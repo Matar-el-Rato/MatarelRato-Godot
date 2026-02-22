@@ -20,3 +20,19 @@ transform = Transform3D(-1.6610327e-08, 0, 0.38, 0, 0.38, 0, -0.38, 0, -1.661032
 [node name="Camera3D" type="Camera3D" parent="." unique_id=1660770193]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6589404, -0.06548041)
 current = true
+
+[node name="UI" type="CanvasLayer" parent="." unique_id=123456789]
+
+[node name="CenterContainer" type="CenterContainer" parent="UI" unique_id=987654321]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Crosshair" type="ColorRect" parent="UI/CenterContainer" unique_id=1112131415]
+custom_minimum_size = Vector2(3, 3)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.8)

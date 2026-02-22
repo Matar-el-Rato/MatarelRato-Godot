@@ -1,0 +1,166 @@
+[gd_scene format=3 uid="uid://cknlf2b7dj8cn"]
+
+[ext_resource type="Script" uid="uid://bmbiiid5mwpk6" path="res://Scripts/WelcomeScreen.cs" id="1_script"]
+[ext_resource type="Shader" uid="uid://dd7df6ovaqj7v" path="res://Shaders/blur.gdshader" id="2_shader"]
+[ext_resource type="FontFile" uid="uid://cw75wckal27hg" path="res://Assets/Fonts/Jersey10-Regular.ttf" id="3_font_jersey"]
+[ext_resource type="FontFile" uid="uid://crh154r1w23lt" path="res://Assets/Fonts/Jacquard24-Regular.ttf" id="4_font_jacquard"]
+[ext_resource type="PackedScene" uid="uid://1agynrda5ors" path="res://Scenes/MainScene.tscn" id="5_main_scene"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_blur"]
+shader = ExtResource("2_shader")
+shader_parameter/lod = 2.5
+
+[sub_resource type="Theme" id="Theme_buttons"]
+default_font = ExtResource("3_font_jersey")
+default_font_size = 32
+
+[sub_resource type="LabelSettings" id="LabelSettings_title"]
+font = ExtResource("4_font_jacquard")
+font_size = 100
+font_color = Color(0.9, 0.9, 0.9, 1)
+shadow_size = 10
+shadow_color = Color(0, 0, 0, 0.5)
+
+[sub_resource type="LabelSettings" id="LabelSettings_8n4fr"]
+font = ExtResource("4_font_jacquard")
+font_size = 120
+font_color = Color(0.9911142, 0.89791375, 0.6138343, 1)
+shadow_size = 10
+shadow_color = Color(0, 0, 0, 0.5)
+
+[node name="WelcomeScreen" type="Control" unique_id=1668848884]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="BackgroundParent" type="Control" parent="." unique_id=293853688]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="BackgroundViewport" type="SubViewportContainer" parent="BackgroundParent" unique_id=1330696641]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+stretch = true
+
+[node name="SubViewport" type="SubViewport" parent="BackgroundParent/BackgroundViewport" unique_id=1607203304]
+handle_input_locally = false
+size = Vector2i(800, 500)
+render_target_update_mode = 4
+
+[node name="MainSceneInstance" parent="BackgroundParent/BackgroundViewport/SubViewport" unique_id=1119880947 instance=ExtResource("5_main_scene")]
+
+[node name="BlurOverlay" type="ColorRect" parent="BackgroundParent" unique_id=645327295]
+material = SubResource("ShaderMaterial_blur")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=529979474]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 50
+theme_override_constants/margin_top = 50
+theme_override_constants/margin_right = 50
+theme_override_constants/margin_bottom = 50
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer" unique_id=999199269]
+layout_mode = 2
+
+[node name="LeftPanel" type="Control" parent="MarginContainer/HBoxContainer" unique_id=32082622]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/HBoxContainer/LeftPanel" unique_id=373655828]
+layout_mode = 1
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_top = -60.0
+offset_right = 200.0
+offset_bottom = 60.0
+grow_vertical = 2
+theme_override_constants/separation = 0
+
+[node name="RegisterButton" type="Button" parent="MarginContainer/HBoxContainer/LeftPanel/VBoxContainer" unique_id=1037235710]
+layout_mode = 2
+theme = SubResource("Theme_buttons")
+text = "Register"
+flat = true
+alignment = 0
+
+[node name="LoginButton" type="Button" parent="MarginContainer/HBoxContainer/LeftPanel/VBoxContainer" unique_id=1555132830]
+layout_mode = 2
+theme = SubResource("Theme_buttons")
+text = "Login"
+flat = true
+alignment = 0
+
+[node name="RightPanel" type="Control" parent="MarginContainer/HBoxContainer" unique_id=1144258639]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="TitleLabel" type="Label" parent="MarginContainer/HBoxContainer/RightPanel" unique_id=552197091]
+layout_mode = 1
+anchors_preset = 6
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = -330.0
+offset_top = -23.0
+offset_right = -50.0
+offset_bottom = 98.0
+grow_horizontal = 0
+grow_vertical = 2
+text = "el Rato"
+label_settings = SubResource("LabelSettings_title")
+horizontal_alignment = 2
+
+[node name="TitleLabel" type="Label" parent="MarginContainer/HBoxContainer/RightPanel/TitleLabel" unique_id=1502323877]
+layout_mode = 1
+anchors_preset = 6
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = -258.0
+offset_top = -154.5
+offset_right = -4.0
+offset_bottom = -33.5
+grow_horizontal = 0
+grow_vertical = 2
+text = "Matar"
+label_settings = SubResource("LabelSettings_8n4fr")
+horizontal_alignment = 2
+
+[node name="DebugButton" type="Button" parent="." unique_id=1603560462]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = -50.0
+offset_right = 120.0
+offset_bottom = -20.0
+grow_vertical = 0
+theme_override_fonts/font = ExtResource("3_font_jersey")
+text = "DEBUG"
