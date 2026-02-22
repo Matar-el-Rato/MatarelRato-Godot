@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://cknlf2b7dj8cn"]
 
-[ext_resource type="Script" uid="uid://bmbiiid5mwpk6" path="res://Scripts/WelcomeScreen.cs" id="1_script"]
+[ext_resource type="Script" path="res://Scripts/UI/WelcomeScreen.cs" id="1_script"]
 [ext_resource type="Shader" uid="uid://dd7df6ovaqj7v" path="res://Shaders/blur.gdshader" id="2_shader"]
 [ext_resource type="FontFile" uid="uid://cw75wckal27hg" path="res://Assets/Fonts/Jersey10-Regular.ttf" id="3_font_jersey"]
 [ext_resource type="FontFile" uid="uid://crh154r1w23lt" path="res://Assets/Fonts/Jacquard24-Regular.ttf" id="4_font_jacquard"]

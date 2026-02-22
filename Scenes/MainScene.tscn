@@ -1,14 +1,15 @@
 [gd_scene format=3 uid="uid://1agynrda5ors"]
 
 [ext_resource type="Texture2D" uid="uid://bdow7xpjm0o3" path="res://Assets/Textures/moon_sky.png" id="1_qxria"]
-[ext_resource type="Shader" uid="uid://ci83pspr41p5w" path="res://Shaders/Stylized.gdshader" id="3_q68mp"]
-[ext_resource type="Script" uid="uid://urx48l6skcr4" path="res://Scripts/Board.cs" id="4_f140w"]
 [ext_resource type="AudioStream" uid="uid://d35ykscrkw14f" path="res://Assets/Music/Portal Radio Tune.mp3" id="6_q68mp"]
 [ext_resource type="PackedScene" uid="uid://bv66lub1e31es" path="res://Assets/Environment/SceneTest.glb" id="6_scene_test"]
 [ext_resource type="PackedScene" uid="uid://bpd6m0lb3j2ls" path="res://Scenes/Player.tscn" id="6_y4jh7"]
-[ext_resource type="Script" uid="uid://6fsbl5q03e4f" path="res://Scripts/EnvironmentCollision.cs" id="7_env_collision"]
+[ext_resource type="Script" uid="uid://ct45xk2s628kn" path="res://Scripts/Environment/EnvironmentCollision.cs" id="7_env_collision"]
 [ext_resource type="PackedScene" uid="uid://b7105h1f46xpg" path="res://Assets/PlayingSet/mesa_poker.glb" id="8_f140w"]
 [ext_resource type="PackedScene" uid="uid://yjmygnj6su5a" path="res://Assets/PlayingSet/tablero.glb" id="9_0iob3"]
+[ext_resource type="PackedScene" uid="uid://bmmkl2x7v3kix" path="res://Assets/PlayingSet/left_door.glb" id="10_4b75m"]
+[ext_resource type="PackedScene" uid="uid://o433j6hka6uh" path="res://Assets/PlayingSet/right_door.glb" id="11_8ju71"]
+[ext_resource type="Script" uid="uid://dquqx6un1fg6q" path="res://Scripts/Environment/Door.cs" id="12_door_script"]
 
 [sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_moon"]
 panorama = ExtResource("1_qxria")
@@ -33,12 +34,6 @@ fog_light_color = Color(0.05, 0.05, 0.07, 1)
 fog_density = 0.02
 fog_sky_affect = 0.0
 fog_depth_begin = 3.0
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_0iob3"]
-shader = ExtResource("3_q68mp")
-shader_parameter/scanline_count = 20.0
-shader_parameter/scanline_opacity = 0.1
-shader_parameter/vignette_intensity = 0.2
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_y4jh7"]
 size = Vector3(91.91815, 7.634369, 1)
@@ -117,7 +112,7 @@ light_color = Color(1, 1, 0.9254902, 1)
 light_energy = 3.45
 
 [node name="PizzeriaLight4" type="OmniLight3D" parent="Lighting" unique_id=1527275724]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12.942166, 2.308368, -5.39094)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13.127879, 2.308368, -5.39094)
 light_color = Color(1, 1, 0.9254902, 1)
 light_energy = 1.953
 
@@ -213,10 +208,8 @@ render_target_update_mode = 4
 
 [node name="Board2D" type="Node2D" parent="SubViewport" unique_id=68157820]
 texture_filter = 1
-material = SubResource("ShaderMaterial_0iob3")
-script = ExtResource("4_f140w")
 
-[node name="SceneTest" parent="." unique_id=1273821951 instance=ExtResource("6_scene_test")]
+[node name="SceneTest" parent="." unique_id=570926479 instance=ExtResource("6_scene_test")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5103102, 0.35111022, 13.224117)
 script = ExtResource("7_env_collision")
 
@@ -250,3 +243,14 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.051862, 0.34357727, -5.25
 
 [node name="tablero" parent="." unique_id=779359470 instance=ExtResource("9_0iob3")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.048522, 0.7424999, -5.248031)
+
+[node name="left_door" parent="." unique_id=1756617272 instance=ExtResource("10_4b75m")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.571119, 1.1142102, -4.550227)
+script = ExtResource("12_door_script")
+OpenAngle = -120.0
+LinkedDoorPath = NodePath("../right_door")
+
+[node name="right_door" parent="." unique_id=33284300 instance=ExtResource("11_8ju71")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.571119, 1.1142102, -6.176636)
+script = ExtResource("12_door_script")
+LinkedDoorPath = NodePath("../left_door")
