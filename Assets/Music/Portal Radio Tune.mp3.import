@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://d35ykscrkw14f"
+path="res://.godot/imported/Portal Radio Tune.mp3-a41bba4f9871c78f48fd448018414b3f.mp3str"
+
+[deps]
+
+source_file="res://Assets/Music/Portal Radio Tune.mp3"
+dest_files=["res://.godot/imported/Portal Radio Tune.mp3-a41bba4f9871c78f48fd448018414b3f.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://dclsavpljnb8a"
+path="res://.godot/imported/Day - No, I'm Not a Human OST.mp3-fac9b559da338db083c893ca4058ac9b.mp3str"
+
+[deps]
+
+source_file="res://Assets/Music/Day - No, I'm Not a Human OST.mp3"
+dest_files=["res://.godot/imported/Day - No, I'm Not a Human OST.mp3-fac9b559da338db083c893ca4058ac9b.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4
