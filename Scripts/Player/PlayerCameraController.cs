@@ -44,9 +44,6 @@ public partial class PlayerCameraController : CharacterBody3D
 			animPlayer.Stop(); // Snaps to frame 0
 		}
 
-		// 2. Clipping: Ensure backface culling is enabled on character meshes
-		// This prevents seeing the "inside" of the character when clipping
-		SetupBackfaceCulling();
 
 		// CharacterBody3D floor settings
 		FloorSnapLength    = 0.3f;
@@ -55,43 +52,7 @@ public partial class PlayerCameraController : CharacterBody3D
 		ApplyFloorSnap();
 	}
 
-	private void SetupBackfaceCulling()
-	{
-		if (_activeCharacter == null) return;
-		
-		GD.Print($"[Culling] Starting backface culling setup for {_activeCharacter.Name}...");
-		
-		var meshes = _activeCharacter.FindChildren("*", "MeshInstance3D", true);
-		if (meshes.Count == 0) GD.Print("[Culling] No MeshInstance3Ds found in characters children!");
 
-		foreach (var node in meshes)
-		{
-			if (node is MeshInstance3D mesh)
-			{
-				if (mesh.Mesh == null) continue;
-				int surfaceCount = mesh.Mesh.GetSurfaceCount();
-				GD.Print($"[Culling] Mesh: {mesh.Name} | Surfaces: {surfaceCount}");
-
-				for (int i = 0; i < surfaceCount; i++)
-				{
-					Material mat = mesh.GetSurfaceOverrideMaterial(i) ?? mesh.Mesh.SurfaceGetMaterial(i);
-					string matType = mat?.GetType().Name ?? "NULL";
-
-					if (mat is BaseMaterial3D baseMat)
-					{
-						var uniqueMat = (BaseMaterial3D)baseMat.Duplicate();
-						uniqueMat.CullMode = BaseMaterial3D.CullModeEnum.Back;
-						mesh.SetSurfaceOverrideMaterial(i, uniqueMat);
-						GD.Print($"[Culling]   Surface {i}: Applied CULL_BACK to {matType}");
-					}
-					else
-					{
-						GD.Print($"[Culling]   Surface {i}: SKIPPED (Unsupported Material type: {matType})");
-					}
-				}
-			}
-		}
-	}
 
 	// ── Mouse look (Yaw on Body, Pitch on Camera) ───────────────────────────
 	public override void _UnhandledInput(InputEvent @event)
@@ -201,6 +162,10 @@ public partial class PlayerCameraController : CharacterBody3D
 
 		if (IsOnFloor() && direction.LengthSquared() > 0)
 		{
+			float dot = direction.Dot(-Transform.Basis.Z);
+			float speedMult = Input.IsActionPressed("sprint") ? 2.0f : 1.0f;
+			animPlayer.SpeedScale = (dot < -0.1f ? -1.0f : 1.0f) * speedMult;
+
 			if (animPlayer.HasAnimation(walkAnim) && animPlayer.CurrentAnimation != walkAnim)
 			{
 				// Ensure the animation is looping
@@ -215,6 +180,7 @@ public partial class PlayerCameraController : CharacterBody3D
 			if (animPlayer.IsPlaying() && animPlayer.CurrentAnimation == walkAnim)
 			{
 				animPlayer.Stop();
+				animPlayer.SpeedScale = 1.0f; // Reset scale
 			}
 		}
 	}
@@ -246,7 +212,7 @@ public partial class PlayerCameraController : CharacterBody3D
 		
 		// Update reference and re-initialize visuals
 		_activeCharacter = orientationFix; 
-		CallDeferred(nameof(SetupBackfaceCulling));
+
 		
 		// Force an animation snap for the new model
 		var animPlayer = newModel.GetNodeOrNull<AnimationPlayer>("AnimationPlayer") ?? 
