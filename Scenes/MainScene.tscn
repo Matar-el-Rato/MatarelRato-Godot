@@ -239,10 +239,10 @@ transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 37.4
 shape = SubResource("BoxShape3D_y4jh7")
 
 [node name="mesa_poker" parent="." unique_id=1994558787 instance=ExtResource("8_f140w")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.5739217, 0.34357727, -5.255393)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9.631325, 0.34357727, -5.255393)
 
 [node name="tablero" parent="." unique_id=779359470 instance=ExtResource("9_0iob3")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.570582, 0.8352988, -5.248031)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9.627985, 0.8352988, -5.248031)
 
 [node name="left_door" parent="." unique_id=1756617272 instance=ExtResource("10_4b75m")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.571119, 1.1142102, -4.550227)
