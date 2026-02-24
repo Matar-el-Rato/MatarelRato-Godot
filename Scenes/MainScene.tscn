@@ -242,7 +242,7 @@ shape = SubResource("BoxShape3D_y4jh7")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.5739217, 0.34357727, -5.255393)
 
 [node name="tablero" parent="." unique_id=779359470 instance=ExtResource("9_0iob3")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.570582, 0.7424999, -5.248031)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.570582, 1.5243587, -5.248031)
 
 [node name="left_door" parent="." unique_id=1756617272 instance=ExtResource("10_4b75m")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.571119, 1.1142102, -4.550227)
