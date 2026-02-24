@@ -12,6 +12,8 @@
 [ext_resource type="PackedScene" uid="uid://cvc57wvgsiu8a" path="res://Assets/Miscellaneous/registration.glb" id="11_xb4mg"]
 [ext_resource type="Script" uid="uid://dquqx6un1fg6q" path="res://Scripts/Environment/Door.cs" id="12_door_script"]
 [ext_resource type="PackedScene" uid="uid://w7l26dijqujm" path="res://Assets/Miscellaneous/signin.glb" id="12_xb4mg"]
+[ext_resource type="Script" uid="uid://bk7ngt4ktf6i6" path="res://Scripts/Interaction/Interactable.cs" id="13_interactable_script"]
+[ext_resource type="FontFile" uid="uid://crh154r1w23lt" path="res://Assets/Fonts/Jacquard24-Regular.ttf" id="14_jacquard_font"]
 
 [sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_moon"]
 panorama = ExtResource("1_qxria")
@@ -243,8 +245,24 @@ shape = SubResource("BoxShape3D_y4jh7")
 [node name="mesa_poker" parent="." unique_id=1994558787 instance=ExtResource("8_f140w")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9.631325, 0.34357727, -5.255393)
 
+[node name="Interactable" type="Node3D" parent="mesa_poker" unique_id=314159265]
+script = ExtResource("13_interactable_script")
+HighlightThickness = 2.0
+HighlightThreshold = 0.1
+HighlightOpacity = 0.4
+
 [node name="tablero" parent="." unique_id=779359470 instance=ExtResource("9_0iob3")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9.627985, 0.8352988, -5.248031)
+
+[node name="Interactable" type="Node3D" parent="tablero" unique_id=875346245]
+script = ExtResource("13_interactable_script")
+ShowExclamation = true
+ExclamationOffset = Vector3(0, 1, 0)
+ExclamationScale = 6.0
+CustomFont = ExtResource("14_jacquard_font")
+HighlightThickness = 2.0
+HighlightThreshold = 0.1
+HighlightOpacity = 0.4
 
 [node name="left_door" parent="." unique_id=1756617272 instance=ExtResource("10_4b75m")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.571119, 1.1142102, -4.550227)
@@ -252,13 +270,22 @@ script = ExtResource("12_door_script")
 OpenAngle = -120.0
 LinkedDoorPath = NodePath("../right_door")
 
+[node name="Interactable" type="Node3D" parent="left_door" unique_id=1068874910]
+script = ExtResource("13_interactable_script")
+PromptText = ""
+ExclamationOffset = Vector3(0, 2, 0)
+
 [node name="right_door" parent="." unique_id=33284300 instance=ExtResource("11_8ju71")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.571119, 1.1142102, -6.176636)
 script = ExtResource("12_door_script")
 LinkedDoorPath = NodePath("../left_door")
 
+[node name="Interactable" type="Node3D" parent="right_door" unique_id=1732529641]
+script = ExtResource("13_interactable_script")
+PromptText = ""
+
 [node name="SignIn Clipboard" parent="." unique_id=443302544 instance=ExtResource("11_xb4mg")]
 transform = Transform3D(0.6836178, 0.7298402, 0, -0.7298402, 0.6836178, 0, 0, 0, 1, -8.71101, 1.1847054, -4.941431)
 
-[node name="signin" parent="." unique_id=847074855 instance=ExtResource("12_xb4mg")]
+[node name="Registration Clipboard" parent="." unique_id=847074855 instance=ExtResource("12_xb4mg")]
 transform = Transform3D(0.64261377, 0.7661903, 0, -0.7661903, 0.64261377, 0, 0, 0, 1, -8.777082, 1.2585282, -5.2168026)

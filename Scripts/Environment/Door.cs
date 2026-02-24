@@ -1,7 +1,7 @@
 using Godot;
 using System;
 
-public partial class Door : Node3D, IInteractable
+public partial class Door : Node3D
 {
 	[Export] public float OpenAngle = 120.0f;
 	[Export] public float AnimationDuration = 0.5f;
@@ -14,8 +14,7 @@ public partial class Door : Node3D, IInteractable
 	private bool _isProcessingLinked = false;
 	private bool _isAnimating = false;
 	
-	private ShaderMaterial _highlightMaterial;
-	private static readonly string SHADER_PATH = "res://Shaders/highlight.gdshader";
+	private Interactable _interactable;
 
 	public override void _Ready()
 	{
@@ -27,25 +26,45 @@ public partial class Door : Node3D, IInteractable
 			_linkedDoor = GetNodeOrNull<Door>(LinkedDoorPath);
 		}
 
-		// Generate collisions for all child meshes
-		CreateCollisions(this);
-
-		// Prepare highlight material
-		_highlightMaterial = new ShaderMaterial();
-		_highlightMaterial.Shader = GD.Load<Shader>(SHADER_PATH);
+		// Connect to child Interactable if it exists
+		_interactable = GetNodeOrNull<Interactable>("Interactable");
+		if (_interactable != null)
+		{
+			_interactable.Interacted += OnInteracted;
+			_interactable.Focused += OnFocused;
+			_interactable.Unfocused += OnUnfocused;
+		}
 	}
 
-	private void CreateCollisions(Node node)
+	private void OnFocused()
 	{
-		if (node is MeshInstance3D meshInstance)
+		if (_linkedDoor != null && !_isProcessingLinked)
 		{
-			meshInstance.CreateTrimeshCollision();
+			_isProcessingLinked = true;
+			_linkedDoor.SetFocus(true);
+			_isProcessingLinked = false;
 		}
+	}
 
-		foreach (Node child in node.GetChildren())
+	private void OnUnfocused()
+	{
+		if (_linkedDoor != null && !_isProcessingLinked)
 		{
-			CreateCollisions(child);
+			_isProcessingLinked = true;
+			_linkedDoor.SetFocus(false);
+			_isProcessingLinked = false;
 		}
+	}
+
+	public void SetFocus(bool focused)
+	{
+		if (focused) _interactable?.OnFocus();
+		else _interactable?.OnBlur();
+	}
+
+	private void OnInteracted()
+	{
+		Interact();
 	}
 
 	public void Interact()
@@ -70,48 +89,6 @@ public partial class Door : Node3D, IInteractable
 			_isProcessingLinked = true;
 			_linkedDoor.Interact();
 			_isProcessingLinked = false;
-		}
-	}
-
-	public void OnFocus()
-	{
-		ApplyHighlight(true);
-		
-		if (_linkedDoor != null && !_isProcessingLinked)
-		{
-			_isProcessingLinked = true;
-			_linkedDoor.OnFocus();
-			_isProcessingLinked = false;
-		}
-	}
-
-	public void OnBlur()
-	{
-		ApplyHighlight(false);
-		
-		if (_linkedDoor != null && !_isProcessingLinked)
-		{
-			_isProcessingLinked = true;
-			_linkedDoor.OnBlur();
-			_isProcessingLinked = false;
-		}
-	}
-
-	private void ApplyHighlight(bool active)
-	{
-		foreach (Node child in GetChildren())
-		{
-			if (child is MeshInstance3D mesh)
-			{
-				if (active)
-				{
-					mesh.MaterialOverlay = _highlightMaterial;
-				}
-				else
-				{
-					mesh.MaterialOverlay = null;
-				}
-			}
 		}
 	}
 }

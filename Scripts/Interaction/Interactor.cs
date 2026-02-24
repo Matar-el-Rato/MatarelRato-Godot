@@ -8,6 +8,7 @@ public partial class Interactor : Node3D
 
 	private RayCast3D _rayCast;
 	private Control _promptLabel;
+	private Label _textLabel;
 	private IInteractable _currentInteractable;
 
 	public override void _Ready()
@@ -18,7 +19,10 @@ public partial class Interactor : Node3D
 		if (!PromptLabelPath.IsEmpty)
 		{
 			_promptLabel = GetNodeOrNull<Control>(PromptLabelPath);
-			GD.Print($"Interactor: Found prompt node: {_promptLabel != null}");
+			if (_promptLabel != null)
+			{
+				_textLabel = _promptLabel.GetNodeOrNull<Label>("PromptLabel");
+			}
 		}
 		
 		UpdatePrompt(false);
@@ -28,7 +32,21 @@ public partial class Interactor : Node3D
 	{
 		CheckInteraction();
 
-		if (Input.IsActionJustPressed("interact"))
+		if (_currentInteractable is Interactable iNode)
+		{
+			if (iNode.UseLeftClick)
+			{
+				if (Input.IsActionJustPressed("mouse_left")) 
+				{
+					iNode.Interact();
+				}
+			}
+			else if (Input.IsActionJustPressed(iNode.InteractionAction))
+			{
+				iNode.Interact();
+			}
+		}
+		else if (Input.IsActionJustPressed("interact"))
 		{
 			_currentInteractable?.Interact();
 		}
@@ -41,17 +59,26 @@ public partial class Interactor : Node3D
 			var collider = _rayCast.GetCollider() as Node;
 			if (collider == null) return;
 
-			// Search up the hierarchy for an IInteractable
 			IInteractable interactable = null;
 			Node current = collider;
 			
 			while (current != null && interactable == null)
 			{
-				if (current is IInteractable i)
+				foreach (var child in current.GetChildren())
 				{
-					interactable = i;
+					if (child is Interactable iNode)
+					{
+						interactable = iNode;
+						break;
+					}
 				}
-				else
+
+				if (interactable == null && current is IInteractable iInterface)
+				{
+					interactable = iInterface;
+				}
+
+				if (interactable == null)
 				{
 					current = current.GetParent();
 				}
@@ -77,7 +104,18 @@ public partial class Interactor : Node3D
 	{
 		if (_promptLabel != null)
 		{
-			_promptLabel.Visible = visible;
+			bool shouldShow = visible;
+			if (visible && _currentInteractable is Interactable interactableNode && interactableNode.UseLeftClick)
+			{
+				shouldShow = false;
+			}
+
+			_promptLabel.Visible = shouldShow;
+			
+			if (shouldShow && _textLabel != null)
+			{
+				_textLabel.Text = "E";
+			}
 		}
 	}
 }
