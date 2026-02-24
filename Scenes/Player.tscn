@@ -1,9 +1,28 @@
 [gd_scene format=3 uid="uid://bpd6m0lb3j2ls"]
 
 [ext_resource type="Script" uid="uid://drfqr78qwg1xg" path="res://Scripts/Player/PlayerCameraController.cs" id="1_script"]
-[ext_resource type="PackedScene" uid="uid://y3kexeayifa3" path="res://Assets/Characters/character.glb" id="2_model"]
+[ext_resource type="PackedScene" uid="uid://da36h4dfwk3eb" path="res://Assets/Characters/main_character.glb" id="2_main_character"]
 [ext_resource type="FontFile" uid="uid://cw75wckal27hg" path="res://Assets/Fonts/Jersey10-Regular.ttf" id="3_font_jersey"]
 [ext_resource type="Script" uid="uid://quj6mgomerp5" path="res://Scripts/Interaction/Interactor.cs" id="4_interactor_script"]
+[ext_resource type="PackedScene" uid="uid://ddw65m10ow7p5" path="res://Assets/Characters/killer_1.glb" id="5_bhhdu"]
+[ext_resource type="Script" uid="uid://cid3u71dtkj40" path="res://Scripts/Player/Selector.cs" id="5_selector_script"]
+[ext_resource type="PackedScene" uid="uid://dcpynvxocdwcg" path="res://Assets/Characters/gotica_1.glb" id="6_bhhdu"]
+[ext_resource type="Script" uid="uid://b5qkcpdbw57ax" path="res://Scripts/Player/CharacterEntry.cs" id="6_entry_script"]
+
+[sub_resource type="Resource" id="Resource_1"]
+script = ExtResource("6_entry_script")
+ModelScene = ExtResource("2_main_character")
+ServerId = 101
+
+[sub_resource type="Resource" id="Resource_2"]
+script = ExtResource("6_entry_script")
+ModelScene = ExtResource("5_bhhdu")
+ServerId = 102
+
+[sub_resource type="Resource" id="Resource_megsn"]
+script = ExtResource("6_entry_script")
+ModelScene = ExtResource("6_bhhdu")
+ServerId = 103
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_1"]
 radius = 0.25097656
@@ -27,17 +46,28 @@ expand_margin_bottom = 2.0
 
 [node name="Player" type="CharacterBody3D" unique_id=1339342590]
 script = ExtResource("1_script")
+WalkSpeed = 3.0
+SprintSpeed = 6.0
+
+[node name="Selector" type="Node" parent="." unique_id=777888999]
+script = ExtResource("5_selector_script")
+Entries = [SubResource("Resource_1"), SubResource("Resource_2"), SubResource("Resource_megsn")]
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=984120229]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
 shape = SubResource("CapsuleShape3D_1")
 
-[node name="character" parent="." unique_id=1060595123 instance=ExtResource("2_model")]
-transform = Transform3D(-1.6610327e-08, 0, 0.38, 0, 0.38, 0, -0.38, 0, -1.6610327e-08, 0, 0, 0)
+[node name="character" type="Node3D" parent="." unique_id=1060595123]
+
+[node name="OrientationFix" type="Node3D" parent="character" unique_id=1415323366]
+transform = Transform3D(0, 0, 0.38, 0, 0.38, 0, -0.38, 0, 0, 0, 0, 0)
+
+[node name="MainCharacterModel" parent="character/OrientationFix" unique_id=603622022 instance=ExtResource("2_main_character")]
 
 [node name="Camera3D" type="Camera3D" parent="." unique_id=1660770193]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6589404, -0.06548041)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.051696703, 1.6589404, -0.17919451)
 current = true
+near = 0.01
 
 [node name="Interactor" type="Node3D" parent="Camera3D" unique_id=222333444]
 script = ExtResource("4_interactor_script")

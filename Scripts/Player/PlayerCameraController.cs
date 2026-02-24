@@ -20,22 +20,77 @@ public partial class PlayerCameraController : CharacterBody3D
 	[Export] public float JumpVelocity     = 6.0f;
 	[Export] public float MouseSensitivity = 0.003f;   // rad / px
 	[Export] public float GravityMultiplier = 3.0f;    // Slightly higher for better feel
+	[Export] public NodePath CharacterModelPath = "character";
 
 	private Camera3D _camera;
 	private float    _gravity;
 	private float    _pitch = 0.0f;
+	private Node3D   _activeCharacter;
 
 	public override void _Ready()
 	{
 		_camera = GetNode<Camera3D>("Camera3D");
+		_activeCharacter = GetNodeOrNull<Node3D>(CharacterModelPath);
 		_gravity = (float)ProjectSettings.GetSetting("physics/3d/default_gravity");
 		Input.MouseMode = Input.MouseModeEnum.Captured;
 
+		// 1. Snapping: Force an animation update to align orientation immediately
+		// We play and then stop to ensure the animation tracks apply their rotation
+		var animPlayer = _activeCharacter?.GetNodeOrNull<AnimationPlayer>("AnimationPlayer") ?? 
+						 _activeCharacter?.FindChild("AnimationPlayer", true, false) as AnimationPlayer;
+		if (animPlayer != null && animPlayer.HasAnimation("WalkingCycle_001"))
+		{
+			animPlayer.Play("WalkingCycle_001");
+			animPlayer.Stop(); // Snaps to frame 0
+		}
+
+		// 2. Clipping: Ensure backface culling is enabled on character meshes
+		// This prevents seeing the "inside" of the character when clipping
+		SetupBackfaceCulling();
+
 		// CharacterBody3D floor settings
-		FloorSnapLength    = 0.3f; // Increased snap length for better adhesion
+		FloorSnapLength    = 0.3f;
 		FloorConstantSpeed = true;
 		FloorStopOnSlope   = true;
 		ApplyFloorSnap();
+	}
+
+	private void SetupBackfaceCulling()
+	{
+		if (_activeCharacter == null) return;
+		
+		GD.Print($"[Culling] Starting backface culling setup for {_activeCharacter.Name}...");
+		
+		var meshes = _activeCharacter.FindChildren("*", "MeshInstance3D", true);
+		if (meshes.Count == 0) GD.Print("[Culling] No MeshInstance3Ds found in characters children!");
+
+		foreach (var node in meshes)
+		{
+			if (node is MeshInstance3D mesh)
+			{
+				if (mesh.Mesh == null) continue;
+				int surfaceCount = mesh.Mesh.GetSurfaceCount();
+				GD.Print($"[Culling] Mesh: {mesh.Name} | Surfaces: {surfaceCount}");
+
+				for (int i = 0; i < surfaceCount; i++)
+				{
+					Material mat = mesh.GetSurfaceOverrideMaterial(i) ?? mesh.Mesh.SurfaceGetMaterial(i);
+					string matType = mat?.GetType().Name ?? "NULL";
+
+					if (mat is BaseMaterial3D baseMat)
+					{
+						var uniqueMat = (BaseMaterial3D)baseMat.Duplicate();
+						uniqueMat.CullMode = BaseMaterial3D.CullModeEnum.Back;
+						mesh.SetSurfaceOverrideMaterial(i, uniqueMat);
+						GD.Print($"[Culling]   Surface {i}: Applied CULL_BACK to {matType}");
+					}
+					else
+					{
+						GD.Print($"[Culling]   Surface {i}: SKIPPED (Unsupported Material type: {matType})");
+					}
+				}
+			}
+		}
 	}
 
 	// ── Mouse look (Yaw on Body, Pitch on Camera) ───────────────────────────
@@ -121,11 +176,85 @@ public partial class PlayerCameraController : CharacterBody3D
 		Velocity = vel;
 		MoveAndSlide();
 
-		// ── 5. Safety net ─────────────────────────────────────────────────
+		// ── 5. Animations ─────────────────────────────────────────────────
+		UpdateAnimations(direction);
+
+		// ── 6. Safety net ─────────────────────────────────────────────────
 		if (GlobalPosition.Y < -50f) 
 		{
 			GlobalPosition = new Vector3(0f, 5f, 0f);
 			Velocity = Vector3.Zero;
+		}
+	}
+
+	private void UpdateAnimations(Vector3 direction)
+	{
+		if (_activeCharacter == null) return;
+		
+		var animPlayer = _activeCharacter.GetNodeOrNull<AnimationPlayer>("AnimationPlayer") ?? 
+						 _activeCharacter.FindChild("AnimationPlayer", true, false) as AnimationPlayer;
+		
+		if (animPlayer == null) return;
+
+		// Target name
+		string walkAnim = "WalkingCycle_001";
+
+		if (IsOnFloor() && direction.LengthSquared() > 0)
+		{
+			if (animPlayer.HasAnimation(walkAnim) && animPlayer.CurrentAnimation != walkAnim)
+			{
+				// Ensure the animation is looping
+				var anim = animPlayer.GetAnimation(walkAnim);
+				if (anim != null) anim.LoopMode = Animation.LoopModeEnum.Linear;
+				
+				animPlayer.Play(walkAnim);
+			}
+		}
+		else
+		{
+			if (animPlayer.IsPlaying() && animPlayer.CurrentAnimation == walkAnim)
+			{
+				animPlayer.Stop();
+			}
+		}
+	}
+
+	/// <summary>
+	/// Swaps the current character model with a new one, preserving orientation nesting.
+	/// </summary>
+	public void SwapCharacter(PackedScene newCharacterScene)
+	{
+		if (newCharacterScene == null) return;
+
+		// We look for the orientation fix node to swap the model inside it
+		var orientationFix = GetNodeOrNull<Node3D>("character/OrientationFix");
+		if (orientationFix == null)
+		{
+			GD.PrintErr("PlayerCameraController: Could not find 'character/OrientationFix' to swap model.");
+			return;
+		}
+
+		// Remove existing children from the fix node
+		foreach (var child in orientationFix.GetChildren())
+		{
+			child.QueueFree();
+		}
+
+		// Instantiate and add the new character
+		var newModel = newCharacterScene.Instantiate<Node3D>();
+		orientationFix.AddChild(newModel);
+		
+		// Update reference and re-initialize visuals
+		_activeCharacter = orientationFix; 
+		CallDeferred(nameof(SetupBackfaceCulling));
+		
+		// Force an animation snap for the new model
+		var animPlayer = newModel.GetNodeOrNull<AnimationPlayer>("AnimationPlayer") ?? 
+						 newModel.FindChild("AnimationPlayer", true, false) as AnimationPlayer;
+		if (animPlayer != null && animPlayer.HasAnimation("WalkingCycle_001"))
+		{
+			animPlayer.Play("WalkingCycle_001");
+			animPlayer.Stop();
 		}
 	}
 }

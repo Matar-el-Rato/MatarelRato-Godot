@@ -2,20 +2,20 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dd68boeyx7yje"
-path.s3tc="res://.godot/imported/character_Character_01.png-c274c30e9aa928332f29bbcaebaef2d2.s3tc.ctex"
+uid="uid://boyveit7nur3b"
+path.s3tc="res://.godot/imported/killer_1_Character_Killer_04.png-29660eb790de3887a3b56fa217fa2f94.s3tc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc"],
 "vram_texture": true
 }
 generator_parameters={
-"md5": "a38e669623e6bc2bafc791d9191c36f3"
+"md5": "ca40d754a9796118b221a94965b98dd8"
 }
 
 [deps]
 
-source_file="res://Assets/Characters/character_Character_01.png"
-dest_files=["res://.godot/imported/character_Character_01.png-c274c30e9aa928332f29bbcaebaef2d2.s3tc.ctex"]
+source_file="res://Assets/Characters/killer_1_Character_Killer_04.png"
+dest_files=["res://.godot/imported/killer_1_Character_Killer_04.png-29660eb790de3887a3b56fa217fa2f94.s3tc.ctex"]
 
 [params]
 
