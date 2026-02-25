@@ -26,9 +26,23 @@ public partial class ClipboardController : Node
 		RegistrationClipboard = parent.GetNodeOrNull<Node3D>("Registration Clipboard");
 		BurnAudio = parent.GetNodeOrNull<AudioStreamPlayer3D>("BurnAudioPlayer");
 
+		// Initialize state: SignIn starts visible, Registration starts hidden
+		if (RegistrationClipboard != null)
+		{
+			RegistrationClipboard.Visible = false;
+			RegistrationClipboard.Scale = Vector3.Zero;
+			_isRegistrationVisible = false;
+		}
+
 		if (SignInInteractable != null)
 		{
 			SignInInteractable.Interacted += OnSignInInteracted;
+			var sib = SignInInteractable.GetParent<Node3D>();
+			if (sib != null)
+			{
+				sib.Visible = true;
+				sib.Scale = Vector3.One;
+			}
 		}
 	}
 

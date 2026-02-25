@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://1agynrda5ors"]
 
 [ext_resource type="Texture2D" uid="uid://bdow7xpjm0o3" path="res://Assets/Textures/moon_sky.png" id="1_qxria"]
+[ext_resource type="AudioStream" uid="uid://d35ykscrkw14f" path="res://Assets/Music/Portal Radio Tune.mp3" id="4_hx8n4"]
 [ext_resource type="PackedScene" uid="uid://bv66lub1e31es" path="res://Assets/Environment/SceneTest.glb" id="6_scene_test"]
 [ext_resource type="PackedScene" uid="uid://bpd6m0lb3j2ls" path="res://Scenes/Player.tscn" id="6_y4jh7"]
 [ext_resource type="Script" uid="uid://ct45xk2s628kn" path="res://Scripts/Environment/EnvironmentCollision.cs" id="7_env_collision"]
@@ -15,6 +16,8 @@
 [ext_resource type="Script" uid="uid://bk7ngt4ktf6i6" path="res://Scripts/Interaction/Interactable.cs" id="13_interactable_script"]
 [ext_resource type="Script" uid="uid://xwhj5o4phi2k" path="res://Scripts/Interaction/ClipboardController.cs" id="15_clipboard_ctrl"]
 [ext_resource type="AudioStream" uid="uid://cv1yyusfc028h" path="res://Assets/Sound FX/burnfx.wav" id="16_burn_fx"]
+[ext_resource type="AudioStream" uid="uid://dclsavpljnb8a" path="res://Assets/Music/Day - No, I'm Not a Human OST.mp3" id="17_day_ost"]
+[ext_resource type="Script" uid="uid://cftkl2vc21msg" path="res://Scripts/Environment/MusicZone.cs" id="18_music_zone"]
 
 [sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_moon"]
 panorama = ExtResource("1_qxria")
@@ -42,6 +45,9 @@ fog_depth_begin = 3.0
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_y4jh7"]
 size = Vector3(91.91815, 7.634369, 1)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_hx8n4"]
+size = Vector3(51.375, 5.825, 81.03)
 
 [node name="Main3D" type="Node3D" unique_id=2050789802]
 
@@ -220,7 +226,7 @@ script = ExtResource("7_env_collision")
 
 [node name="AudioStreamPlayer3D" type="AudioStreamPlayer3D" parent="SceneTest" unique_id=975460020]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -17.753803, 1.0170901, -17.776184)
-stream = ExtResource("16_burn_fx")
+stream = ExtResource("4_hx8n4")
 volume_db = -5.0
 unit_size = 0.2
 autoplay = true
@@ -244,7 +250,7 @@ transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 37.4
 shape = SubResource("BoxShape3D_y4jh7")
 
 [node name="mesa_poker" parent="." unique_id=1994558787 instance=ExtResource("8_f140w")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9.631325, 0.34357727, -5.255393)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.4568543, 0.34357727, -5.255393)
 
 [node name="Interactable" type="Node3D" parent="mesa_poker" unique_id=314159265]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 1, 1)
@@ -253,7 +259,7 @@ HighlightTargetMesh = NodePath("")
 HighlightThickness = 3.0
 
 [node name="tablero" parent="." unique_id=779359470 instance=ExtResource("9_0iob3")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9.627985, 0.8352988, -5.248031)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.4535146, 0.8352988, -5.248031)
 
 [node name="Interactable" type="Node3D" parent="tablero" unique_id=875346245]
 script = ExtResource("13_interactable_script")
@@ -287,29 +293,39 @@ PromptText = ""
 HighlightThickness = 4.0
 
 [node name="Registration Clipboard" parent="." unique_id=1320131793 instance=ExtResource("12_xb4mg")]
-transform = Transform3D(0.64261377, 0.7661903, 0, -0.7661903, 0.64261377, 0, 0, 0, 1, -8.777082, 1.2585282, -5.2168026)
+transform = Transform3D(0.64261377, 0.7661903, 0, -0.7661903, 0.64261377, 0, 0, 0, 1, -6.602612, 1.2585282, -5.2168026)
 
 [node name="SignIn Clipboard" parent="." unique_id=940128104 instance=ExtResource("11_xb4mg")]
-transform = Transform3D(0.6836178, 0.7298402, 0, -0.7298402, 0.6836178, 0, 0, 0, 1, -8.71101, 1.1847054, -4.941431)
+transform = Transform3D(0.6836178, 0.7298402, 0, -0.7298402, 0.6836178, 0, 0, 0, 1, -6.5365396, 1.1847054, -4.941431)
 
 [node name="Interactable" type="Node3D" parent="SignIn Clipboard" unique_id=918273645]
 script = ExtResource("13_interactable_script")
 PromptText = "Sign In"
 UseLeftClick = true
 ShowExclamation = true
-ExclamationOffset = Vector3(0, 0.6, 0)
+ExclamationOffset = Vector3(-0.4, 0.6, 0)
 ExclamationScale = 3.0
 CustomFont = ExtResource("9_xc4hf")
-HighlightThickness = 4.0
+HighlightTargetMesh = NodePath("")
+HighlightThickness = 1.0
+UseShellHighlight = true
 
 [node name="ClipboardController" type="Node" parent="." unique_id=55667788]
 script = ExtResource("15_clipboard_ctrl")
-SignInInteractable = NodePath("../SignIn Clipboard/Interactable")
-RegistrationClipboard = NodePath("../Registration Clipboard")
-BurnAudio = NodePath("../BurnAudioPlayer")
 
 [node name="BurnAudioPlayer" type="AudioStreamPlayer3D" parent="." unique_id=99887766]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.7, 1.2, -5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.5255294, 1.2, -5)
 stream = ExtResource("16_burn_fx")
 volume_db = -2.0
 unit_size = 5.0
+
+[node name="MusicZone" type="Area3D" parent="." unique_id=112233445]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13.906872, 1.6950517, 16.536062)
+script = ExtResource("18_music_zone")
+MusicTrack = ExtResource("17_day_ost")
+ZoneSize = Vector3(51.375, 5.825, 81.03)
+FadeTime = 2.0
+MaxVolume = -15.0
+
+[node name="MusicZoneShape" type="CollisionShape3D" parent="MusicZone" unique_id=998124612]
+shape = SubResource("BoxShape3D_hx8n4")

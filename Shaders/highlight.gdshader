@@ -60,7 +60,6 @@ void fragment() {
 	float dr = linear_depth(depth_tex, SCREEN_UV + vec2(pixel_size.x, 0.0), INV_PROJECTION_MATRIX);
 	float dl = linear_depth(depth_tex, SCREEN_UV + vec2(-pixel_size.x, 0.0), INV_PROJECTION_MATRIX);
 
-	// 5. Edge mask: Only jump to background, ignoring natural slopes
 	ALPHA = 
 		get_diff(d, du, edge_sensitivity) +
 		get_diff(d, dl, edge_sensitivity) +
@@ -69,6 +68,7 @@ void fragment() {
 	;
 	
 	ALPHA = smoothstep(smoothing_cutoff, max(smoothing_cutoff, smoothing_max), ALPHA);
+	
 	ALPHA *= outline_color.a;
 	ALPHA = clamp(ALPHA, 0.0, 1.0);
 }

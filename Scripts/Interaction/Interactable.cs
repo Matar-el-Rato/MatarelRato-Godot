@@ -31,15 +31,19 @@ public partial class Interactable : Node3D, IInteractable
 	[Export] public float HighlightEdgeSensitivity = 0.01f;
 	[Export] public float HighlightOcclusionBias = 0.02f;
 
+	[Export] public bool UseShellHighlight = false;
+	private ShaderMaterial _shellMaterial;
+	private static readonly string SHELL_SHADER_PATH = "res://Shaders/outline_vertex.gdshader";
+
 	private Label3D _exclamationLabel;
 	private Tween _floatTween;
 	private List<MeshInstance3D> _highlightMeshes = new List<MeshInstance3D>();
+	private List<MeshInstance3D> _shellMeshes = new List<MeshInstance3D>();
 	private ShaderMaterial _highlightMaterial;
 	private static readonly string SHADER_PATH = "res://Shaders/highlight.gdshader";
 
 	public override void _Ready()
 	{
-		// Use CallDeferred to ensure parent GLB meshes are fully populated in the scene tree
 		CallDeferred(MethodName.InitializeInteractable);
 	}
 
@@ -55,6 +59,34 @@ public partial class Interactable : Node3D, IInteractable
 		if (HandleHighlight)
 		{
 			SetupHighlightMaterial();
+			if (UseShellHighlight)
+			{
+				SetupShellMeshes();
+			}
+		}
+	}
+
+	private void SetupShellMeshes()
+	{
+		_shellMaterial = new ShaderMaterial();
+		_shellMaterial.Shader = GD.Load<Shader>(SHELL_SHADER_PATH);
+		_shellMaterial.SetShaderParameter("outline_color", HighlightColor);
+		
+		// Map pixel-style thickness to meters (e.g. 4.0 -> 0.008m)
+		_shellMaterial.SetShaderParameter("thickness", HighlightThickness * 0.002f);
+
+		foreach (var mesh in _highlightMeshes)
+		{
+			var shell = new MeshInstance3D();
+			shell.Mesh = mesh.Mesh;
+			shell.MaterialOverride = _shellMaterial;
+			shell.CastShadow = GeometryInstance3D.ShadowCastingSetting.Off;
+			shell.Visible = false;
+			shell.Name = "HighlightShell_" + mesh.Name;
+			
+			// Attach to the mesh so it follows transforms/skeletons
+			mesh.AddChild(shell);
+			_shellMeshes.Add(shell);
 		}
 	}
 
@@ -102,7 +134,6 @@ public partial class Interactable : Node3D, IInteractable
 			_highlightMeshes.Add(mesh);
 		}
 		
-		// Use GetChildren(true) to find nodes that might be "internal" to scene instances
 		foreach (Node child in node.GetChildren(true))
 		{
 			FindMeshesRecursive(child);
@@ -194,16 +225,28 @@ public partial class Interactable : Node3D, IInteractable
 
 	private void ApplyHighlight(bool active)
 	{
-		if (!HandleHighlight || _highlightMaterial == null) return;
+		if (!HandleHighlight) return;
 
+		// Use Shell highlight for specific objects (like the clipboard)
+		if (UseShellHighlight)
+		{
+			foreach (var shell in _shellMeshes)
+			{
+				if (IsInstanceValid(shell))
+				{
+					shell.Visible = active;
+				}
+			}
+			return;
+		}
+
+		// Fallback to Screen-Space highlight for solid objects
+		if (_highlightMaterial == null) return;
 		foreach (var mesh in _highlightMeshes)
 		{
 			if (IsInstanceValid(mesh))
 			{
 				mesh.MaterialOverlay = active ? _highlightMaterial : null;
-				
-				// Diagnostic: If MaterialOverlay is invisible on some GLBs, we might need Override.
-				// But Overlay is preferred as it doesn't replace the base material.
 			}
 		}
 	}
