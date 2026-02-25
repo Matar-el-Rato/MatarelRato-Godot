@@ -25,8 +25,11 @@ public partial class Interactable : Node3D, IInteractable
 	[Export] public NodePath HighlightTargetMesh;
 	[Export] public Color HighlightColor = Colors.Yellow;
 	[Export] public float HighlightThickness = 2.0f;
-	[Export] public float HighlightThreshold = 0.1f;
-	[Export] public float HighlightOpacity = 0.5f;
+	[Export] public float HighlightSmoothingCutoff = 0.1f;
+	[Export] public float HighlightSmoothingMax = 0.1f;
+	[Export] public float HighlightTransparencyThreshold = 0.1f;
+	[Export] public float HighlightEdgeSensitivity = 0.01f;
+	[Export] public float HighlightOcclusionBias = 0.02f;
 
 	private Label3D _exclamationLabel;
 	private Tween _floatTween;
@@ -35,6 +38,12 @@ public partial class Interactable : Node3D, IInteractable
 	private static readonly string SHADER_PATH = "res://Shaders/highlight.gdshader";
 
 	public override void _Ready()
+	{
+		// Use CallDeferred to ensure parent GLB meshes are fully populated in the scene tree
+		CallDeferred(MethodName.InitializeInteractable);
+	}
+
+	private void InitializeInteractable()
 	{
 		SetupExclamation();
 		
@@ -54,10 +63,13 @@ public partial class Interactable : Node3D, IInteractable
 		_highlightMaterial = new ShaderMaterial();
 		_highlightMaterial.Shader = GD.Load<Shader>(SHADER_PATH);
 		_highlightMaterial.RenderPriority = 10;
-		_highlightMaterial.SetShaderParameter("edge_color", HighlightColor);
+		_highlightMaterial.SetShaderParameter("outline_color", HighlightColor);
 		_highlightMaterial.SetShaderParameter("thickness", HighlightThickness);
-		_highlightMaterial.SetShaderParameter("discard_threshold", HighlightThreshold);
-		_highlightMaterial.SetShaderParameter("opacity", HighlightOpacity);
+		_highlightMaterial.SetShaderParameter("smoothing_cutoff", HighlightSmoothingCutoff);
+		_highlightMaterial.SetShaderParameter("smoothing_max", HighlightSmoothingMax);
+		_highlightMaterial.SetShaderParameter("transparency_threshold", HighlightTransparencyThreshold);
+		_highlightMaterial.SetShaderParameter("edge_sensitivity", HighlightEdgeSensitivity);
+		_highlightMaterial.SetShaderParameter("occlusion_bias", HighlightOcclusionBias);
 
 		// Cache meshes
 		_highlightMeshes.Clear();
@@ -72,13 +84,26 @@ public partial class Interactable : Node3D, IInteractable
 		}
 	}
 
+	private MeshInstance3D FindMeshRecursive(Node node)
+	{
+		if (node is MeshInstance3D mesh) return mesh;
+		foreach (Node child in node.GetChildren(true))
+		{
+			var found = FindMeshRecursive(child);
+			if (found != null) return found;
+		}
+		return null;
+	}
+
 	private void FindMeshesRecursive(Node node)
 	{
 		if (node is MeshInstance3D mesh)
 		{
 			_highlightMeshes.Add(mesh);
 		}
-		foreach (Node child in node.GetChildren())
+		
+		// Use GetChildren(true) to find nodes that might be "internal" to scene instances
+		foreach (Node child in node.GetChildren(true))
 		{
 			FindMeshesRecursive(child);
 		}
@@ -109,27 +134,42 @@ public partial class Interactable : Node3D, IInteractable
 	{
 		if (_exclamationLabel == null || !IsInsideTree()) return;
 
+		if (_floatTween != null)
+		{
+			_floatTween.Kill();
+		}
+
 		Vector3 startPos = ExclamationOffset;
 		Vector3 endPos = startPos + new Vector3(0, 0.3f, 0);
 
-		_floatTween = GetTree().CreateTween();
-		_floatTween.SetLoops();
+		_floatTween = CreateTween();
 		_floatTween.TweenProperty(_exclamationLabel, "position", endPos, 1.0f)
 			.SetTrans(Tween.TransitionType.Sine)
 			.SetEase(Tween.EaseType.InOut);
 		_floatTween.TweenProperty(_exclamationLabel, "position", startPos, 1.0f)
 			.SetTrans(Tween.TransitionType.Sine)
 			.SetEase(Tween.EaseType.InOut);
+		_floatTween.SetLoops();
 	}
 
 	private void GenerateCollisions(Node node)
 	{
 		if (node is MeshInstance3D meshInstance)
 		{
-			meshInstance.CreateTrimeshCollision();
+			// Check if it already has a StaticBody3D child
+			bool hasCollision = false;
+			foreach (Node child in meshInstance.GetChildren(true))
+			{
+				if (child is StaticBody3D) { hasCollision = true; break; }
+			}
+
+			if (!hasCollision)
+			{
+				meshInstance.CreateTrimeshCollision();
+			}
 		}
 
-		foreach (Node child in node.GetChildren())
+		foreach (Node child in node.GetChildren(true))
 		{
 			GenerateCollisions(child);
 		}
@@ -161,6 +201,9 @@ public partial class Interactable : Node3D, IInteractable
 			if (IsInstanceValid(mesh))
 			{
 				mesh.MaterialOverlay = active ? _highlightMaterial : null;
+				
+				// Diagnostic: If MaterialOverlay is invisible on some GLBs, we might need Override.
+				// But Overlay is preferred as it doesn't replace the base material.
 			}
 		}
 	}

@@ -28,27 +28,40 @@ public partial class Interactor : Node3D
 		UpdatePrompt(false);
 	}
 
+	private bool _isLeftClickHeld = false;
+
 	public override void _Process(double delta)
 	{
 		CheckInteraction();
 
 		if (_currentInteractable is Interactable iNode)
 		{
-			if (iNode.UseLeftClick)
+			bool wantsToInteract = false;
+			
+			// 1. Check for specific interaction key (Default "E")
+			if (Input.IsActionJustPressed(iNode.InteractionAction) || Input.IsActionJustPressed("interact"))
 			{
-				if (Input.IsActionJustPressed("mouse_left")) 
-				{
-					iNode.Interact();
-				}
+				wantsToInteract = true;
 			}
-			else if (Input.IsActionJustPressed(iNode.InteractionAction))
+			// 2. Check for left-click if enabled for this interactable
+			else if (iNode.UseLeftClick)
+			{
+				bool isPressed = Input.IsMouseButtonPressed(MouseButton.Left);
+				if (isPressed && !_isLeftClickHeld)
+				{
+					wantsToInteract = true; 
+				}
+				_isLeftClickHeld = isPressed;
+			}
+			
+			if (wantsToInteract)
 			{
 				iNode.Interact();
 			}
 		}
-		else if (Input.IsActionJustPressed("interact"))
+		else
 		{
-			_currentInteractable?.Interact();
+			_isLeftClickHeld = Input.IsMouseButtonPressed(MouseButton.Left);
 		}
 	}
 
@@ -64,7 +77,7 @@ public partial class Interactor : Node3D
 			
 			while (current != null && interactable == null)
 			{
-				foreach (var child in current.GetChildren())
+				foreach (var child in current.GetChildren(true))
 				{
 					if (child is Interactable iNode)
 					{

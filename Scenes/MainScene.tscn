@@ -1,19 +1,20 @@
 [gd_scene format=3 uid="uid://1agynrda5ors"]
 
 [ext_resource type="Texture2D" uid="uid://bdow7xpjm0o3" path="res://Assets/Textures/moon_sky.png" id="1_qxria"]
-[ext_resource type="AudioStream" uid="uid://d35ykscrkw14f" path="res://Assets/Music/Portal Radio Tune.mp3" id="6_q68mp"]
 [ext_resource type="PackedScene" uid="uid://bv66lub1e31es" path="res://Assets/Environment/SceneTest.glb" id="6_scene_test"]
 [ext_resource type="PackedScene" uid="uid://bpd6m0lb3j2ls" path="res://Scenes/Player.tscn" id="6_y4jh7"]
 [ext_resource type="Script" uid="uid://ct45xk2s628kn" path="res://Scripts/Environment/EnvironmentCollision.cs" id="7_env_collision"]
 [ext_resource type="PackedScene" uid="uid://b7105h1f46xpg" path="res://Assets/PlayingSet/mesa_poker.glb" id="8_f140w"]
 [ext_resource type="PackedScene" uid="uid://yjmygnj6su5a" path="res://Assets/PlayingSet/tablero.glb" id="9_0iob3"]
+[ext_resource type="FontFile" uid="uid://cw75wckal27hg" path="res://Assets/Fonts/Jersey10-Regular.ttf" id="9_xc4hf"]
 [ext_resource type="PackedScene" uid="uid://bmmkl2x7v3kix" path="res://Assets/PlayingSet/left_door.glb" id="10_4b75m"]
 [ext_resource type="PackedScene" uid="uid://o433j6hka6uh" path="res://Assets/PlayingSet/right_door.glb" id="11_8ju71"]
 [ext_resource type="PackedScene" uid="uid://cvc57wvgsiu8a" path="res://Assets/Miscellaneous/registration.glb" id="11_xb4mg"]
 [ext_resource type="Script" uid="uid://dquqx6un1fg6q" path="res://Scripts/Environment/Door.cs" id="12_door_script"]
 [ext_resource type="PackedScene" uid="uid://w7l26dijqujm" path="res://Assets/Miscellaneous/signin.glb" id="12_xb4mg"]
 [ext_resource type="Script" uid="uid://bk7ngt4ktf6i6" path="res://Scripts/Interaction/Interactable.cs" id="13_interactable_script"]
-[ext_resource type="FontFile" uid="uid://crh154r1w23lt" path="res://Assets/Fonts/Jacquard24-Regular.ttf" id="14_jacquard_font"]
+[ext_resource type="Script" uid="uid://xwhj5o4phi2k" path="res://Scripts/Interaction/ClipboardController.cs" id="15_clipboard_ctrl"]
+[ext_resource type="AudioStream" uid="uid://cv1yyusfc028h" path="res://Assets/Sound FX/burnfx.wav" id="16_burn_fx"]
 
 [sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_moon"]
 panorama = ExtResource("1_qxria")
@@ -219,7 +220,7 @@ script = ExtResource("7_env_collision")
 
 [node name="AudioStreamPlayer3D" type="AudioStreamPlayer3D" parent="SceneTest" unique_id=975460020]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -17.753803, 1.0170901, -17.776184)
-stream = ExtResource("6_q68mp")
+stream = ExtResource("16_burn_fx")
 volume_db = -5.0
 unit_size = 0.2
 autoplay = true
@@ -246,10 +247,10 @@ shape = SubResource("BoxShape3D_y4jh7")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9.631325, 0.34357727, -5.255393)
 
 [node name="Interactable" type="Node3D" parent="mesa_poker" unique_id=314159265]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 1, 1)
 script = ExtResource("13_interactable_script")
-HighlightThickness = 2.0
-HighlightThreshold = 0.1
-HighlightOpacity = 0.4
+HighlightTargetMesh = NodePath("")
+HighlightThickness = 3.0
 
 [node name="tablero" parent="." unique_id=779359470 instance=ExtResource("9_0iob3")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9.627985, 0.8352988, -5.248031)
@@ -259,10 +260,9 @@ script = ExtResource("13_interactable_script")
 ShowExclamation = true
 ExclamationOffset = Vector3(0, 1, 0)
 ExclamationScale = 6.0
-CustomFont = ExtResource("14_jacquard_font")
-HighlightThickness = 2.0
-HighlightThreshold = 0.1
-HighlightOpacity = 0.4
+CustomFont = ExtResource("9_xc4hf")
+HighlightTargetMesh = NodePath("")
+HighlightThickness = 3.0
 
 [node name="left_door" parent="." unique_id=1756617272 instance=ExtResource("10_4b75m")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.571119, 1.1142102, -4.550227)
@@ -274,6 +274,7 @@ LinkedDoorPath = NodePath("../right_door")
 script = ExtResource("13_interactable_script")
 PromptText = ""
 ExclamationOffset = Vector3(0, 2, 0)
+HighlightThickness = 4.0
 
 [node name="right_door" parent="." unique_id=33284300 instance=ExtResource("11_8ju71")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.571119, 1.1142102, -6.176636)
@@ -283,9 +284,32 @@ LinkedDoorPath = NodePath("../left_door")
 [node name="Interactable" type="Node3D" parent="right_door" unique_id=1732529641]
 script = ExtResource("13_interactable_script")
 PromptText = ""
+HighlightThickness = 4.0
 
-[node name="SignIn Clipboard" parent="." unique_id=443302544 instance=ExtResource("11_xb4mg")]
+[node name="Registration Clipboard" parent="." unique_id=1320131793 instance=ExtResource("12_xb4mg")]
+transform = Transform3D(0.64261377, 0.7661903, 0, -0.7661903, 0.64261377, 0, 0, 0, 1, -8.777082, 1.2585282, -5.2168026)
+
+[node name="SignIn Clipboard" parent="." unique_id=940128104 instance=ExtResource("11_xb4mg")]
 transform = Transform3D(0.6836178, 0.7298402, 0, -0.7298402, 0.6836178, 0, 0, 0, 1, -8.71101, 1.1847054, -4.941431)
 
-[node name="Registration Clipboard" parent="." unique_id=847074855 instance=ExtResource("12_xb4mg")]
-transform = Transform3D(0.64261377, 0.7661903, 0, -0.7661903, 0.64261377, 0, 0, 0, 1, -8.777082, 1.2585282, -5.2168026)
+[node name="Interactable" type="Node3D" parent="SignIn Clipboard" unique_id=918273645]
+script = ExtResource("13_interactable_script")
+PromptText = "Sign In"
+UseLeftClick = true
+ShowExclamation = true
+ExclamationOffset = Vector3(0, 0.6, 0)
+ExclamationScale = 3.0
+CustomFont = ExtResource("9_xc4hf")
+HighlightThickness = 4.0
+
+[node name="ClipboardController" type="Node" parent="." unique_id=55667788]
+script = ExtResource("15_clipboard_ctrl")
+SignInInteractable = NodePath("../SignIn Clipboard/Interactable")
+RegistrationClipboard = NodePath("../Registration Clipboard")
+BurnAudio = NodePath("../BurnAudioPlayer")
+
+[node name="BurnAudioPlayer" type="AudioStreamPlayer3D" parent="." unique_id=99887766]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.7, 1.2, -5)
+stream = ExtResource("16_burn_fx")
+volume_db = -2.0
+unit_size = 5.0
