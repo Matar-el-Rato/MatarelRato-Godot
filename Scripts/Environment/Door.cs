@@ -21,7 +21,7 @@ public partial class Door : Node3D
 		_closedRotation = Rotation;
 		_openRotation = new Vector3(Rotation.X, Rotation.Y + Mathf.DegToRad(OpenAngle), Rotation.Z);
 		
-		if (!LinkedDoorPath.IsEmpty)
+		if (LinkedDoorPath != null && !LinkedDoorPath.IsEmpty)
 		{
 			_linkedDoor = GetNodeOrNull<Door>(LinkedDoorPath);
 		}

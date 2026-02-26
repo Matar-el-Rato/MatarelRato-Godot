@@ -34,17 +34,6 @@ public partial class PlayerCameraController : CharacterBody3D
 		_gravity = (float)ProjectSettings.GetSetting("physics/3d/default_gravity");
 		Input.MouseMode = Input.MouseModeEnum.Captured;
 
-		// 1. Snapping: Force an animation update to align orientation immediately
-		// We play and then stop to ensure the animation tracks apply their rotation
-		var animPlayer = _activeCharacter?.GetNodeOrNull<AnimationPlayer>("AnimationPlayer") ?? 
-						 _activeCharacter?.FindChild("AnimationPlayer", true, false) as AnimationPlayer;
-		if (animPlayer != null && animPlayer.HasAnimation("WalkingCycle_001"))
-		{
-			animPlayer.Play("WalkingCycle_001");
-			animPlayer.Stop(); // Snaps to frame 0
-		}
-
-
 		// CharacterBody3D floor settings
 		FloorSnapLength    = 0.3f;
 		FloorConstantSpeed = true;
@@ -162,27 +151,53 @@ public partial class PlayerCameraController : CharacterBody3D
 
 		if (IsOnFloor() && direction.LengthSquared() > 0)
 		{
-			float dot = direction.Dot(-Transform.Basis.Z);
-			float speedMult = Input.IsActionPressed("sprint") ? 2.0f : 1.0f;
-			animPlayer.SpeedScale = (dot < -0.1f ? -1.0f : 1.0f) * speedMult;
-
-			if (animPlayer.HasAnimation(walkAnim) && animPlayer.CurrentAnimation != walkAnim)
+			// ── Walking ──────────────────────────────────────────────────────
+			if (animPlayer.HasAnimation(walkAnim))
 			{
-				// Ensure the animation is looping
-				var anim = animPlayer.GetAnimation(walkAnim);
-				if (anim != null) anim.LoopMode = Animation.LoopModeEnum.Linear;
-				
-				animPlayer.Play(walkAnim);
+				if (animPlayer.CurrentAnimation != walkAnim)
+				{
+					var anim = animPlayer.GetAnimation(walkAnim);
+					if (anim != null) anim.LoopMode = Animation.LoopModeEnum.Linear;
+					animPlayer.Play(walkAnim);
+				}
+				float dot       = direction.Dot(-Transform.Basis.Z);
+				float speedMult = Input.IsActionPressed("sprint") ? 2.0f : 1.0f;
+				animPlayer.SpeedScale = (dot < -0.1f ? -1.0f : 1.0f) * speedMult;
 			}
 		}
 		else
 		{
-			if (animPlayer.IsPlaying() && animPlayer.CurrentAnimation == walkAnim)
+			// ── Idle/Stopped ─────────────────────────────────────────────────
+			if (animPlayer.CurrentAnimation == walkAnim && animPlayer.IsPlaying())
 			{
-				animPlayer.Stop();
-				animPlayer.SpeedScale = 1.0f; // Reset scale
+				animPlayer.SpeedScale = 1.0f;
+				GoToIdlePose(animPlayer);
 			}
 		}
+		
+		// Correct orientation for BOTH states.
+		// Walking needs 0 (perfect) but idle needs -90 (counter parent offset).
+		// We force both because animations might lack rotation tracks and inherit previous values.
+		var root = animPlayer.GetNodeOrNull<Node3D>(animPlayer.RootNode);
+		if (root != null)
+		{
+			float targetY = (direction.LengthSquared() > 0.001f) ? 0f : -90f;
+			root.RotationDegrees = new Vector3(root.RotationDegrees.X, targetY, root.RotationDegrees.Z);
+		}
+	}
+
+	/// <summary>
+	/// Plays the RESET animation and, via a one-shot AnimationFinished signal,
+	/// applies a -90° Y correction after RESET has fully evaluated.
+	/// Fixes the 90° Y rotation Blender bakes into every exported model's bind pose.
+	/// Safe: self-disconnecting, applied exactly once per transition, not cumulative.
+	/// </summary>
+	private static void GoToIdlePose(AnimationPlayer animPlayer)
+	{
+		if (animPlayer.HasAnimation("RESET"))
+			animPlayer.Play("RESET");
+		else
+			animPlayer.Stop(false);
 	}
 
 	/// <summary>
