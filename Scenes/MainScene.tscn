@@ -54,493 +54,495 @@ size = Vector3(51.375, 5.825, 81.03)
 
 [node name="Main3D" type="Node3D" unique_id=2050789802]
 
-[node name="Lighting" type="Node" parent="." unique_id=98138090]
+[node name="Environment" type="Node3D" parent="." unique_id=1785115305]
 
-[node name="PizzeriaLight" type="OmniLight3D" parent="Lighting" unique_id=1382411856]
+[node name="Lighting" type="Node" parent="Environment" unique_id=98138090]
+
+[node name="PizzeriaLight" type="OmniLight3D" parent="Environment/Lighting" unique_id=1382411856]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9.672098, 4.2356358, -3.6366978)
 light_color = Color(1, 1, 0.8980392, 1)
 
-[node name="PizzeriaLight2" type="OmniLight3D" parent="Lighting" unique_id=574077247]
+[node name="PizzeriaLight2" type="OmniLight3D" parent="Environment/Lighting" unique_id=574077247]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9.672098, 4.2356358, -6.8051796)
 light_color = Color(1, 1, 0.8784314, 1)
 
-[node name="PizzeriaLight6" type="OmniLight3D" parent="Lighting" unique_id=566393621]
+[node name="PizzeriaLight6" type="OmniLight3D" parent="Environment/Lighting" unique_id=566393621]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9.672098, 4.2356358, 17.140652)
 light_color = Color(1, 1, 0.8980392, 1)
 
-[node name="PizzeriaLight41" type="OmniLight3D" parent="Lighting" unique_id=200799837]
+[node name="PizzeriaLight41" type="OmniLight3D" parent="Environment/Lighting" unique_id=200799837]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9.672098, 4.2356358, 13.972169)
 light_color = Color(1, 1, 0.8784314, 1)
 
-[node name="PizzeriaLight42" type="OmniLight3D" parent="Lighting" unique_id=693701256]
+[node name="PizzeriaLight42" type="OmniLight3D" parent="Environment/Lighting" unique_id=693701256]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9.672098, 4.2356358, 39.92953)
 light_color = Color(1, 1, 0.8980392, 1)
 
-[node name="PizzeriaLight43" type="OmniLight3D" parent="Lighting" unique_id=7463685]
+[node name="PizzeriaLight43" type="OmniLight3D" parent="Environment/Lighting" unique_id=7463685]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9.672098, 4.2356358, 36.761047)
 light_color = Color(1, 1, 0.8784314, 1)
 
-[node name="PizzeriaLight7" type="OmniLight3D" parent="Lighting" unique_id=1284983761]
+[node name="PizzeriaLight7" type="OmniLight3D" parent="Environment/Lighting" unique_id=1284983761]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20.735025, 5.1901746, -8.716714)
 light_color = Color(1, 1, 0.8784314, 1)
 
-[node name="PizzeriaLight18" type="OmniLight3D" parent="Lighting" unique_id=1688351267]
+[node name="PizzeriaLight18" type="OmniLight3D" parent="Environment/Lighting" unique_id=1688351267]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 36.251694, 3.1758518, -3.7362885)
 light_color = Color(1, 1, 0.8784314, 1)
 
-[node name="PizzeriaLight19" type="OmniLight3D" parent="Lighting" unique_id=574329870]
+[node name="PizzeriaLight19" type="OmniLight3D" parent="Environment/Lighting" unique_id=574329870]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 31.635132, 3.1758518, -3.7362885)
 light_color = Color(1, 1, 0.8784314, 1)
 
-[node name="PizzeriaLight21" type="OmniLight3D" parent="Lighting" unique_id=658658891]
+[node name="PizzeriaLight21" type="OmniLight3D" parent="Environment/Lighting" unique_id=658658891]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 28.024693, 3.1758518, -3.7362885)
 light_color = Color(1, 1, 0.8784314, 1)
 
-[node name="PizzeriaLight22" type="OmniLight3D" parent="Lighting" unique_id=1372679051]
+[node name="PizzeriaLight22" type="OmniLight3D" parent="Environment/Lighting" unique_id=1372679051]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 26.482658, 3.1758518, -5.234231)
 light_color = Color(1, 1, 0.8784314, 1)
 
-[node name="PizzeriaLight23" type="OmniLight3D" parent="Lighting" unique_id=147687209]
+[node name="PizzeriaLight23" type="OmniLight3D" parent="Environment/Lighting" unique_id=147687209]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 26.482658, 3.1758518, -8.338665)
 light_color = Color(1, 1, 0.8784314, 1)
 
-[node name="PizzeriaLight24" type="OmniLight3D" parent="Lighting" unique_id=669301554]
+[node name="PizzeriaLight24" type="OmniLight3D" parent="Environment/Lighting" unique_id=669301554]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 26.482658, 3.1758518, -11.8748455)
 light_color = Color(1, 1, 0.8784314, 1)
 
-[node name="PizzeriaLight25" type="OmniLight3D" parent="Lighting" unique_id=1319167470]
+[node name="PizzeriaLight25" type="OmniLight3D" parent="Environment/Lighting" unique_id=1319167470]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 26.482658, 3.1758518, -15.84446)
 light_color = Color(1, 1, 0.8784314, 1)
 light_energy = 0.898
 
-[node name="PizzeriaLight26" type="OmniLight3D" parent="Lighting" unique_id=1570786822]
+[node name="PizzeriaLight26" type="OmniLight3D" parent="Environment/Lighting" unique_id=1570786822]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 30.622791, 3.1758518, -15.84446)
 light_color = Color(1, 1, 0.8784314, 1)
 light_energy = 0.898
 
-[node name="PizzeriaLight27" type="OmniLight3D" parent="Lighting" unique_id=1729741916]
+[node name="PizzeriaLight27" type="OmniLight3D" parent="Environment/Lighting" unique_id=1729741916]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 34.577396, 3.1758518, -15.84446)
 light_color = Color(1, 1, 0.8784314, 1)
 light_energy = 0.898
 
-[node name="PizzeriaLight28" type="OmniLight3D" parent="Lighting" unique_id=1070820879]
+[node name="PizzeriaLight28" type="OmniLight3D" parent="Environment/Lighting" unique_id=1070820879]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 37.158337, 3.1758518, -15.84446)
 light_color = Color(1, 1, 0.8784314, 1)
 light_energy = 0.898
 
-[node name="PizzeriaLight29" type="OmniLight3D" parent="Lighting" unique_id=1952718915]
+[node name="PizzeriaLight29" type="OmniLight3D" parent="Environment/Lighting" unique_id=1952718915]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 37.158337, 3.1758518, -11.111225)
 light_color = Color(1, 1, 0.8784314, 1)
 
-[node name="PizzeriaLight30" type="OmniLight3D" parent="Lighting" unique_id=1325618327]
+[node name="PizzeriaLight30" type="OmniLight3D" parent="Environment/Lighting" unique_id=1325618327]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 37.158337, 3.1758518, -7.8687925)
 light_color = Color(1, 1, 0.8784314, 1)
 
-[node name="PizzeriaLight40" type="OmniLight3D" parent="Lighting" unique_id=1039070119]
+[node name="PizzeriaLight40" type="OmniLight3D" parent="Environment/Lighting" unique_id=1039070119]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 32.566425, 2.7713463, -10.515602)
 light_color = Color(1, 1, 0.8784314, 1)
 light_energy = 0.642
 
-[node name="PizzeriaLight31" type="OmniLight3D" parent="Lighting" unique_id=1262176013]
+[node name="PizzeriaLight31" type="OmniLight3D" parent="Environment/Lighting" unique_id=1262176013]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 37.158337, 3.1758518, 1.8779993)
 light_color = Color(1, 1, 0.8784314, 1)
 
-[node name="PizzeriaLight33" type="OmniLight3D" parent="Lighting" unique_id=370206667]
+[node name="PizzeriaLight33" type="OmniLight3D" parent="Environment/Lighting" unique_id=370206667]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 30.537178, 3.1758518, 1.8779993)
 light_color = Color(1, 1, 0.8784314, 1)
 
-[node name="PizzeriaLight34" type="OmniLight3D" parent="Lighting" unique_id=2032151651]
+[node name="PizzeriaLight34" type="OmniLight3D" parent="Environment/Lighting" unique_id=2032151651]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 32.358337, 3.1044834, 0.8221469)
 light_color = Color(1, 1, 0.8784314, 1)
 
-[node name="PizzeriaLight35" type="OmniLight3D" parent="Lighting" unique_id=335773266]
+[node name="PizzeriaLight35" type="OmniLight3D" parent="Environment/Lighting" unique_id=335773266]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 33.853672, 3.1044834, 0.8221469)
 light_color = Color(1, 1, 0.8784314, 1)
 
-[node name="PizzeriaLight36" type="OmniLight3D" parent="Lighting" unique_id=108514038]
+[node name="PizzeriaLight36" type="OmniLight3D" parent="Environment/Lighting" unique_id=108514038]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 35.757454, 3.1044834, 0.8221469)
 light_color = Color(1, 1, 0.8784314, 1)
 
-[node name="PizzeriaLight37" type="OmniLight3D" parent="Lighting" unique_id=1427122064]
+[node name="PizzeriaLight37" type="OmniLight3D" parent="Environment/Lighting" unique_id=1427122064]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 37.2663, 3.1044834, 0.8221469)
 light_color = Color(1, 1, 0.8784314, 1)
 
-[node name="PizzeriaLight32" type="OmniLight3D" parent="Lighting" unique_id=1426394302]
+[node name="PizzeriaLight32" type="OmniLight3D" parent="Environment/Lighting" unique_id=1426394302]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 33.87319, 3.1758518, 1.8779993)
 light_color = Color(1, 1, 0.8784314, 1)
 
-[node name="PizzeriaLight8" type="OmniLight3D" parent="Lighting" unique_id=359519226]
+[node name="PizzeriaLight8" type="OmniLight3D" parent="Environment/Lighting" unique_id=359519226]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20.735025, 5.1901746, -10.238544)
 light_color = Color(1, 1, 0.8784314, 1)
 
-[node name="PizzeriaLight9" type="OmniLight3D" parent="Lighting" unique_id=763259010]
+[node name="PizzeriaLight9" type="OmniLight3D" parent="Environment/Lighting" unique_id=763259010]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20.735025, 5.1901746, -11.578435)
 light_color = Color(1, 1, 0.8784314, 1)
 
-[node name="PizzeriaLight10" type="OmniLight3D" parent="Lighting" unique_id=1679894585]
+[node name="PizzeriaLight10" type="OmniLight3D" parent="Environment/Lighting" unique_id=1679894585]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20.735025, 5.1901746, -12.960259)
 light_color = Color(1, 1, 0.8784314, 1)
 
-[node name="PizzeriaLight11" type="OmniLight3D" parent="Lighting" unique_id=1994969108]
+[node name="PizzeriaLight11" type="OmniLight3D" parent="Environment/Lighting" unique_id=1994969108]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22.377872, 3.8684797, -14.558365)
 light_color = Color(1, 1, 0.8784314, 1)
 
-[node name="PizzeriaLight12" type="OmniLight3D" parent="Lighting" unique_id=1970034305]
+[node name="PizzeriaLight12" type="OmniLight3D" parent="Environment/Lighting" unique_id=1970034305]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22.377872, 3.8684797, -10.44883)
 light_color = Color(1, 1, 0.8784314, 1)
 
-[node name="PizzeriaLight13" type="OmniLight3D" parent="Lighting" unique_id=1312476206]
+[node name="PizzeriaLight13" type="OmniLight3D" parent="Environment/Lighting" unique_id=1312476206]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22.377872, 3.8684797, -3.923233)
 light_color = Color(1, 1, 0.8784314, 1)
 
-[node name="PizzeriaLight38" type="OmniLight3D" parent="Lighting" unique_id=366255547]
+[node name="PizzeriaLight38" type="OmniLight3D" parent="Environment/Lighting" unique_id=366255547]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 21.45479, 0.8443074, -5.4291677)
 light_color = Color(1, 1, 0.8784314, 1)
 light_energy = 0.898
 
-[node name="PizzeriaLight39" type="OmniLight3D" parent="Lighting" unique_id=654197799]
+[node name="PizzeriaLight39" type="OmniLight3D" parent="Environment/Lighting" unique_id=654197799]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20.080084, 0.8443074, -5.4291677)
 light_color = Color(1, 1, 0.8784314, 1)
 
-[node name="PizzeriaLight14" type="OmniLight3D" parent="Lighting" unique_id=254421508]
+[node name="PizzeriaLight14" type="OmniLight3D" parent="Environment/Lighting" unique_id=254421508]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18.693594, 3.8684797, -0.42456174)
 light_color = Color(1, 1, 0.8784314, 1)
 
-[node name="PizzeriaLight15" type="OmniLight3D" parent="Lighting" unique_id=1891958768]
+[node name="PizzeriaLight15" type="OmniLight3D" parent="Environment/Lighting" unique_id=1891958768]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18.693594, 3.8684797, 2.423982)
 light_color = Color(1, 1, 0.8784314, 1)
 
-[node name="PizzeriaLight16" type="OmniLight3D" parent="Lighting" unique_id=2129967613]
+[node name="PizzeriaLight16" type="OmniLight3D" parent="Environment/Lighting" unique_id=2129967613]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18.693594, 3.8684797, 5.738591)
 light_color = Color(1, 1, 0.8784314, 1)
 
-[node name="PizzeriaLight17" type="OmniLight3D" parent="Lighting" unique_id=1249630645]
+[node name="PizzeriaLight17" type="OmniLight3D" parent="Environment/Lighting" unique_id=1249630645]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18.693594, 3.8684797, 9.22573)
 light_color = Color(1, 1, 0.8784314, 1)
 
-[node name="PizzeriaLight3" type="OmniLight3D" parent="Lighting" unique_id=1969236887]
+[node name="PizzeriaLight3" type="OmniLight3D" parent="Environment/Lighting" unique_id=1969236887]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18.09094, 2.308368, -5.39094)
 light_color = Color(1, 1, 0.9254902, 1)
 light_energy = 3.45
 
-[node name="PizzeriaLight4" type="OmniLight3D" parent="Lighting" unique_id=1527275724]
+[node name="PizzeriaLight4" type="OmniLight3D" parent="Environment/Lighting" unique_id=1527275724]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13.127879, 2.308368, -5.39094)
 light_color = Color(1, 1, 0.9254902, 1)
 light_energy = 1.953
 
-[node name="PizzeriaLight20" type="OmniLight3D" parent="Lighting" unique_id=1051743847]
+[node name="PizzeriaLight20" type="OmniLight3D" parent="Environment/Lighting" unique_id=1051743847]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.110998, 2.308368, -5.39094)
 light_color = Color(1, 1, 0.9254902, 1)
 light_energy = 2.778
 
-[node name="PizzeriaLight5" type="OmniLight3D" parent="Lighting" unique_id=837854500]
+[node name="PizzeriaLight5" type="OmniLight3D" parent="Environment/Lighting" unique_id=837854500]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -25.94965, 2.308368, -5.39094)
 light_color = Color(1, 1, 0.9254902, 1)
 light_energy = 2.778
 
-[node name="Lamp" type="SpotLight3D" parent="Lighting" unique_id=1327523990]
+[node name="Lamp" type="SpotLight3D" parent="Environment/Lighting" unique_id=1327523990]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 7.268309, 10.788387, -21.691822)
 light_color = Color(1, 1, 0.7411765, 1)
 light_energy = 40.0
 spot_range = 14.361938
 spot_angle = 44.501743
 
-[node name="Lamp26" type="SpotLight3D" parent="Lighting" unique_id=1907292966]
+[node name="Lamp26" type="SpotLight3D" parent="Environment/Lighting" unique_id=1907292966]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 21.288136, 8.479602, -22.216274)
 light_color = Color(1, 1, 0.7411765, 1)
 light_energy = 21.71
 spot_range = 14.361938
 spot_angle = 44.501743
 
-[node name="Lamp27" type="SpotLight3D" parent="Lighting" unique_id=1734943728]
+[node name="Lamp27" type="SpotLight3D" parent="Environment/Lighting" unique_id=1734943728]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 19.821327, 8.479602, -18.096394)
 light_color = Color(1, 1, 0.7411765, 1)
 light_energy = 8.395
 spot_range = 14.361938
 spot_angle = 44.501743
 
-[node name="Lamp6" type="SpotLight3D" parent="Lighting" unique_id=318180263]
+[node name="Lamp6" type="SpotLight3D" parent="Environment/Lighting" unique_id=318180263]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -14.82505, 3.4360473, -4.5708184)
 light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
 light_energy = 0.111
 spot_range = 51.321716
 spot_angle = 44.501743
 
-[node name="Lamp10" type="SpotLight3D" parent="Lighting" unique_id=1217093783]
+[node name="Lamp10" type="SpotLight3D" parent="Environment/Lighting" unique_id=1217093783]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 25.535854, 3.7512062, -5.6571364)
 light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
 light_energy = 3.0
 spot_range = 51.321716
 spot_angle = 44.501743
 
-[node name="Lamp11" type="SpotLight3D" parent="Lighting" unique_id=346377340]
+[node name="Lamp11" type="SpotLight3D" parent="Environment/Lighting" unique_id=346377340]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 28.75455, 3.7512062, -5.6571364)
 light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
 light_energy = 3.0
 spot_range = 51.321716
 spot_angle = 44.501743
 
-[node name="Lamp12" type="SpotLight3D" parent="Lighting" unique_id=1284183463]
+[node name="Lamp12" type="SpotLight3D" parent="Environment/Lighting" unique_id=1284183463]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 32.878876, 3.7512062, -5.6571364)
 light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
 light_energy = 3.0
 spot_range = 51.321716
 spot_angle = 44.501743
 
-[node name="Lamp13" type="SpotLight3D" parent="Lighting" unique_id=1189487526]
+[node name="Lamp13" type="SpotLight3D" parent="Environment/Lighting" unique_id=1189487526]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 36.32729, 3.7512062, -5.6571364)
 light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
 light_energy = 3.0
 spot_range = 51.321716
 spot_angle = 44.501743
 
-[node name="Lamp14" type="SpotLight3D" parent="Lighting" unique_id=1995113921]
+[node name="Lamp14" type="SpotLight3D" parent="Environment/Lighting" unique_id=1995113921]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 25.535854, 3.7512062, -8.998313)
 light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
 light_energy = 3.0
 spot_range = 51.321716
 spot_angle = 44.501743
 
-[node name="Lamp15" type="SpotLight3D" parent="Lighting" unique_id=671709512]
+[node name="Lamp15" type="SpotLight3D" parent="Environment/Lighting" unique_id=671709512]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 28.75455, 3.7512062, -8.998313)
 light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
 light_energy = 3.0
 spot_range = 51.321716
 spot_angle = 44.501743
 
-[node name="Lamp16" type="SpotLight3D" parent="Lighting" unique_id=772662198]
+[node name="Lamp16" type="SpotLight3D" parent="Environment/Lighting" unique_id=772662198]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 32.878876, 3.7512062, -8.998313)
 light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
 light_energy = 3.0
 spot_range = 51.321716
 spot_angle = 44.501743
 
-[node name="Lamp17" type="SpotLight3D" parent="Lighting" unique_id=479357695]
+[node name="Lamp17" type="SpotLight3D" parent="Environment/Lighting" unique_id=479357695]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 36.32729, 3.7512062, -8.998313)
 light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
 light_energy = 3.0
 spot_range = 51.321716
 spot_angle = 44.501743
 
-[node name="Lamp18" type="SpotLight3D" parent="Lighting" unique_id=1072917794]
+[node name="Lamp18" type="SpotLight3D" parent="Environment/Lighting" unique_id=1072917794]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 25.535854, 3.7512062, -12.283393)
 light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
 light_energy = 0.955
 spot_range = 51.321716
 spot_angle = 44.501743
 
-[node name="Lamp19" type="SpotLight3D" parent="Lighting" unique_id=991263189]
+[node name="Lamp19" type="SpotLight3D" parent="Environment/Lighting" unique_id=991263189]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 28.75455, 3.7512062, -12.283393)
 light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
 light_energy = 0.955
 spot_range = 51.321716
 spot_angle = 44.501743
 
-[node name="Lamp20" type="SpotLight3D" parent="Lighting" unique_id=893775183]
+[node name="Lamp20" type="SpotLight3D" parent="Environment/Lighting" unique_id=893775183]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 32.878876, 3.7512062, -12.283393)
 light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
 light_energy = 0.955
 spot_range = 51.321716
 spot_angle = 44.501743
 
-[node name="Lamp21" type="SpotLight3D" parent="Lighting" unique_id=324537746]
+[node name="Lamp21" type="SpotLight3D" parent="Environment/Lighting" unique_id=324537746]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 36.32729, 3.7512062, -12.283393)
 light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
 light_energy = 0.955
 spot_range = 51.321716
 spot_angle = 44.501743
 
-[node name="Lamp22" type="SpotLight3D" parent="Lighting" unique_id=1437574872]
+[node name="Lamp22" type="SpotLight3D" parent="Environment/Lighting" unique_id=1437574872]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 25.535854, 3.7512062, -15.839867)
 light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
 light_energy = 0.59
 spot_range = 51.321716
 spot_angle = 44.501743
 
-[node name="Lamp28" type="SpotLight3D" parent="Lighting" unique_id=1134091850]
+[node name="Lamp28" type="SpotLight3D" parent="Environment/Lighting" unique_id=1134091850]
 transform = Transform3D(1, 0, 0, 0, -0.5089964, 0.8607687, 0, -0.8607687, -0.5089964, 26.933289, 3.7512062, -17.58764)
 light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
 light_energy = 3.0
 spot_range = 51.321716
 spot_angle = 44.501743
 
-[node name="Lamp29" type="SpotLight3D" parent="Lighting" unique_id=420694503]
+[node name="Lamp29" type="SpotLight3D" parent="Environment/Lighting" unique_id=420694503]
 transform = Transform3D(1, 0, 0, 0, -0.99842125, 0.05616993, 0, -0.05616993, -0.99842125, 26.933289, 1.6185584, -18.946203)
 light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
 light_energy = 1.29
 spot_range = 51.321716
 spot_angle = 44.501743
 
-[node name="Lamp23" type="SpotLight3D" parent="Lighting" unique_id=1608767498]
+[node name="Lamp23" type="SpotLight3D" parent="Environment/Lighting" unique_id=1608767498]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 28.75455, 3.7512062, -15.839867)
 light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
 light_energy = 0.7
 spot_range = 51.321716
 spot_angle = 44.501743
 
-[node name="Lamp24" type="SpotLight3D" parent="Lighting" unique_id=1803978126]
+[node name="Lamp24" type="SpotLight3D" parent="Environment/Lighting" unique_id=1803978126]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 32.878876, 3.7512062, -15.839867)
 light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
 light_energy = 0.7
 spot_range = 51.321716
 spot_angle = 44.501743
 
-[node name="Lamp25" type="SpotLight3D" parent="Lighting" unique_id=585921945]
+[node name="Lamp25" type="SpotLight3D" parent="Environment/Lighting" unique_id=585921945]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 36.32729, 3.7512062, -15.839867)
 light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
 light_energy = 0.59
 spot_range = 51.321716
 spot_angle = 44.501743
 
-[node name="Lamp7" type="SpotLight3D" parent="Lighting" unique_id=42326513]
+[node name="Lamp7" type="SpotLight3D" parent="Environment/Lighting" unique_id=42326513]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -14.82505, 3.4360473, -6.393129)
 light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
 light_energy = 1.193
 spot_range = 51.321716
 spot_angle = 44.501743
 
-[node name="Lamp8" type="SpotLight3D" parent="Lighting" unique_id=892589631]
+[node name="Lamp8" type="SpotLight3D" parent="Environment/Lighting" unique_id=892589631]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -18.84093, 3.4360473, -6.393129)
 light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
 light_energy = 1.667
 spot_range = 51.321716
 spot_angle = 44.501743
 
-[node name="Lamp9" type="SpotLight3D" parent="Lighting" unique_id=191735631]
+[node name="Lamp9" type="SpotLight3D" parent="Environment/Lighting" unique_id=191735631]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -18.84093, 3.4360473, -4.571615)
 light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
 light_energy = 0.384
 spot_range = 51.321716
 spot_angle = 44.501743
 
-[node name="PizzeriaLight44" type="OmniLight3D" parent="Lighting" unique_id=1768677677]
+[node name="PizzeriaLight44" type="OmniLight3D" parent="Environment/Lighting" unique_id=1768677677]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18.09094, 2.308368, 15.532433)
 light_color = Color(1, 1, 0.9254902, 1)
 light_energy = 3.45
 
-[node name="PizzeriaLight45" type="OmniLight3D" parent="Lighting" unique_id=1361559904]
+[node name="PizzeriaLight45" type="OmniLight3D" parent="Environment/Lighting" unique_id=1361559904]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13.127879, 2.308368, 15.532433)
 light_color = Color(1, 1, 0.9254902, 1)
 light_energy = 1.953
 
-[node name="PizzeriaLight46" type="OmniLight3D" parent="Lighting" unique_id=1508068559]
+[node name="PizzeriaLight46" type="OmniLight3D" parent="Environment/Lighting" unique_id=1508068559]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.110998, 2.308368, 15.532433)
 light_color = Color(1, 1, 0.9254902, 1)
 light_energy = 2.778
 
-[node name="PizzeriaLight47" type="OmniLight3D" parent="Lighting" unique_id=1850192657]
+[node name="PizzeriaLight47" type="OmniLight3D" parent="Environment/Lighting" unique_id=1850192657]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -25.94965, 2.308368, 15.532433)
 light_color = Color(1, 1, 0.9254902, 1)
 light_energy = 2.778
 
-[node name="Lamp30" type="SpotLight3D" parent="Lighting" unique_id=904111062]
+[node name="Lamp30" type="SpotLight3D" parent="Environment/Lighting" unique_id=904111062]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -14.82505, 3.4360473, 16.352554)
 light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
 light_energy = 0.111
 spot_range = 51.321716
 spot_angle = 44.501743
 
-[node name="Lamp31" type="SpotLight3D" parent="Lighting" unique_id=955224648]
+[node name="Lamp31" type="SpotLight3D" parent="Environment/Lighting" unique_id=955224648]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -14.82505, 3.4360473, 14.530243)
 light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
 light_energy = 1.193
 spot_range = 51.321716
 spot_angle = 44.501743
 
-[node name="Lamp32" type="SpotLight3D" parent="Lighting" unique_id=1647142922]
+[node name="Lamp32" type="SpotLight3D" parent="Environment/Lighting" unique_id=1647142922]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -18.84093, 3.4360473, 14.530243)
 light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
 light_energy = 1.667
 spot_range = 51.321716
 spot_angle = 44.501743
 
-[node name="Lamp33" type="SpotLight3D" parent="Lighting" unique_id=411187864]
+[node name="Lamp33" type="SpotLight3D" parent="Environment/Lighting" unique_id=411187864]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -18.84093, 3.4360473, 16.351757)
 light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
 light_energy = 0.384
 spot_range = 51.321716
 spot_angle = 44.501743
 
-[node name="PizzeriaLight48" type="OmniLight3D" parent="Lighting" unique_id=1161420117]
+[node name="PizzeriaLight48" type="OmniLight3D" parent="Environment/Lighting" unique_id=1161420117]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18.09094, 2.308368, 38.374763)
 light_color = Color(1, 1, 0.9254902, 1)
 light_energy = 3.45
 
-[node name="PizzeriaLight49" type="OmniLight3D" parent="Lighting" unique_id=939502676]
+[node name="PizzeriaLight49" type="OmniLight3D" parent="Environment/Lighting" unique_id=939502676]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13.127879, 2.308368, 38.374763)
 light_color = Color(1, 1, 0.9254902, 1)
 light_energy = 1.953
 
-[node name="PizzeriaLight50" type="OmniLight3D" parent="Lighting" unique_id=1618939979]
+[node name="PizzeriaLight50" type="OmniLight3D" parent="Environment/Lighting" unique_id=1618939979]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.110998, 2.308368, 38.374763)
 light_color = Color(1, 1, 0.9254902, 1)
 light_energy = 2.778
 
-[node name="PizzeriaLight51" type="OmniLight3D" parent="Lighting" unique_id=1802340758]
+[node name="PizzeriaLight51" type="OmniLight3D" parent="Environment/Lighting" unique_id=1802340758]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -25.94965, 2.308368, 38.374763)
 light_color = Color(1, 1, 0.9254902, 1)
 light_energy = 2.778
 
-[node name="Lamp34" type="SpotLight3D" parent="Lighting" unique_id=1429356865]
+[node name="Lamp34" type="SpotLight3D" parent="Environment/Lighting" unique_id=1429356865]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -14.82505, 3.4360473, 39.194885)
 light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
 light_energy = 0.111
 spot_range = 51.321716
 spot_angle = 44.501743
 
-[node name="Lamp35" type="SpotLight3D" parent="Lighting" unique_id=1827352561]
+[node name="Lamp35" type="SpotLight3D" parent="Environment/Lighting" unique_id=1827352561]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -14.82505, 3.4360473, 37.372574)
 light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
 light_energy = 1.193
 spot_range = 51.321716
 spot_angle = 44.501743
 
-[node name="Lamp36" type="SpotLight3D" parent="Lighting" unique_id=636696352]
+[node name="Lamp36" type="SpotLight3D" parent="Environment/Lighting" unique_id=636696352]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -18.84093, 3.4360473, 37.372574)
 light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
 light_energy = 1.667
 spot_range = 51.321716
 spot_angle = 44.501743
 
-[node name="Lamp37" type="SpotLight3D" parent="Lighting" unique_id=1676063843]
+[node name="Lamp37" type="SpotLight3D" parent="Environment/Lighting" unique_id=1676063843]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -18.84093, 3.4360473, 39.194088)
 light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
 light_energy = 0.384
 spot_range = 51.321716
 spot_angle = 44.501743
 
-[node name="Lamp2" type="SpotLight3D" parent="Lighting" unique_id=1069850226]
+[node name="Lamp2" type="SpotLight3D" parent="Environment/Lighting" unique_id=1069850226]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 9.2743225, 10.788387, -24.651516)
 light_color = Color(1, 1, 0.7411765, 1)
 light_energy = 40.0
 spot_range = 14.361938
 spot_angle = 44.501743
 
-[node name="Lamp3" type="SpotLight3D" parent="Lighting" unique_id=282050216]
+[node name="Lamp3" type="SpotLight3D" parent="Environment/Lighting" unique_id=282050216]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 6.3195553, 10.788387, 7.648202)
 light_color = Color(1, 1, 0.7411765, 1)
 light_energy = 40.0
 spot_range = 14.361938
 spot_angle = 44.501743
 
-[node name="Lamp4" type="SpotLight3D" parent="Lighting" unique_id=117973465]
+[node name="Lamp4" type="SpotLight3D" parent="Environment/Lighting" unique_id=117973465]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -3.5059738, 10.788387, 53.155952)
 light_color = Color(1, 1, 0.7411765, 1)
 light_energy = 40.0
 spot_range = 14.361938
 spot_angle = 44.501743
 
-[node name="Lamp5" type="SpotLight3D" parent="Lighting" unique_id=1687450471]
+[node name="Lamp5" type="SpotLight3D" parent="Environment/Lighting" unique_id=1687450471]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -6.194335, 10.788387, 55.866997)
 light_color = Color(1, 1, 0.7411765, 1)
 light_energy = 40.0
 spot_range = 14.361938
 spot_angle = 44.501743
 
-[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=46975947]
+[node name="WorldEnvironment" type="WorldEnvironment" parent="Environment" unique_id=46975947]
 environment = SubResource("Environment_night")
 
-[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1173441071]
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="Environment" unique_id=1173441071]
 transform = Transform3D(-0.8660253, -0.4330129, 0.2500001, 0, 0.49999994, 0.86602545, -0.50000024, 0.74999994, -0.43301257, 0, 9.537342, 15.069515)
 light_color = Color(0.690196, 0.768627, 0.870588, 1)
 light_energy = 0.5
@@ -549,74 +551,62 @@ shadow_enabled = true
 shadow_bias = 0.793
 shadow_blur = 2.485
 
-[node name="SubViewport" type="SubViewport" parent="." unique_id=1684738092]
-disable_3d = true
-transparent_bg = true
-render_target_update_mode = 4
-
-[node name="Board2D" type="Node2D" parent="SubViewport" unique_id=68157820]
-texture_filter = 1
-
-[node name="SceneTest" parent="." unique_id=1565132887 instance=ExtResource("6_scene_test")]
+[node name="SceneTest" parent="Environment" unique_id=1565132887 instance=ExtResource("6_scene_test")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5103102, 0.35111022, 13.224117)
 script = ExtResource("7_env_collision")
 
-[node name="AudioStreamPlayer3D" type="AudioStreamPlayer3D" parent="SceneTest" unique_id=975460020]
+[node name="InvisibleLimits" type="StaticBody3D" parent="Environment" unique_id=1257874519]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.34871292, -2.2026873, 1.6779299)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Environment/InvisibleLimits" unique_id=1438111433]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.8405037, 5.63807, -23.579159)
+shape = SubResource("BoxShape3D_y4jh7")
+
+[node name="CollisionShape3D4" type="CollisionShape3D" parent="Environment/InvisibleLimits" unique_id=946437805]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 29.880638, 5.63807, -0.1797843)
+shape = SubResource("BoxShape3D_y4jh7")
+
+[node name="CollisionShape3D2" type="CollisionShape3D" parent="Environment/InvisibleLimits" unique_id=1356111733]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.62194824, 5.63807, 51.75884)
+shape = SubResource("BoxShape3D_y4jh7")
+
+[node name="CollisionShape3D3" type="CollisionShape3D" parent="Environment/InvisibleLimits" unique_id=911992209]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 37.482307, 5.63807, 18.716145)
+shape = SubResource("BoxShape3D_y4jh7")
+
+[node name="MusicZone" type="Area3D" parent="Environment" unique_id=112233445]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13.906872, 1.6950517, 16.536062)
+script = ExtResource("18_music_zone")
+MusicTrack = ExtResource("17_day_ost")
+ZoneSize = Vector3(51.375, 5.825, 81.03)
+FadeTime = 2.0
+MaxVolume = -15.0
+
+[node name="MusicZoneShape2" type="CollisionShape3D" parent="Environment/MusicZone" unique_id=998124612]
+shape = SubResource("BoxShape3D_hx8n4")
+
+[node name="Room1" type="Node3D" parent="." unique_id=1422990858]
+
+[node name="AudioStreamPlayer3D" type="AudioStreamPlayer3D" parent="Room1" unique_id=975460020]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -17.753803, 1.0170901, -17.776184)
 stream = ExtResource("4_hx8n4")
 volume_db = -5.0
 unit_size = 0.2
 autoplay = true
 
-[node name="AudioStreamPlayer3D2" type="AudioStreamPlayer3D" parent="SceneTest" unique_id=1161319522]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -17.753803, 1.0170901, 3.1471882)
-stream = ExtResource("4_hx8n4")
-volume_db = -5.0
-unit_size = 0.2
-autoplay = true
-
-[node name="AudioStreamPlayer3D3" type="AudioStreamPlayer3D" parent="SceneTest" unique_id=1017838159]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -17.753803, 1.0170901, 25.989521)
-stream = ExtResource("4_hx8n4")
-volume_db = -5.0
-unit_size = 0.2
-autoplay = true
-
-[node name="Player" parent="." unique_id=1339342590 instance=ExtResource("6_y4jh7")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.16528296, -0.22474906, -0.35706663)
-
-[node name="InvisibleLimits" type="StaticBody3D" parent="." unique_id=1257874519]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.34871292, -2.2026873, 1.6779299)
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="InvisibleLimits" unique_id=1438111433]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.8405037, 5.63807, -23.579159)
-shape = SubResource("BoxShape3D_y4jh7")
-
-[node name="CollisionShape3D4" type="CollisionShape3D" parent="InvisibleLimits" unique_id=946437805]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 29.880638, 5.63807, -0.1797843)
-shape = SubResource("BoxShape3D_y4jh7")
-
-[node name="CollisionShape3D2" type="CollisionShape3D" parent="InvisibleLimits" unique_id=1356111733]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.62194824, 5.63807, 51.75884)
-shape = SubResource("BoxShape3D_y4jh7")
-
-[node name="CollisionShape3D3" type="CollisionShape3D" parent="InvisibleLimits" unique_id=911992209]
-transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 37.482307, 5.63807, 18.716145)
-shape = SubResource("BoxShape3D_y4jh7")
-
-[node name="mesa_poker" parent="." unique_id=1994558787 instance=ExtResource("8_f140w")]
+[node name="mesa_poker" parent="Room1" unique_id=1994558787 instance=ExtResource("8_f140w")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.4568543, 0.34357727, -5.255393)
 
-[node name="Interactable" type="Node3D" parent="mesa_poker" unique_id=314159265]
+[node name="Interactable" type="Node3D" parent="Room1/mesa_poker" unique_id=314159265]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 1, 1)
 script = ExtResource("13_interactable_script")
 HighlightTargetMesh = NodePath("")
 HighlightThickness = 3.0
 
-[node name="tablero" parent="." unique_id=779359470 instance=ExtResource("9_0iob3")]
+[node name="tablero" parent="Room1" unique_id=779359470 instance=ExtResource("9_0iob3")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.4535146, 0.8352988, -5.248031)
 
-[node name="Interactable" type="Node3D" parent="tablero" unique_id=875346245]
+[node name="Interactable" type="Node3D" parent="Room1/tablero" unique_id=875346245]
 script = ExtResource("13_interactable_script")
 ShowExclamation = true
 ExclamationOffset = Vector3(0, 1, 0)
@@ -625,79 +615,35 @@ CustomFont = ExtResource("9_xc4hf")
 HighlightTargetMesh = NodePath("")
 HighlightThickness = 3.0
 
-[node name="left_door" parent="." unique_id=1408443076 instance=ExtResource("10_4b75m")]
+[node name="left_door" parent="Room1" unique_id=1408443076 instance=ExtResource("10_4b75m")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.571119, 1.1142102, -4.5296316)
 script = ExtResource("12_door_script")
 OpenAngle = -120.0
 LinkedDoorPath = NodePath("../right_door")
 
-[node name="Interactable" type="Node3D" parent="left_door" unique_id=1068874910]
+[node name="Interactable" type="Node3D" parent="Room1/left_door" unique_id=1068874910]
 script = ExtResource("13_interactable_script")
 PromptText = ""
 ExclamationOffset = Vector3(0, 2, 0)
 HighlightThickness = 7.0
 
-[node name="right_door" parent="." unique_id=270909310 instance=ExtResource("11_8ju71")]
+[node name="right_door" parent="Room1" unique_id=270909310 instance=ExtResource("11_8ju71")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.571119, 1.1142102, -6.1595936)
 script = ExtResource("12_door_script")
 LinkedDoorPath = NodePath("../left_door")
 
-[node name="Interactable" type="Node3D" parent="right_door" unique_id=1732529641]
+[node name="Interactable" type="Node3D" parent="Room1/right_door" unique_id=1732529641]
 script = ExtResource("13_interactable_script")
 PromptText = ""
 HighlightThickness = 7.0
 
-[node name="left_door2" parent="." unique_id=276129115 instance=ExtResource("10_4b75m")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.571119, 1.1142102, 16.247717)
-script = ExtResource("12_door_script")
-OpenAngle = -120.0
-LinkedDoorPath = NodePath("../right_door2")
-
-[node name="Interactable" type="Node3D" parent="left_door2" unique_id=1411790049]
-script = ExtResource("13_interactable_script")
-PromptText = ""
-ExclamationOffset = Vector3(0, 2, 0)
-HighlightThickness = 7.0
-
-[node name="right_door2" parent="." unique_id=903378191 instance=ExtResource("11_8ju71")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.571119, 1.1142102, 14.617755)
-script = ExtResource("12_door_script")
-LinkedDoorPath = NodePath("../left_door2")
-
-[node name="Interactable" type="Node3D" parent="right_door2" unique_id=1510353381]
-script = ExtResource("13_interactable_script")
-PromptText = ""
-HighlightThickness = 7.0
-
-[node name="left_door3" parent="." unique_id=1528410969 instance=ExtResource("10_4b75m")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.571119, 1.1142102, 39.036594)
-script = ExtResource("12_door_script")
-OpenAngle = -120.0
-LinkedDoorPath = NodePath("../right_door3")
-
-[node name="Interactable" type="Node3D" parent="left_door3" unique_id=1025236678]
-script = ExtResource("13_interactable_script")
-PromptText = ""
-ExclamationOffset = Vector3(0, 2, 0)
-HighlightThickness = 7.0
-
-[node name="right_door3" parent="." unique_id=206626883 instance=ExtResource("11_8ju71")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.571119, 1.1142102, 37.406635)
-script = ExtResource("12_door_script")
-LinkedDoorPath = NodePath("../left_door3")
-
-[node name="Interactable" type="Node3D" parent="right_door3" unique_id=48348540]
-script = ExtResource("13_interactable_script")
-PromptText = ""
-HighlightThickness = 7.0
-
-[node name="Registration Clipboard" parent="." unique_id=1320131793 instance=ExtResource("12_xb4mg")]
+[node name="Registration Clipboard" parent="Room1" unique_id=1320131793 instance=ExtResource("12_xb4mg")]
 transform = Transform3D(0.64261377, 0.7661903, 0, -0.7661903, 0.64261377, 0, 0, 0, 1, -6.602612, 1.2585282, -5.2168026)
 
-[node name="SignIn Clipboard" parent="." unique_id=940128104 instance=ExtResource("11_xb4mg")]
+[node name="SignIn Clipboard" parent="Room1" unique_id=940128104 instance=ExtResource("11_xb4mg")]
 transform = Transform3D(0.6836178, 0.7298402, 0, -0.7298402, 0.6836178, 0, 0, 0, 1, -6.5365396, 1.1847054, -4.941431)
 
-[node name="Interactable" type="Node3D" parent="SignIn Clipboard" unique_id=918273645]
+[node name="Interactable" type="Node3D" parent="Room1/SignIn Clipboard" unique_id=918273645]
 script = ExtResource("13_interactable_script")
 PromptText = "Sign In"
 UseLeftClick = true
@@ -709,50 +655,106 @@ HighlightTargetMesh = NodePath("")
 HighlightThickness = 1.0
 UseShellHighlight = true
 
-[node name="ClipboardController" type="Node" parent="." unique_id=55667788]
+[node name="ClipboardController" type="Node" parent="Room1" unique_id=55667788]
 script = ExtResource("15_clipboard_ctrl")
 
-[node name="BurnAudioPlayer" type="AudioStreamPlayer3D" parent="." unique_id=99887766]
+[node name="BurnAudioPlayer" type="AudioStreamPlayer3D" parent="Room1" unique_id=99887766]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.5255294, 1.2, -5)
 stream = ExtResource("16_burn_fx")
 volume_db = -2.0
 unit_size = 5.0
 
-[node name="MusicZone" type="Area3D" parent="." unique_id=112233445]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13.906872, 1.6950517, 16.536062)
-script = ExtResource("18_music_zone")
-MusicTrack = ExtResource("17_day_ost")
-ZoneSize = Vector3(51.375, 5.825, 81.03)
-FadeTime = 2.0
-MaxVolume = -15.0
+[node name="Room2" type="Node3D" parent="." unique_id=1167468490]
 
-[node name="MusicZoneShape2" type="CollisionShape3D" parent="MusicZone" unique_id=998124612]
-shape = SubResource("BoxShape3D_hx8n4")
+[node name="AudioStreamPlayer3D2" type="AudioStreamPlayer3D" parent="Room2" unique_id=1161319522]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -17.753803, 1.0170901, 3.1471882)
+stream = ExtResource("4_hx8n4")
+volume_db = -5.0
+unit_size = 0.2
+autoplay = true
 
-[node name="left_door_pizzeria" parent="." unique_id=1644591183 instance=ExtResource("19_c1ier")]
+[node name="left_door2" parent="Room2" unique_id=276129115 instance=ExtResource("10_4b75m")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.571119, 1.1142102, 16.247717)
+script = ExtResource("12_door_script")
+OpenAngle = -120.0
+LinkedDoorPath = NodePath("../right_door2")
+
+[node name="Interactable" type="Node3D" parent="Room2/left_door2" unique_id=1411790049]
+script = ExtResource("13_interactable_script")
+PromptText = ""
+ExclamationOffset = Vector3(0, 2, 0)
+HighlightThickness = 7.0
+
+[node name="right_door2" parent="Room2" unique_id=903378191 instance=ExtResource("11_8ju71")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.571119, 1.1142102, 14.617755)
+script = ExtResource("12_door_script")
+LinkedDoorPath = NodePath("../left_door2")
+
+[node name="Interactable" type="Node3D" parent="Room2/right_door2" unique_id=1510353381]
+script = ExtResource("13_interactable_script")
+PromptText = ""
+HighlightThickness = 7.0
+
+[node name="Room3" type="Node3D" parent="." unique_id=1614680348]
+
+[node name="AudioStreamPlayer3D3" type="AudioStreamPlayer3D" parent="Room3" unique_id=1017838159]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -17.753803, 1.0170901, 25.989521)
+stream = ExtResource("4_hx8n4")
+volume_db = -5.0
+unit_size = 0.2
+autoplay = true
+
+[node name="left_door3" parent="Room3" unique_id=1528410969 instance=ExtResource("10_4b75m")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.571119, 1.1142102, 39.036594)
+script = ExtResource("12_door_script")
+OpenAngle = -120.0
+LinkedDoorPath = NodePath("../right_door3")
+
+[node name="Interactable" type="Node3D" parent="Room3/left_door3" unique_id=1025236678]
+script = ExtResource("13_interactable_script")
+PromptText = ""
+ExclamationOffset = Vector3(0, 2, 0)
+HighlightThickness = 7.0
+
+[node name="right_door3" parent="Room3" unique_id=206626883 instance=ExtResource("11_8ju71")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.571119, 1.1142102, 37.406635)
+script = ExtResource("12_door_script")
+LinkedDoorPath = NodePath("../left_door3")
+
+[node name="Interactable" type="Node3D" parent="Room3/right_door3" unique_id=48348540]
+script = ExtResource("13_interactable_script")
+PromptText = ""
+HighlightThickness = 7.0
+
+[node name="Pizzeria" type="Node3D" parent="." unique_id=2058530922]
+
+[node name="left_door_pizzeria" parent="Pizzeria" unique_id=1644591183 instance=ExtResource("19_c1ier")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 23.646465, 1.2703688, -6.3825865)
 script = ExtResource("12_door_script")
 OpenAngle = -120.0
 LinkedDoorPath = NodePath("../right_door_pizzeria")
 
-[node name="Interactable" type="Node3D" parent="left_door_pizzeria" unique_id=2111111101]
+[node name="Interactable" type="Node3D" parent="Pizzeria/left_door_pizzeria" unique_id=2111111101]
 script = ExtResource("13_interactable_script")
 PromptText = ""
 ExclamationOffset = Vector3(0, 2, 0)
 HighlightThickness = 10.0
 
-[node name="right_door_pizzeria" parent="." unique_id=1911722681 instance=ExtResource("20_gyaec")]
+[node name="right_door_pizzeria" parent="Pizzeria" unique_id=1911722681 instance=ExtResource("20_gyaec")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 23.646465, 1.2703688, -4.419049)
 script = ExtResource("12_door_script")
 LinkedDoorPath = NodePath("../left_door_pizzeria")
 
-[node name="Interactable" type="Node3D" parent="right_door_pizzeria" unique_id=2111111102]
+[node name="Interactable" type="Node3D" parent="Pizzeria/right_door_pizzeria" unique_id=2111111102]
 script = ExtResource("13_interactable_script")
 PromptText = ""
 HighlightThickness = 10.0
 
-[node name="Mirror" type="Node3D" parent="." unique_id=-1194967295]
+[node name="Mirror" type="Node3D" parent="Pizzeria" unique_id=-1194967295]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 26.970684, 1.8415489, -17.627861)
 script = ExtResource("21_mirror")
 MirrorSize = Vector2(2.34, 3.3)
 PixelsPerUnit = 1000
+
+[node name="Player" parent="." unique_id=1339342590 instance=ExtResource("6_y4jh7")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.16528296, -0.22474906, -0.35706663)
