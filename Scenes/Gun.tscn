@@ -1,0 +1,37 @@
+[gd_scene format=3 uid="uid://bgv6wbfejnsf6"]
+
+[ext_resource type="Script" uid="uid://gwg0ihe4ljk" path="res://Scripts/Game/Gun.cs" id="1_gun_script"]
+[ext_resource type="PackedScene" uid="uid://c64l1qo4yw77e" path="res://Assets/PlayingSet/makarov.glb" id="2_makarov_model"]
+[ext_resource type="Script" uid="uid://bk7ngt4ktf6i6" path="res://Scripts/Interaction/Interactable.cs" id="3_interactable_script"]
+[ext_resource type="AudioStream" uid="uid://vfw8frgy6utn" path="res://Assets/Sound FX/gunshot_and_casing.wav" id="4_gunshot_sound"]
+[ext_resource type="PackedScene" uid="uid://dd7uf7xlh4l1w" path="res://Assets/MuzzleFlash/MuzzleFlashVFX.tscn" id="5_muzzle_flash"]
+
+[node name="Gun" type="Node3D" unique_id=1033857442]
+script = ExtResource("1_gun_script")
+HandPosition = Vector3(0.15, -0.1, -0.3)
+HandRotation = Vector3(0, 3.14159, 0)
+TransitionTime = 0.5
+ReturnDelay = 1.0
+InteractablePath = NodePath("Interactable")
+MuzzleFlashPath = NodePath("MuzzleFlashVFX")
+AudioPlayerPath = NodePath("AudioStreamPlayer3D")
+MeshRootPath = NodePath("makarov")
+
+[node name="makarov" parent="." unique_id=1909773004 instance=ExtResource("2_makarov_model")]
+
+[node name="Interactable" type="Node3D" parent="." unique_id=540061889]
+script = ExtResource("3_interactable_script")
+PromptText = "Pick up Makarov"
+UseLeftClick = true
+HandleHighlight = true
+HighlightTargetMesh = NodePath("../makarov")
+UseShellHighlight = true
+
+[node name="MuzzleFlashVFX" parent="." unique_id=987654321 instance=ExtResource("5_muzzle_flash")]
+transform = Transform3D(-8.742278e-09, 0, -0.2, 0, 0.2, 0, 0.2, 0, -8.742278e-09, 0, 0.00093844533, 0.092899606)
+preview = false
+one_shot = true
+autoplay = false
+
+[node name="AudioStreamPlayer3D" type="AudioStreamPlayer3D" parent="." unique_id=1527330691]
+stream = ExtResource("4_gunshot_sound")

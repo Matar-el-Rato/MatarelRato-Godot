@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://vfw8frgy6utn"
+path="res://.godot/imported/gunshot_and_casing.wav-46b896b9a0df854cb75619320cec1a76.sample"
+
+[deps]
+
+source_file="res://Assets/Sound FX/gunshot_and_casing.wav"
+dest_files=["res://.godot/imported/gunshot_and_casing.wav-46b896b9a0df854cb75619320cec1a76.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2

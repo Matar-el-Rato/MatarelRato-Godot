@@ -107,8 +107,16 @@ public partial class Interactable : Node3D, IInteractable
 		_highlightMeshes.Clear();
 		if (HighlightTargetMesh != null && !HighlightTargetMesh.IsEmpty)
 		{
-			var mesh = GetNodeOrNull<MeshInstance3D>(HighlightTargetMesh);
-			if (mesh != null) _highlightMeshes.Add(mesh);
+			var targetNode = GetNodeOrNull<Node>(HighlightTargetMesh);
+			if (targetNode is MeshInstance3D mesh)
+			{
+				_highlightMeshes.Add(mesh);
+			}
+			else if (targetNode != null)
+			{
+				// If it's a container (like a GLB root), find all meshes inside
+				FindMeshesRecursive(targetNode);
+			}
 		}
 		else
 		{

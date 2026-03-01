@@ -21,6 +21,7 @@ public partial class PlayerCameraController : CharacterBody3D
 	[Export] public float MouseSensitivity = 0.003f;   // rad / px
 	[Export] public float GravityMultiplier = 3.0f;    // Slightly higher for better feel
 	[Export] public NodePath CharacterModelPath = "character";
+	[Export] public bool MovementEnabled = true;
 
 	private Camera3D _camera;
 	private float    _gravity;
@@ -46,6 +47,8 @@ public partial class PlayerCameraController : CharacterBody3D
 	// ── Mouse look (Yaw on Body, Pitch on Camera) ───────────────────────────
 	public override void _UnhandledInput(InputEvent @event)
 	{
+		if (!MovementEnabled) return;
+
 		if (@event is InputEventMouseMotion mm &&
 			Input.MouseMode == Input.MouseModeEnum.Captured)
 		{
@@ -85,7 +88,7 @@ public partial class PlayerCameraController : CharacterBody3D
 		}
 
 		// ── 2. Jump (Space) ───────────────────────────────────────────────
-		if (Input.IsActionJustPressed("jump") && IsOnFloor())
+		if (MovementEnabled && Input.IsActionJustPressed("jump") && IsOnFloor())
 		{
 			vel.Y = JumpVelocity;
 		}
@@ -93,28 +96,36 @@ public partial class PlayerCameraController : CharacterBody3D
 		// ── 3. Horizontal movement ────────────────────────────────────────
 		var direction = Vector3.Zero;
 
-		if (Input.IsActionPressed("move_forward"))
-			direction -= Transform.Basis.Z;
-
-		if (Input.IsActionPressed("move_backward"))
-			direction += Transform.Basis.Z;
-
-		if (Input.IsActionPressed("move_left"))
-			direction -= Transform.Basis.X;
-
-		if (Input.IsActionPressed("move_right"))
-			direction += Transform.Basis.X;
-
-		direction.Y = 0f;
-
-		if (direction.LengthSquared() > 0f)
-			direction = direction.Normalized();
-
-		if (direction != Vector3.Zero)
+		if (MovementEnabled)
 		{
-			float speed = Input.IsActionPressed("sprint") ? SprintSpeed : WalkSpeed;
-			vel.X = direction.X * speed;
-			vel.Z = direction.Z * speed;
+			if (Input.IsActionPressed("move_forward"))
+				direction -= Transform.Basis.Z;
+
+			if (Input.IsActionPressed("move_backward"))
+				direction += Transform.Basis.Z;
+
+			if (Input.IsActionPressed("move_left"))
+				direction -= Transform.Basis.X;
+
+			if (Input.IsActionPressed("move_right"))
+				direction += Transform.Basis.X;
+
+			direction.Y = 0f;
+
+			if (direction.LengthSquared() > 0f)
+				direction = direction.Normalized();
+
+			if (direction != Vector3.Zero)
+			{
+				float speed = Input.IsActionPressed("sprint") ? SprintSpeed : WalkSpeed;
+				vel.X = direction.X * speed;
+				vel.Z = direction.Z * speed;
+			}
+			else
+			{
+				vel.X = Mathf.MoveToward(vel.X, 0f, WalkSpeed);
+				vel.Z = Mathf.MoveToward(vel.Z, 0f, WalkSpeed);
+			}
 		}
 		else
 		{

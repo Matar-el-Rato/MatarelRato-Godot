@@ -27,6 +27,13 @@ public partial class WelcomeScreen : Control
 		_registerButton.MouseExited += () => OnHoverEnded(_registerButton);
 		_loginButton.MouseEntered += () => OnHoverStarted(_loginButton);
 		_loginButton.MouseExited += () => OnHoverEnded(_loginButton);
+
+		// Disable player movement in the background scene
+		var player = GetNodeOrNull<PlayerCameraController>("BackgroundParent/BackgroundViewport/SubViewport/MainSceneInstance/Player");
+		if (player != null)
+		{
+			player.MovementEnabled = false;
+		}
 	}
 
 	private void OnRegisterPressed()
@@ -62,8 +69,27 @@ public partial class WelcomeScreen : Control
 
 	private void ProceedToMainScene()
 	{
-		// Back to pixelated look for the actual game
-		GetWindow().ContentScaleMode = Window.ContentScaleModeEnum.Viewport;
-		GetTree().ChangeSceneToFile(MainScenePath);
+		// Native resolution for UI clarity (including Chat)
+		GetWindow().ContentScaleMode = Window.ContentScaleModeEnum.CanvasItems;
+		
+		var mainScene = GetNodeOrNull<Node3D>("BackgroundParent/BackgroundViewport/SubViewport/MainSceneInstance");
+		if (mainScene != null)
+		{
+			// Reparent to root so it persists when WelcomeScreen is freed
+			mainScene.GetParent().RemoveChild(mainScene);
+			GetTree().Root.AddChild(mainScene);
+			GetTree().CurrentScene = mainScene;
+
+			// Re-enable player movement
+			var player = mainScene.GetNodeOrNull<PlayerCameraController>("Player");
+			if (player != null)
+			{
+				player.MovementEnabled = true;
+				// Capture mouse for gameplay
+				Input.MouseMode = Input.MouseModeEnum.Captured;
+			}
+		}
+
+		QueueFree();
 	}
 }
