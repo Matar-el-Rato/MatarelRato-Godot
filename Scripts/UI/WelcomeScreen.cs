@@ -11,8 +11,8 @@ public partial class WelcomeScreen : Control
 
 	public override void _Ready()
 	{
-		// Native resolution for UI clarity on welcome screen
-		GetWindow().ContentScaleMode = Window.ContentScaleModeEnum.CanvasItems;
+		// Viewport resolution for pixelated look
+		GetWindow().ContentScaleMode = Window.ContentScaleModeEnum.Viewport;
 		
 		Input.MouseMode = Input.MouseModeEnum.Visible;
 		_registerButton = GetNode<Button>("MarginContainer/HBoxContainer/LeftPanel/VBoxContainer/RegisterButton");
@@ -69,8 +69,8 @@ public partial class WelcomeScreen : Control
 
 	private void ProceedToMainScene()
 	{
-		// Native resolution for UI clarity (including Chat)
-		GetWindow().ContentScaleMode = Window.ContentScaleModeEnum.CanvasItems;
+		// Viewport resolution for pixelated gameplay and UI
+		GetWindow().ContentScaleMode = Window.ContentScaleModeEnum.Viewport;
 		
 		var mainScene = GetNodeOrNull<Node3D>("BackgroundParent/BackgroundViewport/SubViewport/MainSceneInstance");
 		if (mainScene != null)

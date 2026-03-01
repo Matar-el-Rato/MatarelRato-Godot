@@ -8,14 +8,10 @@
 
 [node name="Gun" type="Node3D" unique_id=1033857442]
 script = ExtResource("1_gun_script")
-HandPosition = Vector3(0.15, -0.1, -0.3)
 HandRotation = Vector3(0, 3.14159, 0)
-TransitionTime = 0.5
-ReturnDelay = 1.0
 InteractablePath = NodePath("Interactable")
 MuzzleFlashPath = NodePath("MuzzleFlashVFX")
 AudioPlayerPath = NodePath("AudioStreamPlayer3D")
-MeshRootPath = NodePath("makarov")
 
 [node name="makarov" parent="." unique_id=1909773004 instance=ExtResource("2_makarov_model")]
 
@@ -23,7 +19,6 @@ MeshRootPath = NodePath("makarov")
 script = ExtResource("3_interactable_script")
 PromptText = "Pick up Makarov"
 UseLeftClick = true
-HandleHighlight = true
 HighlightTargetMesh = NodePath("../makarov")
 UseShellHighlight = true
 

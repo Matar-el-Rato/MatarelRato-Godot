@@ -160,7 +160,7 @@ public partial class PlayerCameraController : CharacterBody3D
 		// Target name
 		string walkAnim = "WalkingCycle_001";
 
-		if (IsOnFloor() && direction.LengthSquared() > 0)
+		if (direction.LengthSquared() > 0.001f)
 		{
 			// ── Walking ──────────────────────────────────────────────────────
 			if (animPlayer.HasAnimation(walkAnim))

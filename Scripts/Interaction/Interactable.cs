@@ -32,6 +32,9 @@ public partial class Interactable : Node3D, IInteractable
 	[Export] public float HighlightOcclusionBias = 0.02f;
 
 	[Export] public bool UseShellHighlight = false;
+	[Export] public bool UseOverlayHighlight = false;
+	[Export] public Color OverlayColor = new Color(1, 1, 0, 0.4f);
+	[Export] public float HighlightOverlayInflation = 0.005f;
 	private ShaderMaterial _shellMaterial;
 	private static readonly string SHELL_SHADER_PATH = "res://Shaders/outline_vertex.gdshader";
 
@@ -40,7 +43,9 @@ public partial class Interactable : Node3D, IInteractable
 	private List<MeshInstance3D> _highlightMeshes = new List<MeshInstance3D>();
 	private List<MeshInstance3D> _shellMeshes = new List<MeshInstance3D>();
 	private ShaderMaterial _highlightMaterial;
+	private ShaderMaterial _overlayMaterial;
 	private static readonly string SHADER_PATH = "res://Shaders/highlight.gdshader";
+	private static readonly string OVERLAY_SHADER_PATH = "res://Shaders/overlay_highlight.gdshader";
 
 	public override void _Ready()
 	{
@@ -103,6 +108,16 @@ public partial class Interactable : Node3D, IInteractable
 		_highlightMaterial.SetShaderParameter("edge_sensitivity", HighlightEdgeSensitivity);
 		_highlightMaterial.SetShaderParameter("occlusion_bias", HighlightOcclusionBias);
 
+		if (UseOverlayHighlight)
+		{
+			_overlayMaterial = new ShaderMaterial();
+			_overlayMaterial.Shader = GD.Load<Shader>(OVERLAY_SHADER_PATH);
+			_overlayMaterial.SetShaderParameter("overlay_color", OverlayColor);
+			_overlayMaterial.SetShaderParameter("inflation", HighlightOverlayInflation);
+			_overlayMaterial.RenderPriority = 100;
+			GD.Print($"[Interactable] Initialized overlay highlight for {Name}. Priority: 100");
+		}
+
 		// Cache meshes
 		_highlightMeshes.Clear();
 		if (HighlightTargetMesh != null && !HighlightTargetMesh.IsEmpty)
@@ -140,6 +155,7 @@ public partial class Interactable : Node3D, IInteractable
 		if (node is MeshInstance3D mesh)
 		{
 			_highlightMeshes.Add(mesh);
+			GD.Print($"[Interactable] Cached mesh: {mesh.Name} for {Name}");
 		}
 		
 		foreach (Node child in node.GetChildren(true))
@@ -243,6 +259,27 @@ public partial class Interactable : Node3D, IInteractable
 				if (IsInstanceValid(shell))
 				{
 					shell.Visible = active;
+				}
+			}
+			return;
+		}
+
+		// Use Overlay highlight if enabled
+		if (UseOverlayHighlight)
+		{
+			if (_overlayMaterial == null)
+			{
+				GD.PrintErr($"[Interactable] Overlay material null for {Name} but UseOverlayHighlight is true!");
+				return;
+			}
+			
+			GD.Print($"[Interactable] Applying overlay highlight ({active}) to {_highlightMeshes.Count} meshes on {Name}");
+			foreach (var mesh in _highlightMeshes)
+			{
+				if (IsInstanceValid(mesh))
+				{
+					mesh.MaterialOverlay = active ? _overlayMaterial : null;
+					GD.Print($"[Interactable] Set MaterialOverlay on {mesh.Name} to {(active ? "material" : "null")}");
 				}
 			}
 			return;

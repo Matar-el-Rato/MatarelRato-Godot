@@ -56,7 +56,7 @@ stretch = true
 
 [node name="SubViewport" type="SubViewport" parent="BackgroundParent/BackgroundViewport" unique_id=1607203304]
 handle_input_locally = false
-size = Vector2i(800, 500)
+size = Vector2i(960, 540)
 render_target_update_mode = 4
 
 [node name="MainSceneInstance" parent="BackgroundParent/BackgroundViewport/SubViewport" unique_id=1119880947 instance=ExtResource("5_main_scene")]

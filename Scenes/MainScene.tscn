@@ -603,14 +603,8 @@ autoplay = true
 [node name="mesa_poker" parent="Room1" unique_id=1994558787 instance=ExtResource("8_f140w")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.4568543, 0.34357727, -5.255393)
 
-[node name="Interactable" type="Node3D" parent="Room1/mesa_poker" unique_id=314159265]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 1, 1)
-script = ExtResource("13_interactable_script")
-HighlightTargetMesh = NodePath("")
-HighlightThickness = 3.0
-
 [node name="tablero" parent="Room1" unique_id=779359470 instance=ExtResource("9_0iob3")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.4535146, 0.74391806, -5.248031)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.4535146, 0.7492097, -5.248031)
 
 [node name="Interactable" type="Node3D" parent="Room1/tablero" unique_id=875346245]
 script = ExtResource("13_interactable_script")
@@ -620,6 +614,7 @@ ExclamationScale = 6.0
 CustomFont = ExtResource("9_xc4hf")
 HighlightTargetMesh = NodePath("")
 HighlightThickness = 3.0
+UseOverlayHighlight = true
 
 [node name="left_door" parent="Room1" unique_id=1408443076 instance=ExtResource("10_4b75m")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.571119, 1.1142102, -4.5296316)
@@ -645,6 +640,17 @@ HighlightThickness = 7.0
 
 [node name="chair" parent="Room1" unique_id=15228684 instance=ExtResource("18_bpy1e")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.4105206, 0.4724453, -3.7424717)
+
+[node name="Interactable" type="Node3D" parent="Room1/chair" unique_id=1449166664]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.042994022, 0.2767644, -1.5055594)
+script = ExtResource("13_interactable_script")
+ShowExclamation = true
+ExclamationOffset = Vector3(0, 1, 0)
+ExclamationScale = 6.0
+CustomFont = ExtResource("9_xc4hf")
+HighlightTargetMesh = NodePath("")
+HighlightThickness = 3.0
+UseShellHighlight = true
 
 [node name="chair2" parent="Room1" unique_id=1754829362 instance=ExtResource("18_bpy1e")]
 transform = Transform3D(-1, 0, 8.742278e-08, 0, 1, 0, -8.742278e-08, 0, -1, -7.4105206, 0.4724453, -6.739193)

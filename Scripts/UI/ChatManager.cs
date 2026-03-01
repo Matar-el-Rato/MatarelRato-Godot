@@ -32,7 +32,7 @@ public partial class ChatManager : Control
 		
 		// Initial closed state: Input hidden, Spacer takes the 16px to reserve position
 		_inputWrapper.Visible = false;
-		_bottomSpacer.CustomMinimumSize = new Vector2(0, 16);
+		_bottomSpacer.CustomMinimumSize = new Vector2(0, 24);
 		
 		_chatInput.TextSubmitted += OnTextSubmitted;
 		
@@ -126,7 +126,7 @@ public partial class ChatManager : Control
 		// Swap input zone back for spacer to maintain history position
 		_chatInput.Visible = false;
 		_inputWrapper.Visible = false;
-		_bottomSpacer.CustomMinimumSize = new Vector2(0, 16);
+		_bottomSpacer.CustomMinimumSize = new Vector2(0, 24);
 		
 		_chatInput.ReleaseFocus();
 		_chatInput.Clear();
