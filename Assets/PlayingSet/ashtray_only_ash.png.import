@@ -2,17 +2,20 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://c751wlbpgfqxd"
-path.s3tc="res://.godot/imported/flash_side_01.png-3d09832b7bf78365e3ab536696e73b12.s3tc.ctex"
+uid="uid://sr22jrwqqimy"
+path.s3tc="res://.godot/imported/ashtray_only_ash.png-ca33995b24313bfabf47469412c8b9a8.s3tc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc"],
 "vram_texture": true
 }
+generator_parameters={
+"md5": "839d84994ba6e69b7b96b34e04e60abe"
+}
 
 [deps]
 
-source_file="res://Assets/MuzzleFlash/flash_side_01.png"
-dest_files=["res://.godot/imported/flash_side_01.png-3d09832b7bf78365e3ab536696e73b12.s3tc.ctex"]
+source_file="res://Assets/PlayingSet/ashtray_only_ash.png"
+dest_files=["res://.godot/imported/ashtray_only_ash.png-ca33995b24313bfabf47469412c8b9a8.s3tc.ctex"]
 
 [params]
 
