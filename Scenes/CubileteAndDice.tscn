@@ -1,0 +1,83 @@
+[gd_scene format=3 uid="uid://bqvjl1sdnarjm"]
+
+[ext_resource type="Script" uid="uid://bjdqymx2h4lho" path="res://Scripts/Interaction/CubileteController.cs" id="1_controller"]
+[ext_resource type="PackedScene" uid="uid://bh3rn64x3fims" path="res://Assets/PlayingSet/cubilete.glb" id="2_cubilete"]
+[ext_resource type="PackedScene" uid="uid://d1bkxhefi2of7" path="res://Assets/PlayingSet/dice.glb" id="3_dice"]
+[ext_resource type="Script" uid="uid://bk7ngt4ktf6i6" path="res://Scripts/Interaction/Interactable.cs" id="4_interactable"]
+[ext_resource type="AudioStream" uid="uid://dj8mveidv3f6b" path="res://Assets/Sound FX/clack_dice.wav" id="5_clack"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_cubilete"]
+size = Vector3(0.12, 0.15, 0.12)
+
+[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_dice"]
+friction = 0.4
+bounce = 0.6
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_dice"]
+size = Vector3(0.042675782, 0.042382814, 0.043295287)
+
+[node name="CubileteAndDice" type="Node3D" unique_id=740891976]
+script = ExtResource("1_controller")
+CubileteMeshPath = NodePath("cubilete")
+DicePaths = [NodePath("Dice1"), NodePath("Dice2")]
+InteractablePath = NodePath("cubilete/Interactable")
+
+[node name="cubilete" parent="." unique_id=1098885438 instance=ExtResource("2_cubilete")]
+
+[node name="Interactable" type="Node3D" parent="cubilete" unique_id=1367486348]
+script = ExtResource("4_interactable")
+PromptText = "Grab Cubilete"
+UseLeftClick = true
+AutoGenerateCollision = false
+HighlightTargetMesh = NodePath("..")
+HighlightColor = Color(1, 0.843137, 0, 1)
+UseShellHighlight = true
+
+[node name="StaticBody3D" type="StaticBody3D" parent="cubilete" unique_id=1040077810]
+collision_layer = 4
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="cubilete/StaticBody3D" unique_id=159104442]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 0)
+shape = SubResource("BoxShape3D_cubilete")
+
+[node name="Dice1" type="RigidBody3D" parent="." unique_id=365462617]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.003, 0)
+collision_layer = 4
+collision_mask = 9
+mass = 1.0
+physics_material_override = SubResource("PhysicsMaterial_dice")
+continuous_cd = true
+contact_monitor = true
+max_contacts_reported = 4
+
+[node name="CollisionSound" type="AudioStreamPlayer3D" parent="Dice1"]
+stream = ExtResource("5_clack")
+max_polyphony = 4
+bus = &"SFX"
+
+[node name="dice" parent="Dice1" unique_id=588203632 instance=ExtResource("3_dice")]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Dice1" unique_id=510181289]
+shape = SubResource("BoxShape3D_dice")
+
+[node name="Dice2" type="RigidBody3D" parent="." unique_id=438090793]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.001, 0.055752367, 0)
+collision_layer = 4
+collision_mask = 9
+mass = 1.0
+physics_material_override = SubResource("PhysicsMaterial_dice")
+continuous_cd = true
+contact_monitor = true
+max_contacts_reported = 4
+
+[node name="CollisionSound" type="AudioStreamPlayer3D" parent="Dice2"]
+stream = ExtResource("5_clack")
+max_polyphony = 4
+bus = &"SFX"
+
+[node name="dice" parent="Dice2" unique_id=1010940377 instance=ExtResource("3_dice")]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Dice2" unique_id=1577789784]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.00053711084, 0.00029297173, -0.0006118794)
+shape = SubResource("BoxShape3D_dice")

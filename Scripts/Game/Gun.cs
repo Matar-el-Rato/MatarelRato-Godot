@@ -132,7 +132,8 @@ public partial class Gun : Node3D
 			_isInHand = true;
 			_isTransitioning = false;
 			_timeSinceLastShot = 0;
-			GD.Print("Gun: Now in hand.");
+			Interactor.IsLocked = true;
+			GD.Print("Gun: Now in hand. Interaction locked.");
 		};
 	}
 
@@ -220,7 +221,8 @@ public partial class Gun : Node3D
 			_isReturning = false;
 			// Re-enable collisions when back in world
 			SetCollisionsEnabled(this, true);
-			GD.Print("Gun: Back in world.");
+			Interactor.IsLocked = false;
+			GD.Print("Gun: Back in world. Interaction unlocked.");
 		};
 	}
 }

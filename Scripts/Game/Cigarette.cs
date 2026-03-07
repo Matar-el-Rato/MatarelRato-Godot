@@ -78,7 +78,8 @@ public partial class Cigarette : Node3D
 			tweenIn.TweenProperty(_cigaretteModel, "rotation", HandRotation, TransitionTime).SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.Out);
 			
 			await ToSignal(tweenIn, Tween.SignalName.Finished);
-			GD.Print("Cigarette: Grabbed. Smoking...");
+			Interactor.IsLocked = true;
+			GD.Print("Cigarette: Grabbed. Interaction locked. Smoking...");
 
 			// 2. Smoke (Wait)
 			float smokeTime = Mathf.Max(0.1f, TotalSequenceTime - (TransitionTime * 2.0f));
@@ -148,7 +149,8 @@ public partial class Cigarette : Node3D
 			{
 				_smokeParticles.Emitting = true;
 			}
-			GD.Print("Cigarette: Sequence complete. Back in world.");
+			Interactor.IsLocked = false;
+			GD.Print("Cigarette: Sequence complete. Interaction unlocked.");
 		};
 	}
 }

@@ -6,6 +6,8 @@ public partial class Interactor : Node3D
 	[Export] public float InteractionRange = 2.0f;
 	[Export] public NodePath PromptLabelPath;
 
+	public static bool IsLocked { get; set; } = false;
+
 	private RayCast3D _rayCast;
 	private Control _promptLabel;
 	private Label _textLabel;
@@ -32,6 +34,17 @@ public partial class Interactor : Node3D
 
 	public override void _Process(double delta)
 	{
+		if (IsLocked)
+		{
+			if (_currentInteractable != null)
+			{
+				_currentInteractable.OnBlur();
+				_currentInteractable = null;
+				UpdatePrompt(false);
+			}
+			return;
+		}
+
 		CheckInteraction();
 
 		if (_currentInteractable is Interactable iNode)

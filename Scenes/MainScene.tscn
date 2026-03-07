@@ -18,6 +18,7 @@
 [ext_resource type="Script" uid="uid://xwhj5o4phi2k" path="res://Scripts/Interaction/ClipboardController.cs" id="15_clipboard_ctrl"]
 [ext_resource type="AudioStream" uid="uid://cv1yyusfc028h" path="res://Assets/Sound FX/burnfx.wav" id="16_burn_fx"]
 [ext_resource type="AudioStream" uid="uid://dclsavpljnb8a" path="res://Assets/Music/Day - No, I'm Not a Human OST.mp3" id="17_day_ost"]
+[ext_resource type="PackedScene" uid="uid://bqvjl1sdnarjm" path="res://Scenes/CubileteAndDice.tscn" id="17_mymud"]
 [ext_resource type="PackedScene" uid="uid://ce6v2ulh0yjlk" path="res://Assets/PlayingSet/chair.glb" id="18_bpy1e"]
 [ext_resource type="Script" uid="uid://cftkl2vc21msg" path="res://Scripts/Environment/MusicZone.cs" id="18_music_zone"]
 [ext_resource type="PackedScene" uid="uid://iw8e0xxwr7aq" path="res://Assets/Environment/Doors/left_door_pizzeria.glb" id="19_c1ier"]
@@ -25,7 +26,6 @@
 [ext_resource type="Script" uid="uid://b15eo4jowk2p3" path="res://Scripts/Environment/Mirror.cs" id="21_mirror"]
 [ext_resource type="PackedScene" uid="uid://dgv6wbfejnsf6" path="res://Scenes/UI/ChatUI.tscn" id="22_chat_ui"]
 [ext_resource type="PackedScene" uid="uid://cx6y1r8v7k8j2" path="res://Scenes/Cigarette.tscn" id="25_wmecs"]
-
 
 [sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_moon"]
 panorama = ExtResource("1_qxria")
@@ -591,7 +591,7 @@ MaxVolume = -15.0
 shape = SubResource("BoxShape3D_hx8n4")
 
 [node name="Gun" parent="Environment" unique_id=1033857442 instance=ExtResource("6_p5ymy")]
-transform = Transform3D(-4.6362928e-08, -1.0606601, -1.0606601, 1.5, -6.556708e-08, 0, -4.6362928e-08, -1.0606601, 1.0606601, -6.6203823, 0.75126225, -5.6136127)
+transform = Transform3D(-5.8842733e-08, -1.3461648, -0.6616949, 1.5, -6.556708e-08, 0, -2.8923605e-08, -0.6616949, 1.3461648, -6.683686, 0.75126225, -5.599998)
 
 [node name="Room1" type="Node3D" parent="." unique_id=1422990858]
 
@@ -602,12 +602,12 @@ volume_db = -5.0
 unit_size = 0.2
 autoplay = true
 
-[node name="mesa_poker" parent="Room1" unique_id=1994558787 instance=ExtResource("8_f140w")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.4568543, 0.34357727, -5.255393)
+[node name="mesa_poker" parent="Room1" unique_id=2070089762 instance=ExtResource("8_f140w")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.4568543, 0.43543047, -5.255393)
 script = ExtResource("7_env_collision")
 
-[node name="tablero" parent="Room1" unique_id=779359470 instance=ExtResource("9_0iob3")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.4535146, 0.7350848, -5.248031)
+[node name="tablero" parent="Room1" unique_id=611242887 instance=ExtResource("9_0iob3")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.4535146, 0.7376139, -5.248031)
 
 [node name="Interactable" type="Node3D" parent="Room1/tablero" unique_id=875346245]
 script = ExtResource("13_interactable_script")
@@ -666,6 +666,9 @@ transform = Transform3D(1.3113416e-07, 0, 1, 0, 1, 0, -1, 0, 1.3113416e-07, -5.9
 
 [node name="CigaretteInteraction" parent="Room1" unique_id=154600386 instance=ExtResource("25_wmecs")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.626918, 0.77223104, -4.9571815)
+
+[node name="CubileteAndDice" parent="Room1" unique_id=740891976 instance=ExtResource("17_mymud")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.6635666, 0.8132103, -5.257575)
 
 [node name="Room2" type="Node3D" parent="." unique_id=1167468490]
 
@@ -792,4 +795,3 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.16528296, -0.22474906, -0.
 [node name="UI" type="CanvasLayer" parent="." unique_id=2111111103]
 
 [node name="ChatUI" parent="UI" unique_id=2111111104 instance=ExtResource("22_chat_ui")]
-
