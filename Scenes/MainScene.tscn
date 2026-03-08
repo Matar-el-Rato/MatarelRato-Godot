@@ -777,7 +777,7 @@ ExclamationOffset = Vector3(-0.4, 0.6, 0)
 ExclamationScale = 3.0
 CustomFont = ExtResource("9_xc4hf")
 HighlightTargetMesh = NodePath("")
-HighlightThickness = 1.0
+HighlightThickness = 3.0
 UseShellHighlight = true
 
 [node name="ClipboardController" type="Node" parent="Pizzeria" unique_id=55667788]

@@ -4,7 +4,7 @@
 [ext_resource type="PackedScene" uid="uid://bh3rn64x3fims" path="res://Assets/PlayingSet/cubilete.glb" id="2_cubilete"]
 [ext_resource type="PackedScene" uid="uid://d1bkxhefi2of7" path="res://Assets/PlayingSet/dice.glb" id="3_dice"]
 [ext_resource type="Script" uid="uid://bk7ngt4ktf6i6" path="res://Scripts/Interaction/Interactable.cs" id="4_interactable"]
-[ext_resource type="AudioStream" uid="uid://dj8mveidv3f6b" path="res://Assets/Sound FX/clack_dice.wav" id="5_clack"]
+[ext_resource type="AudioStream" uid="uid://14jkykadxaom" path="res://Assets/Sound FX/clack_dice.wav" id="5_clack"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_cubilete"]
 size = Vector3(0.12, 0.15, 0.12)

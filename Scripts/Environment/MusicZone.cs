@@ -76,16 +76,35 @@ public partial class MusicZone : Area3D
 		// ── Signals ──────────────────────────────────────────────────────────
 		BodyEntered += OnBodyEntered;
 		BodyExited  += OnBodyExited;
-		CollisionMask = 1; // player layer
+		
+		// Layer 1 is Board/Environment, Layer 2 is Player.
+		// We listen to Layer 2 (Player) by default.
+		CollisionMask = 2; 
 	}
 
 	// ─── Shape ───────────────────────────────────────────────────────────────
 
 	private void UpdateShape()
 	{
-		// Reuse existing shape node or create a new one
-		if (_collisionShape == null)
-			_collisionShape = GetNodeOrNull<CollisionShape3D>("MusicZoneShape");
+		// Reuse existing shape node regardless of name, or create a default one
+		if (_collisionShape == null || !IsInstanceValid(_collisionShape))
+		{
+			_collisionShape = GetNodeOrNull<CollisionShape3D>("MusicZoneShape") ?? 
+							 GetNodeOrNull<CollisionShape3D>("MusicZoneShape2");
+
+			if (_collisionShape == null)
+			{
+				// Fallback: search children for ANY collision shape if we still don't have one
+				foreach (var child in GetChildren())
+				{
+					if (child is CollisionShape3D cs)
+					{
+						_collisionShape = cs;
+						break;
+					}
+				}
+			}
+		}
 
 		if (_collisionShape == null || !IsInstanceValid(_collisionShape))
 		{
