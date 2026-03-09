@@ -42,19 +42,17 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 0)
 shape = SubResource("BoxShape3D_cubilete")
 
 [node name="Dice1" type="RigidBody3D" parent="." unique_id=365462617]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.003, 0)
+transform = Transform3D(0.951272, -0.30835295, 0, 0.30835295, 0.951272, 0, 0, 0, 1, 0, -0.04268602, -0.020063572)
 collision_layer = 4
 collision_mask = 9
-mass = 1.0
 physics_material_override = SubResource("PhysicsMaterial_dice")
 continuous_cd = true
 contact_monitor = true
 max_contacts_reported = 4
 
-[node name="CollisionSound" type="AudioStreamPlayer3D" parent="Dice1"]
+[node name="CollisionSound" type="AudioStreamPlayer3D" parent="Dice1" unique_id=295017305]
 stream = ExtResource("5_clack")
 max_polyphony = 4
-bus = &"SFX"
 
 [node name="dice" parent="Dice1" unique_id=588203632 instance=ExtResource("3_dice")]
 
@@ -62,19 +60,17 @@ bus = &"SFX"
 shape = SubResource("BoxShape3D_dice")
 
 [node name="Dice2" type="RigidBody3D" parent="." unique_id=438090793]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.001, 0.055752367, 0)
+transform = Transform3D(0.9948177, -0.09615405, 0.033047754, 0.10095718, 0.89561284, -0.43322647, 0.012058497, 0.43431774, 0.9006789, -0.001, 0.0015621223, 0.01504093)
 collision_layer = 4
 collision_mask = 9
-mass = 1.0
 physics_material_override = SubResource("PhysicsMaterial_dice")
 continuous_cd = true
 contact_monitor = true
 max_contacts_reported = 4
 
-[node name="CollisionSound" type="AudioStreamPlayer3D" parent="Dice2"]
+[node name="CollisionSound" type="AudioStreamPlayer3D" parent="Dice2" unique_id=806424701]
 stream = ExtResource("5_clack")
 max_polyphony = 4
-bus = &"SFX"
 
 [node name="dice" parent="Dice2" unique_id=1010940377 instance=ExtResource("3_dice")]
 
