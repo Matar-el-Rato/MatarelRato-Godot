@@ -30,9 +30,9 @@ public partial class ChatManager : Control
 		_chatHistory.Text = "";
 		_chatInput.Visible = false;
 		
-		// Initial closed state: Input hidden, Spacer takes the 16px to reserve position
+		// Initial closed state: Input hidden, Spacer takes the 28px (24 + 4 separation) to reserve position
 		_inputWrapper.Visible = false;
-		_bottomSpacer.CustomMinimumSize = new Vector2(0, 24);
+		_bottomSpacer.CustomMinimumSize = new Vector2(0, 28);
 		
 		_chatInput.TextSubmitted += OnTextSubmitted;
 		
@@ -126,7 +126,7 @@ public partial class ChatManager : Control
 		// Swap input zone back for spacer to maintain history position
 		_chatInput.Visible = false;
 		_inputWrapper.Visible = false;
-		_bottomSpacer.CustomMinimumSize = new Vector2(0, 24);
+		_bottomSpacer.CustomMinimumSize = new Vector2(0, 28);
 		
 		_chatInput.ReleaseFocus();
 		_chatInput.Clear();
@@ -173,14 +173,19 @@ public partial class ChatManager : Control
 			
 			_instance.StartFadeTimer();
 			
-			// Defer height calculation so RichTextLabel can process the new text
-			_instance.CallDeferred(MethodName.UpdateLayout);
-			_instance.CallDeferred(MethodName.ScrollToBottom);
+			_instance.HandleNewMessage();
 		}
-		else
-		{
-			GD.Print("[ChatLog] " + message);
-		}
+	}
+	
+	private async void HandleNewMessage()
+	{
+		// Wait for one frame to let RichTextLabel update its internal content size
+		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+		UpdateLayout();
+		
+		// Wait another frame to let ScrollContainer handle its own resize from UpdateLayout
+		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+		ScrollToBottom();
 	}
 
 	private void UpdateLayout()
@@ -197,7 +202,6 @@ public partial class ChatManager : Control
 		float targetHeight = Mathf.Min(historyHeight, maxHeight);
 		_scrollContainer.CustomMinimumSize = new Vector2(0, targetHeight);
 		
-		GD.Print($"Chat: Layout Updated. Height: {targetHeight}, Open: {_isChatOpen}");
 	}
 
 	private void ScrollToBottom()
@@ -205,7 +209,9 @@ public partial class ChatManager : Control
 		if (_scrollContainer != null)
 		{
 			var scrollBar = _scrollContainer.GetVScrollBar();
-			scrollBar.Value = scrollBar.MaxValue;
+			// Setting value slightly above max ensures it catches the absolute bottom
+			// after layout updates.
+			scrollBar.Value = scrollBar.MaxValue + 100;
 		}
 	}
 }

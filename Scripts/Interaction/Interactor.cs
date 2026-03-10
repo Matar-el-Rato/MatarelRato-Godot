@@ -69,6 +69,7 @@ public partial class Interactor : Node3D
 			
 			if (wantsToInteract)
 			{
+				GD.Print($"[Interactor] Interacting with: {iNode.GetParent().Name} via {iNode.Name}");
 				iNode.Interact();
 			}
 		}

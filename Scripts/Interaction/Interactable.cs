@@ -195,7 +195,10 @@ public partial class Interactable : Node3D, IInteractable
 		}
 
 		Vector3 startPos = ExclamationOffset;
-		Vector3 endPos = startPos + new Vector3(0, 0.3f, 0);
+		// Bobbing height scales with the symbol size (0.075 * scale)
+		// Default scale 4.0 results in 0.3m bob
+		float bobHeight = 0.075f * ExclamationScale;
+		Vector3 endPos = startPos + new Vector3(0, bobHeight, 0);
 
 		_floatTween = CreateTween();
 		_floatTween.TweenProperty(_exclamationLabel, "position", endPos, 1.0f)

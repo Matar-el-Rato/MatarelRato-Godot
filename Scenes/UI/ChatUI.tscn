@@ -53,7 +53,7 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_bg")
 [node name="VBoxContent" type="VBoxContainer" parent="MarginContainer/VBoxOuter/PanelContainer"]
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/separation = 0
+theme_override_constants/separation = 4
 
 [node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/VBoxOuter/PanelContainer/VBoxContent"]
 unique_name_in_owner = true
@@ -76,7 +76,7 @@ bbcode_enabled = true
 fit_content = true
 autowrap_mode = 2
 scroll_active = false
-scroll_following = true
+scroll_following = false
 selection_enabled = true
 
 [node name="InputWrapper" type="Control" parent="MarginContainer/VBoxOuter/PanelContainer/VBoxContent"]

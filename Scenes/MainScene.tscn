@@ -26,6 +26,13 @@
 [ext_resource type="Script" uid="uid://b15eo4jowk2p3" path="res://Scripts/Environment/Mirror.cs" id="21_mirror"]
 [ext_resource type="PackedScene" uid="uid://dgv6wbfejnsf6" path="res://Scenes/UI/ChatUI.tscn" id="22_chat_ui"]
 [ext_resource type="PackedScene" uid="uid://cx6y1r8v7k8j2" path="res://Scenes/Cigarette.tscn" id="25_wmecs"]
+[ext_resource type="PackedScene" uid="uid://b035w31kcbj6f" path="res://Assets/Pizzeria/recepcionist_bell.glb" id="27_4sso6"]
+[ext_resource type="Script" uid="uid://bmkswcfkw2bfr" path="res://Scripts/Interaction/BellController.cs" id="28_bell_script"]
+[ext_resource type="AudioStream" uid="uid://bapkmgr80xnml" path="res://Assets/Sound FX/receptionist_bell.wav" id="29_bell_sound"]
+[ext_resource type="Script" uid="uid://bkaid1pe6sdan" path="res://Scripts/Interaction/FocusController.cs" id="30_focus_ctrl"]
+[ext_resource type="PackedScene" uid="uid://clg3gr4l72qea" path="res://Scenes/Pizzeria/SignInClipboard.tscn" id="33_signin_scene"]
+[ext_resource type="PackedScene" uid="uid://clg3gr4l72qeb" path="res://Scenes/Pizzeria/RegistrationClipboard.tscn" id="34_registration_scene"]
+[ext_resource type="Script" uid="uid://od1qyrmyk781" path="res://Scripts/Interaction/FocusInteractable.cs" id="32_focus_interactable_script"]
 
 [sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_moon"]
 panorama = ExtResource("1_qxria")
@@ -88,8 +95,8 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9.672098, 4.2356358, 36.7610
 light_color = Color(1, 1, 0.8784314, 1)
 
 [node name="PizzeriaLight7" type="OmniLight3D" parent="Environment/Lighting" unique_id=1284983761]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20.735025, 5.1901746, -8.716714)
-light_color = Color(1, 1, 0.8784314, 1)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 21.326605, 5.1901746, -8.716714)
+light_color = Color(0.6770835, 0.5336326, 0, 1)
 
 [node name="PizzeriaLight18" type="OmniLight3D" parent="Environment/Lighting" unique_id=1688351267]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 36.251694, 3.1758518, -3.7362885)
@@ -177,28 +184,31 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 33.87319, 3.1758518, 1.877999
 light_color = Color(1, 1, 0.8784314, 1)
 
 [node name="PizzeriaLight8" type="OmniLight3D" parent="Environment/Lighting" unique_id=359519226]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20.735025, 5.1901746, -10.238544)
-light_color = Color(1, 1, 0.8784314, 1)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 21.326605, 5.1901746, -10.238544)
+light_color = Color(0.6770835, 0.5336326, 0, 1)
 
 [node name="PizzeriaLight9" type="OmniLight3D" parent="Environment/Lighting" unique_id=763259010]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20.735025, 5.1901746, -11.578435)
-light_color = Color(1, 1, 0.8784314, 1)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 21.326605, 5.1901746, -11.578435)
+light_color = Color(0.6770835, 0.5336326, 0, 1)
 
 [node name="PizzeriaLight10" type="OmniLight3D" parent="Environment/Lighting" unique_id=1679894585]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20.735025, 5.1901746, -12.960259)
-light_color = Color(1, 1, 0.8784314, 1)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 21.326605, 5.1901746, -12.960259)
+light_color = Color(0.6770835, 0.5336326, 0, 1)
 
 [node name="PizzeriaLight11" type="OmniLight3D" parent="Environment/Lighting" unique_id=1994969108]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22.377872, 3.8684797, -14.558365)
-light_color = Color(1, 1, 0.8784314, 1)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22.377872, 2.316948, -14.558365)
+light_color = Color(0.7298771, 0.7045973, 0.56369805, 1)
+light_energy = 0.765
 
 [node name="PizzeriaLight12" type="OmniLight3D" parent="Environment/Lighting" unique_id=1970034305]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22.377872, 3.8684797, -10.44883)
-light_color = Color(1, 1, 0.8784314, 1)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22.377872, 2.6312613, -10.44883)
+light_color = Color(0.7298771, 0.7045973, 0.56369805, 1)
+light_energy = 0.765
 
 [node name="PizzeriaLight13" type="OmniLight3D" parent="Environment/Lighting" unique_id=1312476206]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22.377872, 3.8684797, -3.923233)
-light_color = Color(1, 1, 0.8784314, 1)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22.377872, 2.725562, -3.923233)
+light_color = Color(0.7298771, 0.7045973, 0.56369805, 1)
+light_energy = 0.555
 
 [node name="PizzeriaLight38" type="OmniLight3D" parent="Environment/Lighting" unique_id=366255547]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 21.45479, 0.8443074, -5.4291677)
@@ -210,20 +220,24 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20.080084, 0.8443074, -5.4291
 light_color = Color(1, 1, 0.8784314, 1)
 
 [node name="PizzeriaLight14" type="OmniLight3D" parent="Environment/Lighting" unique_id=254421508]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18.693594, 3.8684797, -0.42456174)
-light_color = Color(1, 1, 0.8784314, 1)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18.693594, 2.5446298, -0.42456174)
+light_color = Color(0.86185503, 0.84023947, 0.7068503, 1)
+light_energy = 0.783
 
 [node name="PizzeriaLight15" type="OmniLight3D" parent="Environment/Lighting" unique_id=1891958768]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18.693594, 3.8684797, 2.423982)
-light_color = Color(1, 1, 0.8784314, 1)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18.693594, 2.5446298, 2.423982)
+light_color = Color(0.86185503, 0.84023947, 0.7068503, 1)
+light_energy = 0.783
 
 [node name="PizzeriaLight16" type="OmniLight3D" parent="Environment/Lighting" unique_id=2129967613]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18.693594, 3.8684797, 5.738591)
-light_color = Color(1, 1, 0.8784314, 1)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18.693594, 2.5446298, 5.738591)
+light_color = Color(0.86185503, 0.84023947, 0.7068503, 1)
+light_energy = 0.783
 
 [node name="PizzeriaLight17" type="OmniLight3D" parent="Environment/Lighting" unique_id=1249630645]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18.693594, 3.8684797, 9.22573)
-light_color = Color(1, 1, 0.8784314, 1)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18.693594, 2.5446298, 9.22573)
+light_color = Color(0.86185503, 0.84023947, 0.7068503, 1)
+light_energy = 0.783
 
 [node name="PizzeriaLight3" type="OmniLight3D" parent="Environment/Lighting" unique_id=1969236887]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18.09094, 2.308368, -5.39094)
@@ -611,13 +625,16 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.4535146, 0.7376139, -5.248
 
 [node name="Interactable" type="Node3D" parent="Room1/tablero" unique_id=875346245]
 script = ExtResource("13_interactable_script")
-ShowExclamation = true
 ExclamationOffset = Vector3(0, 1, 0)
 ExclamationScale = 6.0
 CustomFont = ExtResource("9_xc4hf")
 HighlightTargetMesh = NodePath("")
 HighlightThickness = 3.0
 UseOverlayHighlight = true
+
+[node name="FocusInteractable" type="Node" parent="Room1/tablero" unique_id=609980524]
+script = ExtResource("32_focus_interactable_script")
+Distance = 0.85
 
 [node name="left_door" parent="Room1" unique_id=1408443076 instance=ExtResource("10_4b75m")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.571119, 1.1142102, -4.5296316)
@@ -643,17 +660,6 @@ HighlightThickness = 7.0
 
 [node name="chair" parent="Room1" unique_id=15228684 instance=ExtResource("18_bpy1e")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.4105206, 0.4724453, -3.7424717)
-
-[node name="Interactable" type="Node3D" parent="Room1/chair" unique_id=1449166664]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.042994022, 0.2767644, -1.5055594)
-script = ExtResource("13_interactable_script")
-ShowExclamation = true
-ExclamationOffset = Vector3(0, 1, 0)
-ExclamationScale = 6.0
-CustomFont = ExtResource("9_xc4hf")
-HighlightTargetMesh = NodePath("")
-HighlightThickness = 3.0
-UseShellHighlight = true
 
 [node name="chair2" parent="Room1" unique_id=1754829362 instance=ExtResource("18_bpy1e")]
 transform = Transform3D(-1, 0, 8.742278e-08, 0, 1, 0, -8.742278e-08, 0, -1, -7.4105206, 0.4724453, -6.739193)
@@ -762,35 +768,47 @@ script = ExtResource("21_mirror")
 MirrorSize = Vector2(2.34, 3.3)
 PixelsPerUnit = 1000
 
-[node name="Registration Clipboard" parent="Pizzeria" unique_id=1320131793 instance=ExtResource("12_xb4mg")]
-transform = Transform3D(-2.808954e-08, -3.349124e-08, 1, -0.7661903, 0.64261377, 0, -0.64261377, -0.7661903, -4.371139e-08, 33.059418, 1.2426203, -1.9206859)
+[node name="Registration Clipboard" parent="Pizzeria" unique_id=1320131793 instance=ExtResource("34_registration_scene")]
+transform = Transform3D(-0.10452851, 0, 0.9945219, 0, 1, 0, -0.9945219, 0, -0.10452851, 32.61208, 1.0352813, -1.8561821)
 
-[node name="SignIn Clipboard" parent="Pizzeria" unique_id=940128104 instance=ExtResource("11_xb4mg")]
-transform = Transform3D(-2.9881882e-08, -3.1902328e-08, 1, -0.7298402, 0.6836178, 0, -0.6836178, -0.7298402, -4.371139e-08, 33.33479, 1.1687975, -1.9867603)
-
-[node name="Interactable" type="Node3D" parent="Pizzeria/SignIn Clipboard" unique_id=918273645]
-script = ExtResource("13_interactable_script")
-PromptText = "Sign In"
-UseLeftClick = true
-ShowExclamation = true
-ExclamationOffset = Vector3(-0.4, 0.6, 0)
-ExclamationScale = 3.0
-CustomFont = ExtResource("9_xc4hf")
-HighlightTargetMesh = NodePath("")
-HighlightThickness = 3.0
-UseShellHighlight = true
+[node name="SignIn Clipboard" parent="Pizzeria" unique_id=940128104 instance=ExtResource("33_signin_scene")]
+transform = Transform3D(0.15643449, 0, 0.98768836, 0, 1, 0, -0.98768836, 0, 0.15643449, 32.937305, 1.0318031, -1.8546613)
 
 [node name="ClipboardController" type="Node" parent="Pizzeria" unique_id=55667788]
 script = ExtResource("15_clipboard_ctrl")
 
 [node name="BurnAudioPlayer" type="AudioStreamPlayer3D" parent="Pizzeria" unique_id=99887766]
-transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 33.276222, 1.1840922, -1.9977695)
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 32.87874, 1.1840922, -1.7986681)
 stream = ExtResource("16_burn_fx")
 volume_db = -2.0
 unit_size = 5.0
 
+[node name="recepcionist_bell" parent="Pizzeria" unique_id=1528646158 instance=ExtResource("27_4sso6")]
+transform = Transform3D(1.645, 0, 0, 0, 1.645, 0, 0, 0, 1.645, 33.295418, 1.0391078, -1.7534119)
+script = ExtResource("28_bell_script")
+
+[node name="Interactable" type="Node3D" parent="Pizzeria/recepcionist_bell" unique_id=609980523]
+script = ExtResource("13_interactable_script")
+PromptText = "Bell"
+UseLeftClick = true
+ShowExclamation = true
+ExclamationOffset = Vector3(0, 0.2, 0)
+ExclamationScale = 1.2
+CustomFont = ExtResource("9_xc4hf")
+HighlightThickness = 3.0
+UseShellHighlight = true
+
+[node name="BellAudio" type="AudioStreamPlayer3D" parent="Pizzeria/recepcionist_bell" unique_id=335369539]
+stream = ExtResource("29_bell_sound")
+volume_db = -5.0
+unit_size = 3.0
+
 [node name="Player" parent="." unique_id=1339342590 instance=ExtResource("6_y4jh7")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.16528296, -0.22474906, -0.35706663)
+
+[node name="FocusController" type="Node" parent="." unique_id=775295465]
+script = ExtResource("30_focus_ctrl")
+
 
 [node name="UI" type="CanvasLayer" parent="." unique_id=2111111103]
 
