@@ -3,7 +3,7 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://da36h4dfwk3eb"
+uid="uid://d3ccw53yhrvja"
 path="res://.godot/imported/main_character.glb-eadf78ae56d26a066c306a5adf137b82.scn"
 
 [deps]
@@ -32,7 +32,7 @@ animation/import=true
 animation/fps=30
 animation/trimming=false
 animation/remove_immutable_tracks=true
-animation/import_rest_as_RESET=true
+animation/import_rest_as_RESET=false
 import_script/path=""
 materials/extract=0
 materials/extract_format=0

@@ -28,6 +28,8 @@ public partial class ChatManager : Control
 		_chatInput = GetNode<LineEdit>("%ChatInput");
 		
 		_chatHistory.Text = "";
+		_chatHistory.ScrollFollowing = true;
+		_chatHistory.FitContent = true;
 		_chatInput.Visible = false;
 		
 		// Initial closed state: Input hidden, Spacer takes the 28px (24 + 4 separation) to reserve position
@@ -185,6 +187,9 @@ public partial class ChatManager : Control
 	
 	private async void HandleNewMessage()
 	{
+		// Force layout update for the container
+		_chatHistory.QueueRedraw();
+		
 		// Wait for one frame to let RichTextLabel update its internal content size
 		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
 		UpdateLayout();
@@ -207,7 +212,6 @@ public partial class ChatManager : Control
 		
 		float targetHeight = Mathf.Min(historyHeight, maxHeight);
 		_scrollContainer.CustomMinimumSize = new Vector2(0, targetHeight);
-		
 	}
 
 	private void ScrollToBottom()
@@ -215,9 +219,7 @@ public partial class ChatManager : Control
 		if (_scrollContainer != null)
 		{
 			var scrollBar = _scrollContainer.GetVScrollBar();
-			// Setting value slightly above max ensures it catches the absolute bottom
-			// after layout updates.
-			scrollBar.Value = scrollBar.MaxValue + 100;
+			scrollBar.Value = scrollBar.MaxValue;
 		}
 	}
 }

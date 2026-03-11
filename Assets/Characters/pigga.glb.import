@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://jwyxmfrbcis8"
-path="res://.godot/imported/killer_1.glb-cfb6c7a2c9897ae65a1e987245caebee.scn"
+uid="uid://bo0jrvqeuilxe"
+path="res://.godot/imported/pigga.glb-99d141f48c05de31402140af4f26fe26.scn"
 
 [deps]
 
-source_file="res://Assets/Characters/killer_1.glb"
-dest_files=["res://.godot/imported/killer_1.glb-cfb6c7a2c9897ae65a1e987245caebee.scn"]
+source_file="res://Assets/Characters/pigga.glb"
+dest_files=["res://.godot/imported/pigga.glb-99d141f48c05de31402140af4f26fe26.scn"]
 
 [params]
 

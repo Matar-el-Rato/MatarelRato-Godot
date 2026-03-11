@@ -3,7 +3,7 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://dcpynvxocdwcg"
+uid="uid://k7mpth6i0ith"
 path="res://.godot/imported/gotica_1.glb-66b2699ca3bf2924dea4de0d14e82122.scn"
 
 [deps]
@@ -32,7 +32,7 @@ animation/import=true
 animation/fps=30
 animation/trimming=false
 animation/remove_immutable_tracks=true
-animation/import_rest_as_RESET=true
+animation/import_rest_as_RESET=false
 import_script/path=""
 materials/extract=0
 materials/extract_format=0

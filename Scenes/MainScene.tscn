@@ -11,9 +11,7 @@
 [ext_resource type="FontFile" uid="uid://cw75wckal27hg" path="res://Assets/Fonts/Jersey10-Regular.ttf" id="9_xc4hf"]
 [ext_resource type="PackedScene" uid="uid://bmmkl2x7v3kix" path="res://Assets/Environment/Doors/left_door.glb" id="10_4b75m"]
 [ext_resource type="PackedScene" uid="uid://o433j6hka6uh" path="res://Assets/Environment/Doors/right_door.glb" id="11_8ju71"]
-[ext_resource type="PackedScene" uid="uid://cvc57wvgsiu8a" path="res://Assets/Miscellaneous/registration.glb" id="11_xb4mg"]
 [ext_resource type="Script" uid="uid://dquqx6un1fg6q" path="res://Scripts/Environment/Door.cs" id="12_door_script"]
-[ext_resource type="PackedScene" uid="uid://w7l26dijqujm" path="res://Assets/Miscellaneous/signin.glb" id="12_xb4mg"]
 [ext_resource type="Script" uid="uid://bk7ngt4ktf6i6" path="res://Scripts/Interaction/Interactable.cs" id="13_interactable_script"]
 [ext_resource type="Script" uid="uid://xwhj5o4phi2k" path="res://Scripts/Interaction/ClipboardController.cs" id="15_clipboard_ctrl"]
 [ext_resource type="AudioStream" uid="uid://cv1yyusfc028h" path="res://Assets/Sound FX/burnfx.wav" id="16_burn_fx"]
@@ -30,9 +28,11 @@
 [ext_resource type="Script" uid="uid://bmkswcfkw2bfr" path="res://Scripts/Interaction/BellController.cs" id="28_bell_script"]
 [ext_resource type="AudioStream" uid="uid://bapkmgr80xnml" path="res://Assets/Sound FX/receptionist_bell.wav" id="29_bell_sound"]
 [ext_resource type="Script" uid="uid://bkaid1pe6sdan" path="res://Scripts/Interaction/FocusController.cs" id="30_focus_ctrl"]
+[ext_resource type="Script" uid="uid://od1qyrmyk781" path="res://Scripts/Interaction/FocusInteractable.cs" id="32_focus_interactable_script"]
+[ext_resource type="Script" uid="uid://bmboldbjexyxg" path="res://Scripts/Interaction/Chair.cs" id="33_chair_script"]
 [ext_resource type="PackedScene" uid="uid://ikqyfcjnbajd" path="res://Scenes/Pizzeria/SignInClipboard.tscn" id="33_signin_scene"]
 [ext_resource type="PackedScene" uid="uid://p2bo4u4lncli" path="res://Scenes/Pizzeria/RegistrationClipboard.tscn" id="34_registration_scene"]
-[ext_resource type="Script" uid="uid://od1qyrmyk781" path="res://Scripts/Interaction/FocusInteractable.cs" id="32_focus_interactable_script"]
+[ext_resource type="PackedScene" path="res://Scenes/NPC.tscn" id="35_npc_scene"]
 
 [sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_moon"]
 panorama = ExtResource("1_qxria")
@@ -625,12 +625,15 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.4535146, 0.7376139, -5.248
 
 [node name="Interactable" type="Node3D" parent="Room1/tablero" unique_id=875346245]
 script = ExtResource("13_interactable_script")
+PromptText = "Focus tablero"
+InteractionAction = ""
+UseLeftClick = true
 ExclamationOffset = Vector3(0, 1, 0)
 ExclamationScale = 6.0
 CustomFont = ExtResource("9_xc4hf")
 HighlightTargetMesh = NodePath("")
 HighlightThickness = 3.0
-UseOverlayHighlight = true
+UseShellHighlight = true
 
 [node name="FocusInteractable" type="Node" parent="Room1/tablero" unique_id=609980524]
 script = ExtResource("32_focus_interactable_script")
@@ -644,7 +647,8 @@ LinkedDoorPath = NodePath("../right_door")
 
 [node name="Interactable" type="Node3D" parent="Room1/left_door" unique_id=1068874910]
 script = ExtResource("13_interactable_script")
-PromptText = ""
+PromptText = "Open Door"
+InteractionAction = ""
 ExclamationOffset = Vector3(0, 2, 0)
 HighlightThickness = 7.0
 
@@ -655,20 +659,57 @@ LinkedDoorPath = NodePath("../left_door")
 
 [node name="Interactable" type="Node3D" parent="Room1/right_door" unique_id=1732529641]
 script = ExtResource("13_interactable_script")
-PromptText = ""
+PromptText = "Open Door"
+InteractionAction = ""
 HighlightThickness = 7.0
 
 [node name="chair" parent="Room1" unique_id=15228684 instance=ExtResource("18_bpy1e")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.4105206, 0.4724453, -3.7424717)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.4105206, 0.4724453, -3.848565)
+script = ExtResource("33_chair_script")
+
+[node name="Interactable" type="Node3D" parent="Room1/chair" unique_id=1111111001]
+script = ExtResource("13_interactable_script")
+PromptText = "Sit"
+UseLeftClick = true
+HighlightColor = Color(0, 1, 1, 1)
+HighlightThickness = 3.0
+UseShellHighlight = true
 
 [node name="chair2" parent="Room1" unique_id=1754829362 instance=ExtResource("18_bpy1e")]
-transform = Transform3D(-1, 0, 8.742278e-08, 0, 1, 0, -8.742278e-08, 0, -1, -7.4105206, 0.4724453, -6.739193)
+transform = Transform3D(-1, 0, 8.742278e-08, 0, 1, 0, -8.742278e-08, 0, -1, -7.4105206, 0.4724453, -6.683965)
+script = ExtResource("33_chair_script")
+
+[node name="Interactable" type="Node3D" parent="Room1/chair2" unique_id=1111111002]
+script = ExtResource("13_interactable_script")
+PromptText = "Sit"
+UseLeftClick = true
+HighlightColor = Color(0, 1, 1, 1)
+HighlightThickness = 3.0
+UseShellHighlight = true
 
 [node name="chair3" parent="Room1" unique_id=219526553 instance=ExtResource("18_bpy1e")]
-transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -8.908881, 0.4724453, -5.2408323)
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -8.877581, 0.4724453, -5.2408323)
+script = ExtResource("33_chair_script")
+
+[node name="Interactable" type="Node3D" parent="Room1/chair3" unique_id=1111111003]
+script = ExtResource("13_interactable_script")
+PromptText = "Sit"
+UseLeftClick = true
+HighlightColor = Color(0, 1, 1, 1)
+HighlightThickness = 3.0
+UseShellHighlight = true
 
 [node name="chair4" parent="Room1" unique_id=1487634359 instance=ExtResource("18_bpy1e")]
-transform = Transform3D(1.3113416e-07, 0, 1, 0, 1, 0, -1, 0, 1.3113416e-07, -5.91216, 0.4724453, -5.2408323)
+transform = Transform3D(1.3113416e-07, 0, 1, 0, 1, 0, -1, 0, 1.3113416e-07, -6.0068364, 0.4724453, -5.2408323)
+script = ExtResource("33_chair_script")
+
+[node name="Interactable" type="Node3D" parent="Room1/chair4" unique_id=1111111004]
+script = ExtResource("13_interactable_script")
+PromptText = "Sit"
+UseLeftClick = true
+HighlightColor = Color(0, 1, 1, 1)
+HighlightThickness = 3.0
+UseShellHighlight = true
 
 [node name="CigaretteInteraction" parent="Room1" unique_id=154600386 instance=ExtResource("25_wmecs")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.626918, 0.77223104, -4.9571815)
@@ -693,7 +734,8 @@ LinkedDoorPath = NodePath("../right_door2")
 
 [node name="Interactable" type="Node3D" parent="Room2/left_door2" unique_id=1411790049]
 script = ExtResource("13_interactable_script")
-PromptText = ""
+PromptText = "Open Door"
+InteractionAction = ""
 ExclamationOffset = Vector3(0, 2, 0)
 HighlightThickness = 7.0
 
@@ -704,7 +746,8 @@ LinkedDoorPath = NodePath("../left_door2")
 
 [node name="Interactable" type="Node3D" parent="Room2/right_door2" unique_id=1510353381]
 script = ExtResource("13_interactable_script")
-PromptText = ""
+PromptText = "Open Door"
+InteractionAction = ""
 HighlightThickness = 7.0
 
 [node name="Room3" type="Node3D" parent="." unique_id=1614680348]
@@ -724,7 +767,8 @@ LinkedDoorPath = NodePath("../right_door3")
 
 [node name="Interactable" type="Node3D" parent="Room3/left_door3" unique_id=1025236678]
 script = ExtResource("13_interactable_script")
-PromptText = ""
+PromptText = "Open Door"
+InteractionAction = ""
 ExclamationOffset = Vector3(0, 2, 0)
 HighlightThickness = 7.0
 
@@ -735,7 +779,8 @@ LinkedDoorPath = NodePath("../left_door3")
 
 [node name="Interactable" type="Node3D" parent="Room3/right_door3" unique_id=48348540]
 script = ExtResource("13_interactable_script")
-PromptText = ""
+PromptText = "Open Door"
+InteractionAction = ""
 HighlightThickness = 7.0
 
 [node name="Pizzeria" type="Node3D" parent="." unique_id=2058530922]
@@ -748,7 +793,8 @@ LinkedDoorPath = NodePath("../right_door_pizzeria")
 
 [node name="Interactable" type="Node3D" parent="Pizzeria/left_door_pizzeria" unique_id=2111111101]
 script = ExtResource("13_interactable_script")
-PromptText = ""
+PromptText = "Open Door"
+InteractionAction = ""
 ExclamationOffset = Vector3(0, 2, 0)
 HighlightThickness = 10.0
 
@@ -759,7 +805,8 @@ LinkedDoorPath = NodePath("../left_door_pizzeria")
 
 [node name="Interactable" type="Node3D" parent="Pizzeria/right_door_pizzeria" unique_id=2111111102]
 script = ExtResource("13_interactable_script")
-PromptText = ""
+PromptText = "Open Door"
+InteractionAction = ""
 HighlightThickness = 10.0
 
 [node name="Mirror" type="Node3D" parent="Pizzeria" unique_id=-1194967295]
@@ -786,6 +833,7 @@ unit_size = 5.0
 [node name="recepcionist_bell" parent="Pizzeria" unique_id=1528646158 instance=ExtResource("27_4sso6")]
 transform = Transform3D(1.645, 0, 0, 0, 1.645, 0, 0, 0, 1.645, 33.295418, 1.0391078, -1.7534119)
 script = ExtResource("28_bell_script")
+TargetNPC = NodePath("../PiggaNPC")
 
 [node name="Interactable" type="Node3D" parent="Pizzeria/recepcionist_bell" unique_id=609980523]
 script = ExtResource("13_interactable_script")
@@ -803,12 +851,14 @@ stream = ExtResource("29_bell_sound")
 volume_db = -5.0
 unit_size = 3.0
 
+[node name="PiggaNPC" parent="Pizzeria" unique_id=947763416 instance=ExtResource("35_npc_scene")]
+transform = Transform3D(-0.21480355, 0, 0.9766573, 0, 1, 0, -0.9766573, 0, -0.21480355, 33.1, -0.028534383, -0.897762)
+
 [node name="Player" parent="." unique_id=1339342590 instance=ExtResource("6_y4jh7")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.16528296, -0.22474906, -0.35706663)
 
 [node name="FocusController" type="Node" parent="." unique_id=775295465]
 script = ExtResource("30_focus_ctrl")
-
 
 [node name="UI" type="CanvasLayer" parent="." unique_id=2111111103]
 

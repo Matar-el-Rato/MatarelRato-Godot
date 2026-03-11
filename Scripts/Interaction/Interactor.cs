@@ -52,7 +52,7 @@ public partial class Interactor : Node3D
 			bool wantsToInteract = false;
 			
 			// 1. Check for specific interaction key (Default "E")
-			if (Input.IsActionJustPressed(iNode.InteractionAction) || Input.IsActionJustPressed("interact"))
+			if ((!string.IsNullOrEmpty(iNode.InteractionAction) && Input.IsActionJustPressed(iNode.InteractionAction)) || Input.IsActionJustPressed("interact"))
 			{
 				wantsToInteract = true;
 			}
@@ -131,17 +131,14 @@ public partial class Interactor : Node3D
 	{
 		if (_promptLabel != null)
 		{
-			bool shouldShow = visible;
-			if (visible && _currentInteractable is Interactable interactableNode && interactableNode.UseLeftClick)
-			{
-				shouldShow = false;
-			}
-
-			_promptLabel.Visible = shouldShow;
+			_promptLabel.Visible = visible;
 			
-			if (shouldShow && _textLabel != null)
+			if (visible && _textLabel != null && _currentInteractable is Interactable iNode)
 			{
-				_textLabel.Text = "E";
+				string action = (iNode.InteractionAction ?? "").Trim().ToLower();
+				bool isDefaultAction = string.IsNullOrWhiteSpace(action) || action == "interact";
+				string actionText = isDefaultAction ? "" : $"[{action.ToUpper()}] ";
+				_textLabel.Text = $"{actionText}{iNode.PromptText}";
 			}
 		}
 	}

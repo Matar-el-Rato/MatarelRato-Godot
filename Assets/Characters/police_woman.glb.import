@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://jwyxmfrbcis8"
-path="res://.godot/imported/killer_1.glb-cfb6c7a2c9897ae65a1e987245caebee.scn"
+uid="uid://bc0h6r8iod2yb"
+path="res://.godot/imported/police_woman.glb-d73864ae3bde13131ce1d07d3132e346.scn"
 
 [deps]
 
-source_file="res://Assets/Characters/killer_1.glb"
-dest_files=["res://.godot/imported/killer_1.glb-cfb6c7a2c9897ae65a1e987245caebee.scn"]
+source_file="res://Assets/Characters/police_woman.glb"
+dest_files=["res://.godot/imported/police_woman.glb-d73864ae3bde13131ce1d07d3132e346.scn"]
 
 [params]
 

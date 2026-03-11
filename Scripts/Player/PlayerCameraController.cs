@@ -24,22 +24,49 @@ public partial class PlayerCameraController : CharacterBody3D
 	[Export] public bool MovementEnabled = true;
 
 	private Camera3D _camera;
+	private CollisionShape3D _collisionShape;
 	private float    _gravity;
 	private float    _pitch = 0.0f;
 	private Node3D   _activeCharacter;
+	[Export] private CharacterEntry _activeEntry;
+	private Vector3  _baseCameraPos;
+	private float    _baseFOV;
+
+	private bool     _isSitting = false;
+	private Chair    _currentChair;
+	private float    _sittingYaw = 0f;
+	private Vector3  _preSitPosition;
+	private const float SITTING_YAW_LIMIT = 1.2f; // ~70 degrees
 
 	public override void _Ready()
 	{
-		_camera = GetNode<Camera3D>("Camera3D");
-		_activeCharacter = GetNodeOrNull<Node3D>(CharacterModelPath);
-		_gravity = (float)ProjectSettings.GetSetting("physics/3d/default_gravity");
-		Input.MouseMode = Input.MouseModeEnum.Captured;
+		EnsureInitialized();
 
 		// CharacterBody3D floor settings
 		FloorSnapLength    = 0.3f;
 		FloorConstantSpeed = true;
 		FloorStopOnSlope   = true;
 		ApplyFloorSnap();
+	}
+
+	private void EnsureInitialized()
+	{
+		if (_camera == null)
+		{
+			_camera = GetNode<Camera3D>("Camera3D");
+			_baseCameraPos = _camera.Position;
+			_baseFOV = _camera.Fov;
+		}
+		if (_collisionShape == null)
+		{
+			_collisionShape = GetNodeOrNull<CollisionShape3D>("CollisionShape3D");
+		}
+		if (_activeCharacter == null)
+		{
+			_activeCharacter = GetNodeOrNull<Node3D>(CharacterModelPath);
+		}
+		_gravity = (float)ProjectSettings.GetSetting("physics/3d/default_gravity");
+		Input.MouseMode = Input.MouseModeEnum.Captured;
 	}
 
 
@@ -52,13 +79,25 @@ public partial class PlayerCameraController : CharacterBody3D
 		if (@event is InputEventMouseMotion mm &&
 			Input.MouseMode == Input.MouseModeEnum.Captured)
 		{
-			// YAW  → rotate the entire body so the character model follows.
-			RotateY(-mm.Relative.X * MouseSensitivity);
+			if (_isSitting)
+			{
+				// Clamp YAW when sitting - apply to CAMERA only to keep body still
+				_sittingYaw = Mathf.Clamp(_sittingYaw - mm.Relative.X * MouseSensitivity, -SITTING_YAW_LIMIT, SITTING_YAW_LIMIT);
+			}
+			else
+			{
+				// YAW  → rotate the entire body so the character model follows.
+				RotateY(-mm.Relative.X * MouseSensitivity);
+			}
 
 			// PITCH → tilt only the Camera, clamped to ±89°.
 			_pitch -= mm.Relative.Y * MouseSensitivity;
 			_pitch = Mathf.Clamp(_pitch, Mathf.DegToRad(-89f), Mathf.DegToRad(89f));
-			_camera.Rotation = new Vector3(_pitch, 0, 0);
+			
+			if (_isSitting)
+				_camera.Rotation = new Vector3(_pitch, _sittingYaw, 0);
+			else
+				_camera.Rotation = new Vector3(_pitch, 0, 0);
 		}
 
 		if (@event.IsActionPressed("ui_cancel"))
@@ -96,7 +135,7 @@ public partial class PlayerCameraController : CharacterBody3D
 		// ── 3. Horizontal movement ────────────────────────────────────────
 		var direction = Vector3.Zero;
 
-		if (MovementEnabled)
+		if (MovementEnabled && !_isSitting)
 		{
 			if (Input.IsActionPressed("move_forward"))
 				direction -= Transform.Basis.Z;
@@ -131,11 +170,25 @@ public partial class PlayerCameraController : CharacterBody3D
 		{
 			vel.X = Mathf.MoveToward(vel.X, 0f, WalkSpeed);
 			vel.Z = Mathf.MoveToward(vel.Z, 0f, WalkSpeed);
+
+			if (_isSitting && (Input.IsActionJustPressed("sprint") || Input.IsKeyPressed(Key.Shift))) // Use Shift to get up
+			{
+				Unsit();
+			}
+
+			// Force camera position while sitting (overrides animation tracks)
+			if (_isSitting && _activeEntry != null)
+			{
+				_camera.Position = _baseCameraPos + _activeEntry.CameraOffset + _activeEntry.SittingCameraOffset;
+			}
 		}
 
 		// ── 4. Apply + collide ────────────────────────────────────────────
 		Velocity = vel;
-		MoveAndSlide();
+		if (!_isSitting)
+			MoveAndSlide();
+		else
+			GlobalPosition = GlobalPosition; // Stay put
 
 		// ── 5. Animations ─────────────────────────────────────────────────
 		UpdateAnimations(direction);
@@ -157,8 +210,35 @@ public partial class PlayerCameraController : CharacterBody3D
 		
 		if (animPlayer == null) return;
 
-		// Target name
+		// Target names
 		string walkAnim = "WalkingCycle_001";
+		string sitAnim = "sittingidle_001";
+
+		if (_isSitting)
+		{
+			if (animPlayer.HasAnimation(sitAnim))
+			{
+				if (animPlayer.CurrentAnimation != sitAnim)
+				{
+					var anim = animPlayer.GetAnimation(sitAnim);
+					if (anim != null) anim.LoopMode = Animation.LoopModeEnum.Linear;
+					animPlayer.Play(sitAnim);
+				}
+			}
+			return; // Don't apply further rotation fix while sitting
+		}
+
+		// If we are NOT sitting, we must NOT be playing the sit animation.
+		if (animPlayer.CurrentAnimation == sitAnim)
+		{
+			animPlayer.Stop();
+			if (animPlayer.HasAnimation(walkAnim))
+			{
+				animPlayer.Play(walkAnim);
+				animPlayer.Stop(true); // Snap to the first frame (standing)
+			}
+			GoToIdlePose(animPlayer);
+		}
 
 		if (direction.LengthSquared() > 0.001f)
 		{
@@ -192,7 +272,8 @@ public partial class PlayerCameraController : CharacterBody3D
 		var root = animPlayer.GetNodeOrNull<Node3D>(animPlayer.RootNode);
 		if (root != null)
 		{
-			float targetY = (direction.LengthSquared() > 0.001f) ? 0f : -90f;
+			float idleRot = _activeEntry?.IdleRotation ?? 0f;
+			float targetY = (direction.LengthSquared() > 0.001f) ? 0f : idleRot;
 			root.RotationDegrees = new Vector3(root.RotationDegrees.X, targetY, root.RotationDegrees.Z);
 		}
 	}
@@ -214,9 +295,13 @@ public partial class PlayerCameraController : CharacterBody3D
 	/// <summary>
 	/// Swaps the current character model with a new one, preserving orientation nesting.
 	/// </summary>
-	public void SwapCharacter(PackedScene newCharacterScene)
+	public void SwapCharacter(CharacterEntry entry)
 	{
-		if (newCharacterScene == null) return;
+		if (entry?.ModelScene == null) return;
+
+		EnsureInitialized();
+
+		_activeEntry = entry;
 
 		// We look for the orientation fix node to swap the model inside it
 		var orientationFix = GetNodeOrNull<Node3D>("character/OrientationFix");
@@ -233,20 +318,101 @@ public partial class PlayerCameraController : CharacterBody3D
 		}
 
 		// Instantiate and add the new character
-		var newModel = newCharacterScene.Instantiate<Node3D>();
+		var newModel = entry.ModelScene.Instantiate<Node3D>();
 		orientationFix.AddChild(newModel);
 		
 		// Update reference and re-initialize visuals
 		_activeCharacter = orientationFix; 
 
-		
 		// Force an animation snap for the new model
 		var animPlayer = newModel.GetNodeOrNull<AnimationPlayer>("AnimationPlayer") ?? 
 						 newModel.FindChild("AnimationPlayer", true, false) as AnimationPlayer;
-		if (animPlayer != null && animPlayer.HasAnimation("WalkingCycle_001"))
+		
+		if (animPlayer != null)
 		{
-			animPlayer.Play("WalkingCycle_001");
-			animPlayer.Stop();
+			// Set correct initial idle rotation immediately
+			var root = animPlayer.GetNodeOrNull<Node3D>(animPlayer.RootNode);
+			if (root != null)
+			{
+				root.RotationDegrees = new Vector3(root.RotationDegrees.X, entry.IdleRotation, root.RotationDegrees.Z);
+			}
+
+			if (animPlayer.HasAnimation("WalkingCycle_001"))
+			{
+				animPlayer.Play("WalkingCycle_001");
+				animPlayer.Stop();
+			}
 		}
+
+		// Apply camera offset
+		_camera.Position = _baseCameraPos + entry.CameraOffset;
+
+		// Force orientation update immediately
+		UpdateAnimations(Vector3.Zero);
+	}
+
+	public void Sit(Chair chair)
+	{
+		if (_isSitting) return;
+
+		EnsureInitialized();
+		_isSitting = true;
+		_currentChair = chair;
+		_sittingYaw = 0f;
+		_preSitPosition = GlobalPosition;
+
+		// Snap to chair
+		GlobalRotation = chair.GlobalRotation;
+		
+		Vector3 totalOffset = chair.SitOffset;
+		if (_activeEntry != null)
+		{
+			totalOffset += _activeEntry.SittingOffset;
+			// Final camera position is enforced in _PhysicsProcess while sitting
+			_camera.Position = _baseCameraPos + _activeEntry.CameraOffset + _activeEntry.SittingCameraOffset;
+		}
+		
+		GlobalPosition = chair.GlobalPosition + (chair.GlobalTransform.Basis * totalOffset);
+
+		// Adjust FOV
+		Tween fovTween = CreateTween();
+		fovTween.TweenProperty(_camera, "fov", chair.SitFOV, 0.3f).SetTrans(Tween.TransitionType.Sine);
+
+		if (_collisionShape != null)
+			_collisionShape.Disabled = true;
+
+		UpdateAnimations(Vector3.Zero);
+	}
+
+	public void Unsit()
+	{
+		if (!_isSitting) return;
+
+		_isSitting = false;
+		_currentChair = null;
+
+		if (_collisionShape != null)
+			_collisionShape.Disabled = false;
+
+		// Restore position
+		GlobalPosition = _preSitPosition;
+		
+		// Reset camera
+		_sittingYaw = 0f;
+		if (_activeEntry != null)
+		{
+			_camera.Position = _baseCameraPos + _activeEntry.CameraOffset;
+		}
+		else
+		{
+			_camera.Position = _baseCameraPos;
+		}
+		_camera.Rotation = new Vector3(_pitch, 0, 0);
+
+		// Reset FOV
+		Tween fovTween = CreateTween();
+		fovTween.TweenProperty(_camera, "fov", _baseFOV, 0.3f).SetTrans(Tween.TransitionType.Sine);
+
+		UpdateAnimations(Vector3.Zero);
 	}
 }

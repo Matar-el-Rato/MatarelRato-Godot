@@ -59,7 +59,7 @@ handle_input_locally = false
 size = Vector2i(960, 540)
 render_target_update_mode = 4
 
-[node name="MainSceneInstance" parent="BackgroundParent/BackgroundViewport/SubViewport" unique_id=1119880947 instance=ExtResource("5_main_scene")]
+[node name="MainSceneInstance" parent="BackgroundParent/BackgroundViewport/SubViewport" unique_id=2050789802 instance=ExtResource("5_main_scene")]
 
 [node name="BlurOverlay" type="ColorRect" parent="BackgroundParent" unique_id=645327295]
 material = SubResource("ShaderMaterial_blur")

@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://jwyxmfrbcis8"
-path="res://.godot/imported/killer_1.glb-cfb6c7a2c9897ae65a1e987245caebee.scn"
+uid="uid://c3g3fxjchpaf6"
+path="res://.godot/imported/black_dude.glb-2c50e6ef8557f7aa32b52f6517829cd3.scn"
 
 [deps]
 
-source_file="res://Assets/Characters/killer_1.glb"
-dest_files=["res://.godot/imported/killer_1.glb-cfb6c7a2c9897ae65a1e987245caebee.scn"]
+source_file="res://Assets/Characters/black_dude.glb"
+dest_files=["res://.godot/imported/black_dude.glb-2c50e6ef8557f7aa32b52f6517829cd3.scn"]
 
 [params]
 

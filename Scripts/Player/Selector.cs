@@ -16,6 +16,11 @@ public partial class Selector : Node
 		{
 			_playerController = GetNodeOrNull<PlayerCameraController>(PlayerControllerPath);
 		}
+
+		if (_playerController != null && Entries != null && Entries.Length > 0)
+		{
+			_playerController.SwapCharacter(Entries[0]);
+		}
 	}
 
 	public override void _UnhandledInput(InputEvent @event)
@@ -56,6 +61,6 @@ public partial class Selector : Node
 		}
 
 		string modelName = System.IO.Path.GetFileNameWithoutExtension(entry.ModelScene.ResourcePath);
-		_playerController.SwapCharacter(entry.ModelScene);
+		_playerController.SwapCharacter(entry);
 	}
 }

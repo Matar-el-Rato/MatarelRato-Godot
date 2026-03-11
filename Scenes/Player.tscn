@@ -1,58 +1,77 @@
 [gd_scene format=3 uid="uid://bpd6m0lb3j2ls"]
 
 [ext_resource type="Script" uid="uid://drfqr78qwg1xg" path="res://Scripts/Player/PlayerCameraController.cs" id="1_script"]
-[ext_resource type="PackedScene" uid="uid://da36h4dfwk3eb" path="res://Assets/Characters/main_character.glb" id="2_main_character"]
+[ext_resource type="PackedScene" uid="uid://d3ccw53yhrvja" path="res://Assets/Characters/main_character.glb" id="2_main_character"]
 [ext_resource type="FontFile" uid="uid://cw75wckal27hg" path="res://Assets/Fonts/Jersey10-Regular.ttf" id="3_font_jersey"]
 [ext_resource type="Script" uid="uid://quj6mgomerp5" path="res://Scripts/Interaction/Interactor.cs" id="4_interactor_script"]
 [ext_resource type="Script" uid="uid://cid3u71dtkj40" path="res://Scripts/Player/Selector.cs" id="5_selector_script"]
-[ext_resource type="PackedScene" uid="uid://dcpynvxocdwcg" path="res://Assets/Characters/gotica_1.glb" id="6_bhhdu"]
+[ext_resource type="PackedScene" uid="uid://k7mpth6i0ith" path="res://Assets/Characters/gotica_1.glb" id="6_bhhdu"]
 [ext_resource type="Script" uid="uid://b5qkcpdbw57ax" path="res://Scripts/Player/CharacterEntry.cs" id="6_entry_script"]
-[ext_resource type="PackedScene" uid="uid://ddw65m10ow7p5" path="res://Assets/Characters/killer_1.glb" id="7_killer_character"]
+[ext_resource type="PackedScene" uid="uid://jwyxmfrbcis8" path="res://Assets/Characters/killer_1.glb" id="7_killer_character"]
+[ext_resource type="PackedScene" uid="uid://wn4v51eqxph7" path="res://Assets/Characters/clown.glb" id="8_clown"]
+[ext_resource type="PackedScene" uid="uid://c3g3fxjchpaf6" path="res://Assets/Characters/black_dude.glb" id="9_black_dude"]
+[ext_resource type="PackedScene" uid="uid://bc0h6r8iod2yb" path="res://Assets/Characters/police_woman.glb" id="10_police_woman"]
 
 [sub_resource type="Resource" id="Resource_1"]
 script = ExtResource("6_entry_script")
 ModelScene = ExtResource("2_main_character")
 ServerId = 101
+SittingOffset = Vector3(0, -0.9, -0.1)
+SittingCameraOffset = Vector3(0.07, -0.5, -0.1)
 
 [sub_resource type="Resource" id="Resource_2"]
 script = ExtResource("6_entry_script")
 ModelScene = ExtResource("7_killer_character")
 ServerId = 102
+SittingOffset = Vector3(0, -0.9, -0.1)
+SittingCameraOffset = Vector3(0.07, -0.5, -0.1)
+CameraOffset = Vector3(0, 0, -0.05)
 
 [sub_resource type="Resource" id="Resource_megsn"]
 script = ExtResource("6_entry_script")
 ModelScene = ExtResource("6_bhhdu")
 ServerId = 103
+SittingOffset = Vector3(0, -0.9, -0.1)
+SittingCameraOffset = Vector3(0.07, -0.5, -0.1)
+
+[sub_resource type="Resource" id="Resource_clown"]
+script = ExtResource("6_entry_script")
+ModelScene = ExtResource("8_clown")
+ServerId = 104
+SittingOffset = Vector3(0, -0.9, -0.1)
+SittingCameraOffset = Vector3(0.07, -0.5, -0.1)
+
+[sub_resource type="Resource" id="Resource_black_dude"]
+script = ExtResource("6_entry_script")
+ModelScene = ExtResource("9_black_dude")
+ServerId = 105
+SittingOffset = Vector3(0, -0.9, -0.1)
+SittingCameraOffset = Vector3(0.07, -0.5, -0.1)
+
+[sub_resource type="Resource" id="Resource_police_woman"]
+script = ExtResource("6_entry_script")
+ModelScene = ExtResource("10_police_woman")
+ServerId = 106
+SittingOffset = Vector3(0, -0.9, -0.1)
+SittingCameraOffset = Vector3(0.07, -0.5, -0.1)
+CameraOffset = Vector3(0, -0.1, 0)
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_1"]
 radius = 0.25097656
 height = 1.8
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_keycap"]
-bg_color = Color(0, 0, 0, 0.8)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(1, 1, 1, 1)
-corner_radius_top_left = 2
-corner_radius_top_right = 2
-corner_radius_bottom_right = 2
-corner_radius_bottom_left = 2
-expand_margin_left = 2.0
-expand_margin_top = 2.0
-expand_margin_right = 2.0
-expand_margin_bottom = 2.0
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_prompt"]
 
-[node name="Player" type="CharacterBody3D" unique_id=1339342590]
+[node name="Player" type="CharacterBody3D" unique_id=1339342590 groups=["player"]]
 collision_layer = 2
 script = ExtResource("1_script")
 WalkSpeed = 3.0
 SprintSpeed = 6.0
+_activeEntry = SubResource("Resource_1")
 
 [node name="Selector" type="Node" parent="." unique_id=777888999]
 script = ExtResource("5_selector_script")
-Entries = [SubResource("Resource_1"), SubResource("Resource_2"), SubResource("Resource_megsn")]
+Entries = [SubResource("Resource_1"), SubResource("Resource_2"), SubResource("Resource_megsn"), SubResource("Resource_clown"), SubResource("Resource_black_dude"), SubResource("Resource_police_woman")]
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=984120229]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
@@ -66,7 +85,7 @@ transform = Transform3D(0, 0, 0.38, 0, 0.38, 0, -0.38, 0, 0, 0, 0, 0)
 [node name="MainCharacterModel" parent="character/OrientationFix" unique_id=603622022 instance=ExtResource("2_main_character")]
 
 [node name="Camera3D" type="Camera3D" parent="." unique_id=1660770193]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.051696703, 1.6589404, -0.17919451)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.051696703, 1.6589404, -0.19208956)
 current = true
 near = 0.01
 
@@ -97,24 +116,25 @@ color = Color(1, 1, 1, 0.8)
 
 [node name="PromptContainer" type="PanelContainer" parent="UI" unique_id=999000111]
 visible = false
-custom_minimum_size = Vector2(20, 20)
-anchors_preset = 7
+anchors_preset = 8
 anchor_left = 0.5
-anchor_top = 1.0
+anchor_top = 0.5
 anchor_right = 0.5
-anchor_bottom = 1.0
-offset_left = -10.0
-offset_top = -92.0
-offset_right = 10.0
-offset_bottom = -72.0
+anchor_bottom = 0.5
+offset_left = -100.0
+offset_top = 10.0
+offset_right = 100.0
+offset_bottom = 40.0
 grow_horizontal = 2
-grow_vertical = 0
-theme_override_styles/panel = SubResource("StyleBoxFlat_keycap")
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxEmpty_prompt")
 
 [node name="PromptLabel" type="Label" parent="UI/PromptContainer" unique_id=1931482905]
 layout_mode = 2
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
 theme_override_fonts/font = ExtResource("3_font_jersey")
-theme_override_font_sizes/font_size = 16
-text = "E"
+theme_override_font_sizes/font_size = 14
+text = "PROMPT"
 horizontal_alignment = 1
 vertical_alignment = 1
