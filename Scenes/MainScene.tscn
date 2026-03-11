@@ -30,8 +30,8 @@
 [ext_resource type="Script" uid="uid://bmkswcfkw2bfr" path="res://Scripts/Interaction/BellController.cs" id="28_bell_script"]
 [ext_resource type="AudioStream" uid="uid://bapkmgr80xnml" path="res://Assets/Sound FX/receptionist_bell.wav" id="29_bell_sound"]
 [ext_resource type="Script" uid="uid://bkaid1pe6sdan" path="res://Scripts/Interaction/FocusController.cs" id="30_focus_ctrl"]
-[ext_resource type="PackedScene" uid="uid://clg3gr4l72qea" path="res://Scenes/Pizzeria/SignInClipboard.tscn" id="33_signin_scene"]
-[ext_resource type="PackedScene" uid="uid://clg3gr4l72qeb" path="res://Scenes/Pizzeria/RegistrationClipboard.tscn" id="34_registration_scene"]
+[ext_resource type="PackedScene" uid="uid://ikqyfcjnbajd" path="res://Scenes/Pizzeria/SignInClipboard.tscn" id="33_signin_scene"]
+[ext_resource type="PackedScene" uid="uid://p2bo4u4lncli" path="res://Scenes/Pizzeria/RegistrationClipboard.tscn" id="34_registration_scene"]
 [ext_resource type="Script" uid="uid://od1qyrmyk781" path="res://Scripts/Interaction/FocusInteractable.cs" id="32_focus_interactable_script"]
 
 [sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_moon"]

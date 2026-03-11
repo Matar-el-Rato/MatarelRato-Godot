@@ -61,12 +61,18 @@ public partial class ChatManager : Control
 		_player = GetTree().Root.FindChild("Player", true, false) as PlayerCameraController;
 	}
 
-	public override void _Input(InputEvent @event)
+	public override void _UnhandledInput(InputEvent @event)
 	{
 		if (@event is InputEventKey key && key.Pressed && !key.Echo)
 		{
 			if (key.Keycode == Key.T && !_isChatOpen)
 			{
+				// Don't open chat if focusing on something (like a clipboard)
+				if (FocusController.Instance != null && FocusController.Instance.IsFocused)
+				{
+					return;
+				}
+				
 				GetViewport().SetInputAsHandled();
 				OpenChat();
 			}

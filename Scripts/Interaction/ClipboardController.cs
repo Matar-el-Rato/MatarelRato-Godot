@@ -4,6 +4,7 @@ using System.Collections.Generic;
 
 public partial class ClipboardController : Node
 {
+	public static ClipboardController Instance { get; private set; }
 	[Export] public Node3D SignInClipboard;
 	[Export] public Node3D RegistrationClipboard;
 	[Export] public AudioStreamPlayer3D BurnAudio;
@@ -20,6 +21,7 @@ public partial class ClipboardController : Node
 
 	public override void _Ready()
 	{
+		Instance = this;
 		CallDeferred(MethodName.InitializeController);
 	}
 
@@ -67,6 +69,34 @@ public partial class ClipboardController : Node
 			BurnAudio.GlobalPosition = SignInClipboard?.GlobalPosition ?? Vector3.Zero;
 			BurnAudio.Play();
 		}
+	}
+
+	public void HideClipboards()
+	{
+		if (!_clipboardsVisible) return;
+		_clipboardsVisible = false;
+
+		if (SignInClipboard != null) DisappearClipboard(SignInClipboard);
+		if (RegistrationClipboard != null) DisappearClipboard(RegistrationClipboard);
+
+		if (BurnAudio != null)
+		{
+			BurnAudio.GlobalPosition = SignInClipboard?.GlobalPosition ?? Vector3.Zero;
+			BurnAudio.Play();
+		}
+	}
+
+	private void DisappearClipboard(Node3D clipboard)
+	{
+		Tween tween = CreateTween();
+		tween.TweenProperty(clipboard, "scale", new Vector3(0.001f, 0.001f, 0.001f), TransitionDuration)
+			.SetTrans(Tween.TransitionType.Quad)
+			.SetEase(Tween.EaseType.InOut);
+		
+		tween.Finished += () => clipboard.Visible = false;
+		
+		AddBurnFlash(clipboard);
+		AddEmbers(clipboard);
 	}
 
 	private void AppearClipboard(Node3D clipboard)

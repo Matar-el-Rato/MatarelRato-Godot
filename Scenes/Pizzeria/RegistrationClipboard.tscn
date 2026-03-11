@@ -1,59 +1,61 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene format=3 uid="uid://p2bo4u4lncli"]
 
-[ext_resource type="PackedScene" path="res://Assets/Miscellaneous/registration.glb" id="1_registration_model"]
-[ext_resource type="Script" path="res://Scripts/Interaction/FocusInteractable.cs" id="2_focus_script"]
-[ext_resource type="Script" path="res://Scripts/Interaction/Interactable.cs" id="3_interactable_script"]
-[ext_resource type="Script" path="res://Scripts/Interaction/ClipboardUIInteraction.cs" id="4_ui_interaction_script"]
-[ext_resource type="PackedScene" path="res://Scenes/UI/ClipboardUI.tscn" id="5_ui_scene"]
-
-[sub_resource type="ViewportTexture" id="ViewportTexture_ui"]
-viewport_path = NodePath("SubViewport")
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ui"]
-transparency = 1
-shading_mode = 0
-albedo_texture = SubResource("ViewportTexture_ui")
+[ext_resource type="PackedScene" uid="uid://cvc57wvgsiu8a" path="res://Assets/Miscellaneous/registration.glb" id="1_registration_model"]
+[ext_resource type="Script" uid="uid://od1qyrmyk781" path="res://Scripts/Interaction/FocusInteractable.cs" id="2_focus_script"]
+[ext_resource type="Script" uid="uid://bk7ngt4ktf6i6" path="res://Scripts/Interaction/Interactable.cs" id="3_interactable_script"]
+[ext_resource type="Script" uid="uid://by5rrpux7eqv2" path="res://Scripts/Interaction/ClipboardUIInteraction.cs" id="4_ui_interaction_script"]
+[ext_resource type="PackedScene" uid="uid://clg3gr4l72qeo" path="res://Scenes/UI/ClipboardUI.tscn" id="5_ui_scene"]
 
 [sub_resource type="QuadMesh" id="QuadMesh_ui"]
 size = Vector2(0.28, 0.4)
 
+[sub_resource type="ViewportTexture" id="ViewportTexture_o78ci"]
+viewport_path = NodePath("SubViewport")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ui"]
+resource_local_to_scene = true
+transparency = 1
+shading_mode = 0
+albedo_texture = SubResource("ViewportTexture_o78ci")
+
 [sub_resource type="BoxShape3D" id="BoxShape3D_interact"]
-size = Vector3(0.35, 0.05, 0.5)
+size = Vector3(0.33206788, 0.05, 0.20812988)
 
-[node name="Registration Clipboard" type="Node3D"]
+[node name="Registration Clipboard" type="Node3D" unique_id=1979094690]
 
-[node name="Model" parent="." instance=ExtResource("1_registration_model")]
+[node name="Model" parent="." unique_id=1248677832 instance=ExtResource("1_registration_model")]
 
-[node name="UIOverlay" type="MeshInstance3D" parent="."]
-transform = Transform3D(-4.37114e-08, 0, 1, 1, -4.37114e-08, 4.37114e-08, 4.37114e-08, 1, 1.91069e-15, 0, 0.012, 0)
+[node name="UIOverlay" type="MeshInstance3D" parent="." unique_id=1214976964]
+transform = Transform3D(4.371139e-08, -1, 1.9106855e-15, -4.371139e-08, 0, 1, -1, -4.371139e-08, -4.371139e-08, 0, 0.004437916, 0)
 mesh = SubResource("QuadMesh_ui")
 surface_material_override/0 = SubResource("StandardMaterial3D_ui")
 
-[node name="SubViewport" type="SubViewport" parent="."]
+[node name="SubViewport" type="SubViewport" parent="." unique_id=536764316]
 disable_3d = true
 transparent_bg = true
 size = Vector2i(512, 724)
 render_target_update_mode = 4
 
-[node name="ClipboardUI" parent="SubViewport" instance=ExtResource("5_ui_scene")]
+[node name="ClipboardUI" parent="SubViewport" unique_id=1408997786 instance=ExtResource("5_ui_scene")]
 
-[node name="Interactable" type="Node3D" parent="."]
+[node name="Interactable" type="Node3D" parent="." unique_id=209809970]
 script = ExtResource("3_interactable_script")
 PromptText = "Register"
 UseLeftClick = true
 UseShellHighlight = true
 
-[node name="Collision" type="StaticBody3D" parent="Interactable"]
+[node name="Collision" type="StaticBody3D" parent="Interactable" unique_id=1926062693]
 
-[node name="Shape" type="CollisionShape3D" parent="Interactable/Collision"]
+[node name="Shape" type="CollisionShape3D" parent="Interactable/Collision" unique_id=1769249435]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.005999744, 0, 0.00982666)
 shape = SubResource("BoxShape3D_interact")
 
-[node name="FocusInteractable" type="Node" parent="."]
+[node name="FocusInteractable" type="Node" parent="." unique_id=289610953]
 script = ExtResource("2_focus_script")
 Distance = 0.19
 RotationOffset = -90.0
 
-[node name="UIInteraction" type="Node3D" parent="." node_paths=PackedStringArray("Viewport", "Mesh")]
+[node name="UIInteraction" type="Node3D" parent="." unique_id=1507924356 node_paths=PackedStringArray("Viewport", "Mesh")]
 script = ExtResource("4_ui_interaction_script")
 Viewport = NodePath("../SubViewport")
 Mesh = NodePath("../UIOverlay")

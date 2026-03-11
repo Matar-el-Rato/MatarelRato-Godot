@@ -13,6 +13,7 @@ public partial class FocusController : Node
 	private Camera3D _playerCamera;
 	private PlayerCameraController _playerBody;
 	private bool _isFocused = false;
+	public bool IsFocused => _isFocused;
 	private Transform3D _originalCameraTransform;
 	private Node3D _currentFocusTarget;
 

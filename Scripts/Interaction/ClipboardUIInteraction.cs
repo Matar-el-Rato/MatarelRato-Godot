@@ -37,11 +37,14 @@ public partial class ClipboardUIInteraction : Node3D
 		if (@event is InputEventMouse mouseEvent)
 		{
 			HandleMouseInput(mouseEvent);
+			// We don't mark mouse as handled here because we want to allow mouse movement/unfocus etc.
+			// HandleMouseInput inside will push mapped mouse events.
 		}
 		else if (@event is InputEventKey || @event is InputEventAction)
 		{
-			// Forward keyboard input to viewport as well
+			GD.Print($"[ClipboardUIInteraction] Consuming keyboard input: {@event.AsText()}");
 			Viewport.PushInput(@event);
+			GetViewport().SetInputAsHandled();
 		}
 	}
 
@@ -58,11 +61,18 @@ public partial class ClipboardUIInteraction : Node3D
 		var spaceState = GetWorld3D().DirectSpaceState;
 		var query = PhysicsRayQueryParameters3D.Create(from, to, 1);
 		query.CollideWithAreas = true;
-		
 		var result = spaceState.IntersectRay(query);
 		
 		// The collider is usually a StaticBody3D child of the MeshInstance3D
 		Node hitNode = result.Count > 0 ? result["collider"].As<Node>() : null;
+		
+		// Debug print for clicking if we missed
+		if (@event is InputEventMouseButton mb && mb.Pressed)
+		{
+			if (hitNode == null) GD.Print("[ClipboardUIInteraction] Raycast missed entirely.");
+			else GD.Print($"[ClipboardUIInteraction] Raycast hit: {hitNode.Name} (Parent: {hitNode.GetParent()?.Name})");
+		}
+
 		bool isHitting = hitNode != null && (hitNode == Mesh || hitNode.GetParent() == Mesh || hitNode.GetParent()?.GetParent() == GetParent());
 
 		if (isHitting)
@@ -73,9 +83,9 @@ public partial class ClipboardUIInteraction : Node3D
 			Vector2 viewportSize = Viewport.Size;
 			Vector2 mappedPos = new Vector2(uv.X * viewportSize.X, uv.Y * viewportSize.Y);
 
-			if (@event is InputEventMouseButton mb && mb.Pressed)
+			if (@event is InputEventMouseButton mb2 && mb2.Pressed)
 			{
-				GD.Print($"[ClipboardUIInteraction] Click on {GetParent().Name} at UV: {uv}, Mapped: {mappedPos}");
+				GD.Print($"[ClipboardUIInteraction] HIT! uv={uv}, mapped={mappedPos}, viewport={viewportSize}");
 			}
 
 			var localEvent = (InputEvent)@event.Duplicate();
@@ -101,13 +111,17 @@ public partial class ClipboardUIInteraction : Node3D
 	{
 		Vector3 localPos = Mesh.ToLocal(hitPos);
 		
-		float width = 0.35f;
-		float height = 0.5f;
+		float width = 0.28f;
+		float height = 0.4f;
 
 		if (Mesh.Mesh is QuadMesh quad)
 		{
 			width = quad.Size.X;
 			height = quad.Size.Y;
+		}
+		else
+		{
+			GD.PrintErr($"[ClipboardUIInteraction] Mesh.Mesh is NOT QuadMesh! It is {Mesh.Mesh?.GetType().Name}. Falling back to defaults.");
 		}
 		
 		// Map local X [-width/2, width/2] to U [0, 1]
