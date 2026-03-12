@@ -1,0 +1,73 @@
+[gd_scene format=3 uid="uid://c6f3yub4x4n1m"]
+
+[ext_resource type="Script" path="res://Scripts/NPC/DialogBubble.cs" id="1_script"]
+[ext_resource type="FontFile" uid="uid://cw75wckal27hg" path="res://Assets/Fonts/Jersey10-Regular.ttf" id="2_font"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bubble"]
+bg_color = Color(0, 0, 0, 0.862745)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 2
+anti_aliasing = false
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_bubble"]
+viewport_path = NodePath("SubViewport")
+
+[node name="DialogBubble" type="Node3D" node_paths=PackedStringArray("TextLabel", "Viewport", "DisplaySprite")]
+script = ExtResource("1_script")
+TextLabel = NodePath("SubViewport/PanelContainer/MarginContainer/RichTextLabel")
+Viewport = NodePath("SubViewport")
+DisplaySprite = NodePath("Sprite3D")
+
+[node name="SubViewport" type="SubViewport" parent="."]
+disable_3d = true
+transparent_bg = true
+size = Vector2i(512, 160)
+render_target_update_mode = 4
+
+[node name="PanelContainer" type="PanelContainer" parent="SubViewport"]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -20.0
+offset_right = 20.0
+offset_bottom = 20.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_bubble")
+
+[node name="MarginContainer" type="MarginContainer" parent="SubViewport/PanelContainer"]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 10
+
+[node name="RichTextLabel" type="RichTextLabel" parent="SubViewport/PanelContainer/MarginContainer"]
+layout_mode = 2
+theme_override_fonts/normal_font = ExtResource("2_font")
+theme_override_font_sizes/normal_font_size = 32
+bbcode_enabled = true
+text = "Sample text here..."
+fit_content = true
+autowrap_mode = 0
+scroll_active = false
+visible_characters_behavior = 1
+
+[node name="Sprite3D" type="Sprite3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25, 0)
+pixel_size = 0.0025
+billboard = 1
+double_sided = false
+texture_filter = 1
+render_priority = 1
+texture = SubResource("ViewportTexture_bubble")

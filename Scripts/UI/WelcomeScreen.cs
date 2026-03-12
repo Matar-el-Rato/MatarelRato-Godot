@@ -5,8 +5,8 @@ public partial class WelcomeScreen : Control
 {
 	[Export] public string MainScenePath = "res://Scenes/MainScene.tscn";
 
-	private Button _registerButton;
-	private Button _loginButton;
+	private Button _playButton;
+	private Button _sourceCodeButton;
 	private Button _debugButton;
 
 	public override void _Ready()
@@ -15,18 +15,18 @@ public partial class WelcomeScreen : Control
 		GetWindow().ContentScaleMode = Window.ContentScaleModeEnum.Viewport;
 		
 		Input.MouseMode = Input.MouseModeEnum.Visible;
-		_registerButton = GetNode<Button>("MarginContainer/HBoxContainer/LeftPanel/VBoxContainer/RegisterButton");
-		_loginButton = GetNode<Button>("MarginContainer/HBoxContainer/LeftPanel/VBoxContainer/LoginButton");
+		_playButton = GetNode<Button>("MarginContainer/HBoxContainer/LeftPanel/VBoxContainer/PlayButton");
+		_sourceCodeButton = GetNode<Button>("MarginContainer/HBoxContainer/LeftPanel/VBoxContainer/SourceCodeButton");
 		_debugButton = GetNode<Button>("DebugButton");
 
-		_registerButton.Pressed += OnRegisterPressed;
-		_loginButton.Pressed += OnLoginPressed;
+		_playButton.Pressed += OnPlayPressed;
+		_sourceCodeButton.Pressed += OnSourceCodePressed;
 		_debugButton.Pressed += OnDebugPressed;
 
-		_registerButton.MouseEntered += () => OnHoverStarted(_registerButton);
-		_registerButton.MouseExited += () => OnHoverEnded(_registerButton);
-		_loginButton.MouseEntered += () => OnHoverStarted(_loginButton);
-		_loginButton.MouseExited += () => OnHoverEnded(_loginButton);
+		_playButton.MouseEntered += () => OnHoverStarted(_playButton);
+		_playButton.MouseExited += () => OnHoverEnded(_playButton);
+		_sourceCodeButton.MouseEntered += () => OnHoverStarted(_sourceCodeButton);
+		_sourceCodeButton.MouseExited += () => OnHoverEnded(_sourceCodeButton);
 
 		// Disable player movement in the background scene
 		var player = GetNodeOrNull<PlayerCameraController>("BackgroundParent/BackgroundViewport/SubViewport/MainSceneInstance/Player");
@@ -36,19 +36,21 @@ public partial class WelcomeScreen : Control
 		}
 	}
 
-	private void OnRegisterPressed()
+	private void OnPlayPressed()
 	{
-		GD.Print("Register pressed - Logic not yet implemented");
+		GD.Print("Play pressed - Initializing game flow");
+		ProceedToMainScene();
 	}
 
-	private void OnLoginPressed()
+	private void OnSourceCodePressed()
 	{
-		GD.Print("Login pressed - Logic not yet implemented");
+		GD.Print("Opening Source Code URL");
+		OS.ShellOpen("https://github.com/Matar-el-Rato/MatarelRato-Godot");
 	}
 
 	private void OnDebugPressed()
 	{
-		GD.Print("Debug pressed - Proceeding to MainScene");
+		GD.Print("Debug pressed - Proceeding to MainScene (Full Dev Mode)");
 		ProceedToMainScene();
 	}
 

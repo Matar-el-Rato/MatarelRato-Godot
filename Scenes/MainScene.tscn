@@ -581,12 +581,24 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.34871292, -2.2026873, 1.677
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.1316776, 5.63807, -23.579159)
 shape = SubResource("BoxShape3D_y4jh7")
 
+[node name="CollisionShape3D6" type="CollisionShape3D" parent="Environment/InvisibleLimits" unique_id=301227266]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15.697802, 5.63807, -23.579159)
+shape = SubResource("BoxShape3D_y4jh7")
+
+[node name="CollisionShape3D7" type="CollisionShape3D" parent="Environment/InvisibleLimits" unique_id=289630011]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 25.568422, 5.63807, -31.864273)
+shape = SubResource("BoxShape3D_y4jh7")
+
 [node name="CollisionShape3D4" type="CollisionShape3D" parent="Environment/InvisibleLimits" unique_id=946437805]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 29.880638, 5.63807, -0.1797843)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 33.958317, 5.63807, -0.1797843)
 shape = SubResource("BoxShape3D_y4jh7")
 
 [node name="CollisionShape3D2" type="CollisionShape3D" parent="Environment/InvisibleLimits" unique_id=1356111733]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.62194824, 5.63807, 51.75884)
+shape = SubResource("BoxShape3D_y4jh7")
+
+[node name="CollisionShape3D5" type="CollisionShape3D" parent="Environment/InvisibleLimits" unique_id=237813492]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 25.693653, 5.63807, 51.75884)
 shape = SubResource("BoxShape3D_y4jh7")
 
 [node name="CollisionShape3D3" type="CollisionShape3D" parent="Environment/InvisibleLimits" unique_id=911992209]

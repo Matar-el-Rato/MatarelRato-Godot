@@ -13,6 +13,7 @@ public partial class Interactor : Node3D
 	private Label _textLabel;
 	private Label _keyLabel;
 	private IInteractable _currentInteractable;
+	private Tween _promptTween;
 
 	public override void _Ready()
 	{
@@ -26,6 +27,11 @@ public partial class Interactor : Node3D
 			{
 				_textLabel = _promptLabel.GetNodeOrNull<Label>("PromptLabel");
 				_keyLabel = _promptLabel.GetNodeOrNull<Label>("KeyLabel");
+				
+				// Initialize animation state
+				_promptLabel.Modulate = new Color(1, 1, 1, 0);
+				_promptLabel.Scale = new Vector2(0.8f, 0.8f);
+				_promptLabel.Visible = false;
 			}
 		}
 		
@@ -131,32 +137,59 @@ public partial class Interactor : Node3D
 
 	private void UpdatePrompt(bool visible)
 	{
-		if (_promptLabel != null)
-		{
-			_promptLabel.Visible = visible;
-			
-			if (visible && _currentInteractable is Interactable iNode)
-			{
-				if (_textLabel != null)
-				{
-					_textLabel.Text = iNode.PromptText;
-				}
+		if (_promptLabel == null) return;
 
-				if (_keyLabel != null)
+		if (_promptTween != null)
+		{
+			_promptTween.Kill();
+		}
+
+		_promptTween = CreateTween();
+		
+		if (visible && _currentInteractable is Interactable iNode)
+		{
+			if (_textLabel != null)
+			{
+				_textLabel.Text = iNode.PromptText;
+			}
+
+			if (_keyLabel != null)
+			{
+				if (iNode.UseLeftClick)
 				{
-					if (iNode.UseLeftClick)
-					{
-						_keyLabel.Visible = false;
-					}
-					else
-					{
-						_keyLabel.Visible = true;
-						string action = (iNode.InteractionAction ?? "").Trim().ToLower();
-						bool isDefaultAction = string.IsNullOrWhiteSpace(action) || action == "interact";
-						_keyLabel.Text = isDefaultAction ? "E" : action.ToUpper();
-					}
+					_keyLabel.Visible = false;
+				}
+				else
+				{
+					_keyLabel.Visible = true;
+					string action = (iNode.InteractionAction ?? "").Trim().ToLower();
+					bool isDefaultAction = string.IsNullOrWhiteSpace(action) || action == "interact";
+					_keyLabel.Text = isDefaultAction ? "E" : action.ToUpper();
 				}
 			}
+
+			_promptLabel.Visible = true;
+			_promptTween.SetParallel(true);
+			_promptTween.TweenProperty(_promptLabel, "modulate:a", 1.0f, 0.15f)
+				.SetTrans(Tween.TransitionType.Quad)
+				.SetEase(Tween.EaseType.Out);
+			_promptTween.TweenProperty(_promptLabel, "scale", Vector2.One, 0.15f)
+				.SetTrans(Tween.TransitionType.Back)
+				.SetEase(Tween.EaseType.Out);
+		}
+		else
+		{
+			_promptTween.SetParallel(true);
+			_promptTween.TweenProperty(_promptLabel, "modulate:a", 0.0f, 0.1f)
+				.SetTrans(Tween.TransitionType.Quad)
+				.SetEase(Tween.EaseType.In);
+			_promptTween.TweenProperty(_promptLabel, "scale", new Vector2(0.8f, 0.8f), 0.1f)
+				.SetTrans(Tween.TransitionType.Quad)
+				.SetEase(Tween.EaseType.In);
+			
+			_promptTween.Chain().TweenCallback(Callable.From(() => {
+				if (_promptLabel.Modulate.A < 0.05f) _promptLabel.Visible = false;
+			}));
 		}
 	}
 }

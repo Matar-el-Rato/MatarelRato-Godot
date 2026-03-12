@@ -48,11 +48,6 @@ public partial class BellController : Node3D
 			BellAudio.Play();
 		}
 
-		if (ClipboardCtrl != null)
-		{
-			ClipboardCtrl.ShowClipboards();
-		}
-
 		if (_targetNPC != null)
 		{
 			_targetNPC.Appear();

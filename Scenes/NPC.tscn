@@ -4,6 +4,7 @@
 [ext_resource type="PackedScene" uid="uid://bo0jrvqeuilxe" path="res://Assets/Characters/pigga.glb" id="2_pigga_model"]
 [ext_resource type="Script" uid="uid://bk7ngt4ktf6i6" path="res://Scripts/Interaction/Interactable.cs" id="3_interactable_script"]
 [ext_resource type="AudioStream" uid="uid://cv1yyusfc028h" path="res://Assets/Sound FX/burnfx.wav" id="4_burn_fx"]
+[ext_resource type="PackedScene" uid="uid://c6f3yub4x4n1m" path="res://Scenes/DialogBubble.tscn" id="5_dialog_bubble"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_npc"]
 radius = 0.25878906
@@ -20,6 +21,9 @@ transform = Transform3D(0.38, 0, 0, 0, 0.38, 0, 0, 0, 0.38, 0, 0, 0)
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1619478947]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.925708, 0)
 shape = SubResource("CapsuleShape3D_npc")
+
+[node name="DialogBubble" parent="." unique_id=1234567891 instance=ExtResource("5_dialog_bubble")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, 0)
 
 [node name="Interactable" type="Node3D" parent="." unique_id=130849168]
 script = ExtResource("3_interactable_script")

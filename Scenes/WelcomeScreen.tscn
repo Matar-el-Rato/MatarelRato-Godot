@@ -6,6 +6,8 @@
 [ext_resource type="FontFile" uid="uid://crh154r1w23lt" path="res://Assets/Fonts/Jacquard24-Regular.ttf" id="4_font_jacquard"]
 [ext_resource type="PackedScene" uid="uid://1agynrda5ors" path="res://Scenes/MainScene.tscn" id="5_main_scene"]
 
+[ext_resource type="Texture2D" uid="uid://baf2o8l6lipkk" path="res://Assets/Miscellaneous/github_logo.svg" id="6_github"]
+
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_blur"]
 shader = ExtResource("2_shader")
 shader_parameter/lod = 2.5
@@ -98,21 +100,25 @@ offset_top = -60.0
 offset_right = 200.0
 offset_bottom = 60.0
 grow_vertical = 2
-theme_override_constants/separation = 0
+theme_override_constants/separation = 10
 
-[node name="RegisterButton" type="Button" parent="MarginContainer/HBoxContainer/LeftPanel/VBoxContainer" unique_id=1037235710]
+[node name="PlayButton" type="Button" parent="MarginContainer/HBoxContainer/LeftPanel/VBoxContainer" unique_id=1037235710]
 layout_mode = 2
 theme = SubResource("Theme_buttons")
 text = "Play"
 flat = true
 alignment = 0
 
-[node name="LoginButton" type="Button" parent="MarginContainer/HBoxContainer/LeftPanel/VBoxContainer" unique_id=1555132830]
+[node name="SourceCodeButton" type="Button" parent="MarginContainer/HBoxContainer/LeftPanel/VBoxContainer" unique_id=1555132830]
 layout_mode = 2
 theme = SubResource("Theme_buttons")
-text = "Options"
+theme_override_constants/icon_max_width = 16
+theme_override_font_sizes/font_size = 25
+text = " Source Code"
+icon = ExtResource("6_github")
 flat = true
 alignment = 0
+expand_icon = true
 
 [node name="RightPanel" type="Control" parent="MarginContainer/HBoxContainer" unique_id=1144258639]
 layout_mode = 2
@@ -158,9 +164,12 @@ anchors_preset = 2
 anchor_top = 1.0
 anchor_bottom = 1.0
 offset_left = 20.0
-offset_top = -50.0
-offset_right = 120.0
-offset_bottom = -20.0
+offset_top = -35.0
+offset_right = 80.0
+offset_bottom = -15.0
 grow_vertical = 0
+theme_override_colors/font_color = Color(1, 1, 1, 0.4)
 theme_override_fonts/font = ExtResource("3_font_jersey")
+theme_override_font_sizes/font_size = 14
 text = "DEBUG"
+flat = true

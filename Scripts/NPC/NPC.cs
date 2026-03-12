@@ -6,11 +6,15 @@ public partial class NPC : CharacterBody3D
 	[Export] public string IdleAnimation = "Armature|mixamo_com|Layer0_007";
 	[Export] public float TransitionDuration = 0.8f;
 	[Export] public Color TransitionColor = new Color(1.0f, 0.5f, 0.2f); // Orange flash
+	[Export] public string DialogText = "Good to see you again...\n what can i get for you today?";
+	[Export] public NodePath DialogBubblePath;
 	
 	private AnimationPlayer _animPlayer;
 	private Node3D _model;
 	private AudioStreamPlayer3D _burnAudio;
+	private DialogBubble _dialogBubble;
 	private bool _hasAppeared = false;
+	private bool _hasInteracted = false;
 
 	public override void _Ready()
 	{
@@ -29,6 +33,15 @@ public partial class NPC : CharacterBody3D
 		// Hide the entire NPC (root CharacterBody3D), not just the model
 		Visible = false;
 		Scale = new Vector3(0.001f, 0.001f, 0.001f);
+
+		if (DialogBubblePath != null && !DialogBubblePath.IsEmpty)
+		{
+			_dialogBubble = GetNodeOrNull<DialogBubble>(DialogBubblePath);
+		}
+		else
+		{
+			_dialogBubble = GetNodeOrNull<DialogBubble>("DialogBubble");
+		}
 
 		var interactable = GetNodeOrNull<Interactable>("Interactable");
 		if (interactable != null)
@@ -121,8 +134,26 @@ public partial class NPC : CharacterBody3D
 		GetTree().CreateTimer(particles.Lifetime + 0.5f).Timeout += () => particles.QueueFree();
 	}
 
-	private void OnInteracted()
+	private async void OnInteracted()
 	{
+		if (!_hasAppeared || _hasInteracted) return;
+		_hasInteracted = true;
+
+		GD.Print("NPC Interacted, showing dialog...");
+
+		if (_dialogBubble != null)
+		{
+			_dialogBubble.ShowDialog(DialogText);
+		}
+
+		// Wait 1 second after interacting
+		await ToSignal(GetTree().CreateTimer(1.0f), SceneTreeTimer.SignalName.Timeout);
+
+		GD.Print("Spawning clipboards...");
+		if (ClipboardController.Instance != null)
+		{
+			ClipboardController.Instance.ShowClipboards();
+		}
 	}
 
 	private AnimationPlayer FindAnimationPlayer(Node node)

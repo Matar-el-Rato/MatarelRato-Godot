@@ -178,7 +178,9 @@ public partial class PlayerCameraController : CharacterBody3D
 			}
 
 			// Force camera position while sitting (overrides animation tracks)
-			if (_isSitting && _activeEntry != null && !_isTransitioning)
+			// SKIP if we are currently focused on an object via FocusController
+			bool isFocused = FocusController.Instance != null && FocusController.Instance.IsFocused;
+			if (_isSitting && _activeEntry != null && !_isTransitioning && !isFocused)
 			{
 				_camera.Position = _baseCameraPos + _activeEntry.CameraOffset + _activeEntry.SittingCameraOffset;
 			}
