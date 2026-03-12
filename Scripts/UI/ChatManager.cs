@@ -44,7 +44,6 @@ public partial class ChatManager : Control
 		
 		CallDeferred(MethodName.FindPlayer);
 		
-		// Reset ping timer to start firing after 10s
 		_pingTimer = 0;
 	}
 
@@ -69,11 +68,7 @@ public partial class ChatManager : Control
 		{
 			if (key.Keycode == Key.T && !_isChatOpen)
 			{
-				// Don't open chat if focusing on something (like a clipboard)
-				if (FocusController.Instance != null && FocusController.Instance.IsFocused)
-				{
-					return;
-				}
+				if (FocusController.Instance != null && FocusController.Instance.IsFocused) return;
 				
 				GetViewport().SetInputAsHandled();
 				OpenChat();
@@ -84,7 +79,6 @@ public partial class ChatManager : Control
 				CloseChat(false);
 			}
 			
-			// Scrolling with Arrows
 			if (_isChatOpen && _scrollContainer != null)
 			{
 				var scrollBar = _scrollContainer.GetVScrollBar();
@@ -107,7 +101,6 @@ public partial class ChatManager : Control
 		ResetFade();
 		_isChatOpen = true;
 		
-		// Swap spacer for input zone
 		_inputWrapper.Visible = true;
 		_bottomSpacer.CustomMinimumSize = new Vector2(0, 0);
 		
@@ -130,8 +123,6 @@ public partial class ChatManager : Control
 		}
 		
 		_isChatOpen = false;
-		
-		// Swap input zone back for spacer to maintain history position
 		_chatInput.Visible = false;
 		_inputWrapper.Visible = false;
 		_bottomSpacer.CustomMinimumSize = new Vector2(0, 28);
@@ -173,28 +164,24 @@ public partial class ChatManager : Control
 		if (_instance != null && IsInstanceValid(_instance))
 		{
 			_instance.ResetFade();
-			
-			// ALWAYS append a newline AFTER the message to ensure vertical stacking.
-			// This is more robust than checking for existing content because AppendText 
-			// might not immediately update the Text property.
 			_instance._chatHistory.AppendText(message + "\n");
-			
 			_instance.StartFadeTimer();
-			
 			_instance.HandleNewMessage();
 		}
 	}
 	
 	private async void HandleNewMessage()
 	{
-		// Force layout update for the container
+		// Force layout update
 		_chatHistory.QueueRedraw();
 		
-		// Wait for one frame to let RichTextLabel update its internal content size
+		// Wait multiple frames for the first message to avoid "stale large height" issue
+		// This ensures GetContentHeight() returns a stabilized value.
 		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+		
 		UpdateLayout();
 		
-		// Wait another frame to let ScrollContainer handle its own resize from UpdateLayout
 		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
 		ScrollToBottom();
 	}
@@ -203,9 +190,12 @@ public partial class ChatManager : Control
 	{
 		if (_chatHistory == null || _scrollContainer == null) return;
 		
-		// Force label to update before measuring height
 		float historyHeight = _chatHistory.GetContentHeight();
 		
+		// Sanity check: if height is 0, we don't want to hide it completely if there's text
+		// But usually GetContentHeight returns at least one line height if it's ready.
+		if (historyHeight <= 0) return;
+
 		// Cap it at 40% of screen
 		float screenHeight = GetViewportRect().Size.Y;
 		float maxHeight = screenHeight * 0.4f - 20; 

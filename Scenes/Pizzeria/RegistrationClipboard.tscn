@@ -19,7 +19,7 @@ shading_mode = 0
 albedo_texture = SubResource("ViewportTexture_o78ci")
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_interact"]
-size = Vector3(0.33206788, 0.05, 0.20812988)
+size = Vector3(0.28, 0.4, 0.001)
 
 [node name="Registration Clipboard" type="Node3D" unique_id=1979094690]
 
@@ -47,7 +47,7 @@ UseShellHighlight = true
 [node name="Collision" type="StaticBody3D" parent="Interactable" unique_id=1926062693]
 
 [node name="Shape" type="CollisionShape3D" parent="Interactable/Collision" unique_id=1769249435]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.005999744, 0, 0.00982666)
+transform = Transform3D(4.371139e-08, -1, 1.9106855e-15, -4.371139e-08, 0, 1, -1, -4.371139e-08, -4.371139e-08, 0, 0.004437916, 0)
 shape = SubResource("BoxShape3D_interact")
 
 [node name="FocusInteractable" type="Node" parent="." unique_id=289610953]

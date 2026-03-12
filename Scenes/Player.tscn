@@ -60,7 +60,21 @@ CameraOffset = Vector3(0, -0.1, 0)
 radius = 0.25097656
 height = 1.8
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_prompt"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_keybg"]
+bg_color = Color(0.08, 0.08, 0.08, 0.85)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.6, 0.6, 0.6, 0.5)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 3.0
+content_margin_right = 3.0
+content_margin_top = 3.0
+content_margin_bottom = 3.0
 
 [node name="Player" type="CharacterBody3D" unique_id=1339342590 groups=["player"]]
 collision_layer = 2
@@ -114,20 +128,36 @@ size_flags_horizontal = 4
 mouse_filter = 2
 color = Color(1, 1, 1, 0.8)
 
-[node name="PromptContainer" type="PanelContainer" parent="UI" unique_id=999000111]
+
+[node name="PromptContainer" type="VBoxContainer" parent="UI" unique_id=999000111]
 visible = false
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -100.0
+offset_left = -60.0
 offset_top = 10.0
-offset_right = 100.0
-offset_bottom = 40.0
+offset_right = 60.0
+offset_bottom = 70.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_styles/panel = SubResource("StyleBoxEmpty_prompt")
+mouse_filter = 2
+alignment = 1
+
+[node name="KeyLabel" type="Label" parent="UI/PromptContainer" unique_id=999000222]
+custom_minimum_size = Vector2(24, 24)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_color = Color(1, 1, 1, 0.95)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 3
+theme_override_fonts/font = ExtResource("3_font_jersey")
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = SubResource("StyleBoxFlat_keybg")
+text = "E"
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="PromptLabel" type="Label" parent="UI/PromptContainer" unique_id=1931482905]
 layout_mode = 2

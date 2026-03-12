@@ -7,47 +7,62 @@
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_paper"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_input"]
-bg_color = Color(1, 1, 1, 0.05)
+bg_color = Color(1, 1, 1, 0)
+content_margin_left = 10.0
 border_width_left = 2
 border_width_top = 2
 border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0, 0, 0, 0.3)
+border_width_bottom = 1
+border_color = Color(0, 0, 0, 0.15)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_input_hover"]
+bg_color = Color(1, 0.95, 0.9, 0.08)
+content_margin_left = 10.0
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 1
+border_color = Color(0.6, 0.2, 0.1, 0.35)
 corner_radius_top_left = 4
 corner_radius_top_right = 4
 corner_radius_bottom_right = 4
 corner_radius_bottom_left = 4
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_input_focus"]
-bg_color = Color(1, 1, 1, 0.15)
-border_width_left = 3
-border_width_top = 3
-border_width_right = 3
-border_width_bottom = 3
-border_color = Color(0, 0, 0, 0.6)
+bg_color = Color(1, 1, 0.9, 0.04)
+content_margin_left = 10.0
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.9, 0.8, 0.3, 0.3)
 corner_radius_top_left = 4
 corner_radius_top_right = 4
 corner_radius_bottom_right = 4
 corner_radius_bottom_left = 4
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button"]
-bg_color = Color(0.5, 0.1, 0.1, 0.3)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
-corner_radius_bottom_left = 8
+bg_color = Color(0.3, 0.05, 0.05, 0.2)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button_hover"]
-bg_color = Color(0.6, 0.2, 0.2, 0.5)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.8, 0.6, 0.2, 1)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
-corner_radius_bottom_left = 8
+bg_color = Color(0.5, 0.08, 0.08, 0.35)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.8, 0.3, 0.1, 0.6)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
 
 [node name="ClipboardUI" type="Control" unique_id=89514985]
 layout_mode = 3
@@ -87,7 +102,8 @@ offset_right = -61.0
 offset_bottom = 76.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_colors/font_color = Color(0.35, 0.02, 0.02, 1)
+theme_override_colors/caret_color = Color(0.35, 0.02, 0.02, 1)
 theme_override_fonts/font = ExtResource("1_font")
 theme_override_font_sizes/font_size = 38
 theme_override_styles/normal = SubResource("StyleBoxFlat_input")
@@ -115,7 +131,8 @@ offset_right = -60.0
 offset_bottom = 49.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_colors/font_color = Color(0.35, 0.02, 0.02, 1)
+theme_override_colors/caret_color = Color(0.35, 0.02, 0.02, 1)
 theme_override_fonts/font = ExtResource("1_font")
 theme_override_font_sizes/font_size = 38
 theme_override_styles/normal = SubResource("StyleBoxFlat_input")
@@ -129,12 +146,13 @@ offset_left = 330.0
 offset_top = 561.0
 offset_right = 408.0
 offset_bottom = 594.0
+theme_override_colors/font_color = Color(0.35, 0.02, 0.02, 1)
 theme_override_fonts/font = ExtResource("1_font")
 theme_override_font_sizes/font_size = 24
 theme_override_styles/normal = SubResource("StyleBoxFlat_button")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
 theme_override_styles/hover = SubResource("StyleBoxFlat_button_hover")
-theme_override_styles/focus = SubResource("StyleBoxFlat_button_hover")
+theme_override_styles/focus = SubResource("StyleBoxFlat_button")
 text = "SIGN"
 
 [node name="ScribbleAudio" type="AudioStreamPlayer" parent="." unique_id=123456789]

@@ -11,6 +11,7 @@ public partial class Interactor : Node3D
 	private RayCast3D _rayCast;
 	private Control _promptLabel;
 	private Label _textLabel;
+	private Label _keyLabel;
 	private IInteractable _currentInteractable;
 
 	public override void _Ready()
@@ -24,6 +25,7 @@ public partial class Interactor : Node3D
 			if (_promptLabel != null)
 			{
 				_textLabel = _promptLabel.GetNodeOrNull<Label>("PromptLabel");
+				_keyLabel = _promptLabel.GetNodeOrNull<Label>("KeyLabel");
 			}
 		}
 		
@@ -133,12 +135,27 @@ public partial class Interactor : Node3D
 		{
 			_promptLabel.Visible = visible;
 			
-			if (visible && _textLabel != null && _currentInteractable is Interactable iNode)
+			if (visible && _currentInteractable is Interactable iNode)
 			{
-				string action = (iNode.InteractionAction ?? "").Trim().ToLower();
-				bool isDefaultAction = string.IsNullOrWhiteSpace(action) || action == "interact";
-				string actionText = isDefaultAction ? "" : $"[{action.ToUpper()}] ";
-				_textLabel.Text = $"{actionText}{iNode.PromptText}";
+				if (_textLabel != null)
+				{
+					_textLabel.Text = iNode.PromptText;
+				}
+
+				if (_keyLabel != null)
+				{
+					if (iNode.UseLeftClick)
+					{
+						_keyLabel.Visible = false;
+					}
+					else
+					{
+						_keyLabel.Visible = true;
+						string action = (iNode.InteractionAction ?? "").Trim().ToLower();
+						bool isDefaultAction = string.IsNullOrWhiteSpace(action) || action == "interact";
+						_keyLabel.Text = isDefaultAction ? "E" : action.ToUpper();
+					}
+				}
 			}
 		}
 	}

@@ -33,6 +33,7 @@ public partial class PlayerCameraController : CharacterBody3D
 	private float    _baseFOV;
 
 	private bool     _isSitting = false;
+	private bool     _isTransitioning = false;
 	private Chair    _currentChair;
 	private float    _sittingYaw = 0f;
 	private Vector3  _preSitPosition;
@@ -74,7 +75,7 @@ public partial class PlayerCameraController : CharacterBody3D
 	// ── Mouse look (Yaw on Body, Pitch on Camera) ───────────────────────────
 	public override void _UnhandledInput(InputEvent @event)
 	{
-		if (!MovementEnabled) return;
+		if (!MovementEnabled || _isTransitioning) return;
 
 		if (@event is InputEventMouseMotion mm &&
 			Input.MouseMode == Input.MouseModeEnum.Captured)
@@ -177,7 +178,7 @@ public partial class PlayerCameraController : CharacterBody3D
 			}
 
 			// Force camera position while sitting (overrides animation tracks)
-			if (_isSitting && _activeEntry != null)
+			if (_isSitting && _activeEntry != null && !_isTransitioning)
 			{
 				_camera.Position = _baseCameraPos + _activeEntry.CameraOffset + _activeEntry.SittingCameraOffset;
 			}
@@ -185,9 +186,9 @@ public partial class PlayerCameraController : CharacterBody3D
 
 		// ── 4. Apply + collide ────────────────────────────────────────────
 		Velocity = vel;
-		if (!_isSitting)
+		if (!_isSitting && !_isTransitioning)
 			MoveAndSlide();
-		else
+		else if (_isSitting && !_isTransitioning)
 			GlobalPosition = GlobalPosition; // Stay put
 
 		// ── 5. Animations ─────────────────────────────────────────────────
@@ -353,65 +354,70 @@ public partial class PlayerCameraController : CharacterBody3D
 
 	public void Sit(Chair chair)
 	{
-		if (_isSitting) return;
+		if (_isSitting || _isTransitioning) return;
 
 		EnsureInitialized();
 		_isSitting = true;
+		_isTransitioning = true;
 		_currentChair = chair;
 		_sittingYaw = 0f;
 		_preSitPosition = GlobalPosition;
 
-		// Snap to chair
-		GlobalRotation = chair.GlobalRotation;
-		
-		Vector3 totalOffset = chair.SitOffset;
-		if (_activeEntry != null)
-		{
-			totalOffset += _activeEntry.SittingOffset;
-			// Final camera position is enforced in _PhysicsProcess while sitting
-			_camera.Position = _baseCameraPos + _activeEntry.CameraOffset + _activeEntry.SittingCameraOffset;
-		}
-		
-		GlobalPosition = chair.GlobalPosition + (chair.GlobalTransform.Basis * totalOffset);
-
-		// Adjust FOV
-		Tween fovTween = CreateTween();
-		fovTween.TweenProperty(_camera, "fov", chair.SitFOV, 0.3f).SetTrans(Tween.TransitionType.Sine);
-
 		if (_collisionShape != null)
 			_collisionShape.Disabled = true;
+
+		Vector3 targetPos = chair.GlobalPosition + (chair.GlobalTransform.Basis * (chair.SitOffset + (_activeEntry?.SittingOffset ?? Vector3.Zero)));
+		Vector3 targetCamPos = _baseCameraPos + (_activeEntry?.CameraOffset ?? Vector3.Zero) + (_activeEntry?.SittingCameraOffset ?? Vector3.Zero);
+		
+		Tween transition = CreateTween();
+		transition.SetParallel(true);
+		
+		// Body transition
+		transition.TweenProperty(this, "global_position", targetPos, 0.6f).SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.InOut);
+		transition.TweenProperty(this, "global_rotation", chair.GlobalRotation, 0.6f).SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.InOut);
+		
+		// Camera transition
+		transition.TweenProperty(_camera, "position", targetCamPos, 0.6f).SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.InOut);
+		transition.TweenProperty(_camera, "fov", chair.SitFOV, 0.6f).SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.InOut);
+
+		transition.Finished += () => {
+			_isTransitioning = false;
+			UpdateAnimations(Vector3.Zero);
+		};
 
 		UpdateAnimations(Vector3.Zero);
 	}
 
 	public void Unsit()
 	{
-		if (!_isSitting) return;
+		if (!_isSitting || _isTransitioning) return;
 
 		_isSitting = false;
+		_isTransitioning = true;
 		_currentChair = null;
 
-		if (_collisionShape != null)
-			_collisionShape.Disabled = false;
-
-		// Restore position
-		GlobalPosition = _preSitPosition;
+		Vector3 targetCamPos = _baseCameraPos + (_activeEntry?.CameraOffset ?? Vector3.Zero);
 		
-		// Reset camera
-		_sittingYaw = 0f;
-		if (_activeEntry != null)
-		{
-			_camera.Position = _baseCameraPos + _activeEntry.CameraOffset;
-		}
-		else
-		{
-			_camera.Position = _baseCameraPos;
-		}
-		_camera.Rotation = new Vector3(_pitch, 0, 0);
+		Tween transition = CreateTween();
+		transition.SetParallel(true);
+		
+		// Body transition back
+		transition.TweenProperty(this, "global_position", _preSitPosition, 0.6f).SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.InOut);
+		// Note: body rotation usually stays as it was or we can snap it forward. 
+		// Let's keep the rotation from the chair for a moment then allow mouse look to take over.
+		
+		// Camera transition back
+		transition.TweenProperty(_camera, "position", targetCamPos, 0.6f).SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.InOut);
+		transition.TweenProperty(_camera, "rotation", new Vector3(_pitch, 0, 0), 0.6f).SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.InOut);
+		transition.TweenProperty(_camera, "fov", _baseFOV, 0.6f).SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.InOut);
 
-		// Reset FOV
-		Tween fovTween = CreateTween();
-		fovTween.TweenProperty(_camera, "fov", _baseFOV, 0.3f).SetTrans(Tween.TransitionType.Sine);
+		transition.Finished += () => {
+			_isTransitioning = false;
+			_sittingYaw = 0f;
+			if (_collisionShape != null)
+				_collisionShape.Disabled = false;
+			UpdateAnimations(Vector3.Zero);
+		};
 
 		UpdateAnimations(Vector3.Zero);
 	}

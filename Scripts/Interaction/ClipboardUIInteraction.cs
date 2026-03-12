@@ -25,7 +25,6 @@ public partial class ClipboardUIInteraction : Node3D
 				Mesh.SetSurfaceOverrideMaterial(SurfaceIndex, mat);
 			}
 			mat.AlbedoTexture = Viewport.GetTexture();
-			GD.Print($"[ClipboardUIInteraction] Linked {Mesh.Name} to {Viewport.Name}");
 		}
 	}
 
@@ -42,7 +41,6 @@ public partial class ClipboardUIInteraction : Node3D
 		}
 		else if (@event is InputEventKey || @event is InputEventAction)
 		{
-			GD.Print($"[ClipboardUIInteraction] Consuming keyboard input: {@event.AsText()}");
 			Viewport.PushInput(@event);
 			GetViewport().SetInputAsHandled();
 		}
@@ -55,25 +53,35 @@ public partial class ClipboardUIInteraction : Node3D
 		var camera = GetViewport().GetCamera3D();
 		if (camera == null) return;
 
-		var from = camera.ProjectRayOrigin(@event.Position);
-		var to = from + camera.ProjectRayNormal(@event.Position) * 10.0f;
+		// Use the current mouse position from the viewport for better consistency during transitions
+		Vector2 mousePos = GetViewport().GetMousePosition();
+		var from = camera.ProjectRayOrigin(mousePos);
+		var to = from + camera.ProjectRayNormal(mousePos) * 10.0f;
 
 		var spaceState = GetWorld3D().DirectSpaceState;
 		var query = PhysicsRayQueryParameters3D.Create(from, to, 1);
 		query.CollideWithAreas = true;
 		var result = spaceState.IntersectRay(query);
 		
-		// The collider is usually a StaticBody3D child of the MeshInstance3D
 		Node hitNode = result.Count > 0 ? result["collider"].As<Node>() : null;
-		
-		// Debug print for clicking if we missed
-		if (@event is InputEventMouseButton mb && mb.Pressed)
-		{
-			if (hitNode == null) GD.Print("[ClipboardUIInteraction] Raycast missed entirely.");
-			else GD.Print($"[ClipboardUIInteraction] Raycast hit: {hitNode.Name} (Parent: {hitNode.GetParent()?.Name})");
-		}
 
-		bool isHitting = hitNode != null && (hitNode == Mesh || hitNode.GetParent() == Mesh || hitNode.GetParent()?.GetParent() == GetParent());
+		// Check if we hit the collision object associated with this clipboard
+		// The collider is usually a StaticBody3D under Interactable/Collision
+		bool isHitting = false;
+		if (hitNode != null)
+		{
+			// Check if hitNode or its parents belong to this clipboard instance
+			Node current = hitNode;
+			while (current != null && current != GetTree().Root)
+			{
+				if (current == this || current == GetParent())
+				{
+					isHitting = true;
+					break;
+				}
+				current = current.GetParent();
+			}
+		}
 
 		if (isHitting)
 		{
@@ -82,11 +90,6 @@ public partial class ClipboardUIInteraction : Node3D
 			
 			Vector2 viewportSize = Viewport.Size;
 			Vector2 mappedPos = new Vector2(uv.X * viewportSize.X, uv.Y * viewportSize.Y);
-
-			if (@event is InputEventMouseButton mb2 && mb2.Pressed)
-			{
-				GD.Print($"[ClipboardUIInteraction] HIT! uv={uv}, mapped={mappedPos}, viewport={viewportSize}");
-			}
 
 			var localEvent = (InputEvent)@event.Duplicate();
 			if (localEvent is InputEventMouse mouseLocal)

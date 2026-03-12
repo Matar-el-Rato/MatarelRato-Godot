@@ -158,34 +158,44 @@ public partial class CubileteController : Node3D
 		_interactable.PromptText = "Waiting...";
 		_interactable.ProcessMode = ProcessModeEnum.Disabled; 
 		
-		// 1. Release dice from below camera
-		Vector3 throwPos = _playerCamera.GlobalPosition + _playerCamera.GlobalTransform.Basis.Z * ThrowOriginOffset.Z 
-						  + _playerCamera.GlobalTransform.Basis.Y * ThrowOriginOffset.Y;
+		// 1. Release dice from a point in front of the camera (pitch-dependent but clamped)
+		Vector3 camForward = -_playerCamera.GlobalTransform.Basis.Z;
+		Vector3 camRight = _playerCamera.GlobalTransform.Basis.X;
 		
+		// Clamp the baseline direction for spawning and throwing
+		// Limit downward pitch to -10 degrees (horizon is 0) to avoid floor issues
+		float minEle = Mathf.DegToRad(-10f);
+		Vector3 clampedForward = camForward;
+		if (Mathf.Asin(clampedForward.Y) < minEle)
+		{
+			Vector3 horizontal = new Vector3(clampedForward.X, 0, clampedForward.Z).Normalized();
+			if (horizontal.LengthSquared() < 0.001f) horizontal = Vector3.Forward; // fallback
+			clampedForward = horizontal * Mathf.Cos(minEle) + Vector3.Up * Mathf.Sin(minEle);
+		}
+		
+		// Spawn dice 0.4m along the clamped forward, slightly below center
+		Vector3 throwPos = _playerCamera.GlobalPosition + (clampedForward * 0.4f) + (Vector3.Down * 0.1f);
 		GlobalPosition = throwPos;
 
 		for (int i = 0; i < _dice.Length; i++)
 		{
 			var die = _dice[i];
-			// 1. Reset state while frozen to avoid "teleportation" physics kicks
 			die.Freeze = true;
 			die.LinearVelocity = Vector3.Zero;
 			die.AngularVelocity = Vector3.Zero;
 			
-			// Increase separation to avoid immediate overlaps (spread them a bit more)
-			float offsetX = (i == 0) ? -0.04f : 0.04f;
-			die.GlobalPosition = throwPos + new Vector3(offsetX, (float)GD.RandRange(-0.02, 0.02), (float)GD.RandRange(-0.02, 0.02));
+			// Slightly more random spread
+			die.GlobalPosition = throwPos + (camRight * (i == 0 ? -0.05f : 0.05f)) + (Vector3.Up * (float)GD.RandRange(-0.02, 0.02));
 			die.Visible = true;
-			
-			// 2. Now unfreeze and apply the controlled impulse
 			die.Freeze = false;
 			
-			// Proportional scaling for variations - Removed clamp to allow full force scaling
-			float forceScale = ThrowForce; 
-			Vector3 forward = -_playerCamera.GlobalTransform.Basis.Z;
-			Vector3 impulse = (forward * ThrowForce) + new Vector3(
+			// ENFORCE MINIMUM ELEVATION: Use the clamped camera forward + slight upward bias for better feel
+			Vector3 throwDir = (clampedForward + Vector3.Up * 0.1f).Normalized();
+			
+			float forceScale = ThrowForce;
+			Vector3 impulse = (throwDir * ThrowForce) + new Vector3(
 				(float)GD.RandRange(-0.1f, 0.1f) * forceScale,
-				(float)GD.RandRange(0.1f, 0.2f) * forceScale, // Proportional arc
+				(float)GD.RandRange(0.05f, 0.15f) * forceScale, // Slight extra air
 				(float)GD.RandRange(-0.1f, 0.1f) * forceScale
 			);
 			die.ApplyCentralImpulse(impulse);
