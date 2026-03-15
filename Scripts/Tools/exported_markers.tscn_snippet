@@ -1,0 +1,356 @@
+[node name="Positions" type="Node3D" parent="." unique_id="200000010"]
+transform = Transform3D(0.002, 0, 0, 0, 0.002, 0, 0, 0, 0.002, 0, 0.011436, 0)
+
+[node name="Pos_01" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2140, 0, 0.9100)
+
+[node name="Pos_02" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2140, 0, 0.8160)
+
+[node name="Pos_03" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2140, 0, 0.7280)
+
+[node name="Pos_04" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2140, 0, 0.6360)
+
+[node name="Pos_05" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2140, 0, 0.5460)
+
+[node name="Pos_06" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2140, 0, 0.4540)
+
+[node name="Pos_07" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2140, 0, 0.3660)
+
+[node name="Pos_08" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2140, 0, 0.2720)
+
+[node name="Pos_09" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2720, 0, -0.2120)
+
+[node name="Pos_10" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.3660, 0, -0.2120)
+
+[node name="Pos_11" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4540, 0, -0.2120)
+
+[node name="Pos_12" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5460, 0, -0.2120)
+
+[node name="Pos_13" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6360, 0, -0.2120)
+
+[node name="Pos_14" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.7280, 0, -0.2120)
+
+[node name="Pos_15" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8160, 0, -0.2120)
+
+[node name="Pos_16" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.9100, 0, -0.2120)
+
+[node name="Pos_17" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.9100, 0, 0.0060)
+
+[node name="Pos_18" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.9100, 0, 0.2140)
+
+[node name="Pos_19" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8160, 0, 0.2140)
+
+[node name="Pos_20" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.7280, 0, 0.2140)
+
+[node name="Pos_21" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6360, 0, 0.2140)
+
+[node name="Pos_22" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5460, 0, 0.2140)
+
+[node name="Pos_23" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4540, 0, 0.2140)
+
+[node name="Pos_24" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.3660, 0, 0.2140)
+
+[node name="Pos_25" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2720, 0, 0.2140)
+
+[node name="Pos_26" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2120, 0, -0.2720)
+
+[node name="Pos_27" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2120, 0, -0.3660)
+
+[node name="Pos_28" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2120, 0, -0.4540)
+
+[node name="Pos_29" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2120, 0, -0.5460)
+
+[node name="Pos_30" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2120, 0, -0.6360)
+
+[node name="Pos_31" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2120, 0, -0.7280)
+
+[node name="Pos_32" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2120, 0, -0.8160)
+
+[node name="Pos_33" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2120, 0, -0.9100)
+
+[node name="Pos_34" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0060, 0, -0.9100)
+
+[node name="Pos_35" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2140, 0, -0.9100)
+
+[node name="Pos_36" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2140, 0, -0.8160)
+
+[node name="Pos_37" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2140, 0, -0.7280)
+
+[node name="Pos_38" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2140, 0, -0.6360)
+
+[node name="Pos_39" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2140, 0, -0.5460)
+
+[node name="Pos_40" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2140, 0, -0.4540)
+
+[node name="Pos_41" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2140, 0, -0.3660)
+
+[node name="Pos_42" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2140, 0, -0.2720)
+
+[node name="Pos_43" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2720, 0, 0.2120)
+
+[node name="Pos_44" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3660, 0, 0.2120)
+
+[node name="Pos_45" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4540, 0, 0.2120)
+
+[node name="Pos_46" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5460, 0, 0.2120)
+
+[node name="Pos_47" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6360, 0, 0.2120)
+
+[node name="Pos_48" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.7280, 0, 0.2120)
+
+[node name="Pos_49" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.8160, 0, 0.2120)
+
+[node name="Pos_50" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.9100, 0, 0.2120)
+
+[node name="Pos_51" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.9100, 0, -0.0060)
+
+[node name="Pos_52" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.9100, 0, -0.2140)
+
+[node name="Pos_53" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.8160, 0, -0.2140)
+
+[node name="Pos_54" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.7280, 0, -0.2140)
+
+[node name="Pos_55" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6360, 0, -0.2140)
+
+[node name="Pos_56" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5460, 0, -0.2140)
+
+[node name="Pos_57" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4540, 0, -0.2140)
+
+[node name="Pos_58" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3660, 0, -0.2140)
+
+[node name="Pos_59" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2720, 0, -0.2140)
+
+[node name="Pos_60" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2120, 0, 0.2720)
+
+[node name="Pos_61" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2120, 0, 0.3660)
+
+[node name="Pos_62" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2120, 0, 0.4540)
+
+[node name="Pos_63" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2120, 0, 0.5460)
+
+[node name="Pos_64" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2120, 0, 0.6360)
+
+[node name="Pos_65" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2120, 0, 0.7280)
+
+[node name="Pos_66" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2120, 0, 0.8160)
+
+[node name="Pos_67" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2120, 0, 0.9100)
+
+[node name="Pos_68" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0060, 0, 0.9100)
+
+[node name="HomePositions" type="Node3D" parent="." unique_id="200000020"]
+transform = Transform3D(0.002, 0, 0, 0, 0.002, 0, 0, 0, 0.002, 0, 0.011436, 0)
+
+[node name="HomeBlue_1" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0060, 0, 0.8160)
+
+[node name="HomeBlue_2" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0060, 0, 0.7280)
+
+[node name="HomeBlue_3" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0060, 0, 0.6360)
+
+[node name="HomeBlue_4" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0060, 0, 0.5460)
+
+[node name="HomeBlue_5" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0060, 0, 0.4540)
+
+[node name="HomeBlue_6" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0060, 0, 0.3660)
+
+[node name="HomeBlue_7" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0060, 0, 0.2720)
+
+[node name="HomeGreen_1" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0060, 0, -0.8160)
+
+[node name="HomeGreen_2" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0060, 0, -0.7280)
+
+[node name="HomeGreen_3" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0060, 0, -0.6360)
+
+[node name="HomeGreen_4" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0060, 0, -0.5460)
+
+[node name="HomeGreen_5" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0060, 0, -0.4540)
+
+[node name="HomeGreen_6" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0060, 0, -0.3660)
+
+[node name="HomeGreen_7" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0060, 0, -0.2720)
+
+[node name="HomeRed_1" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.8160, 0, -0.0060)
+
+[node name="HomeRed_2" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.7280, 0, -0.0060)
+
+[node name="HomeRed_3" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6360, 0, -0.0060)
+
+[node name="HomeRed_4" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5460, 0, -0.0060)
+
+[node name="HomeRed_5" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4540, 0, -0.0060)
+
+[node name="HomeRed_6" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3660, 0, -0.0060)
+
+[node name="HomeRed_7" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2720, 0, -0.0060)
+
+[node name="HomeYellow_1" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8160, 0, 0.0060)
+
+[node name="HomeYellow_2" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.7280, 0, 0.0060)
+
+[node name="HomeYellow_3" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6360, 0, 0.0060)
+
+[node name="HomeYellow_4" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5460, 0, 0.0060)
+
+[node name="HomeYellow_5" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4540, 0, 0.0060)
+
+[node name="HomeYellow_6" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.3660, 0, 0.0060)
+
+[node name="HomeYellow_7" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2720, 0, 0.0060)
+
+[node name="BasePositions" type="Node3D" parent="." unique_id="200000030"]
+transform = Transform3D(0.002, 0, 0, 0, 0.002, 0, 0, 0, 0.002, 0, 0.011436, 0)
+
+[node name="BaseBlue_0" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.7980, 0, 0.7900)
+
+[node name="BaseBlue_1" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4940, 0, 0.7920)
+
+[node name="BaseBlue_2" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.8020, 0, 0.4900)
+
+[node name="BaseBlue_3" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4900, 0, 0.4880)
+
+[node name="BaseGreen_0" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.7980, 0, -0.7900)
+
+[node name="BaseGreen_1" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4940, 0, -0.7920)
+
+[node name="BaseGreen_2" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8020, 0, -0.4900)
+
+[node name="BaseGreen_3" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4900, 0, -0.4880)
+
+[node name="BaseRed_0" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.7900, 0, -0.7980)
+
+[node name="BaseRed_1" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.7920, 0, -0.4940)
+
+[node name="BaseRed_2" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4900, 0, -0.8020)
+
+[node name="BaseRed_3" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4880, 0, -0.4900)
+
+[node name="BaseYellow_0" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.7900, 0, 0.7980)
+
+[node name="BaseYellow_1" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.7920, 0, 0.4940)
+
+[node name="BaseYellow_2" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4900, 0, 0.8020)
+
+[node name="BaseYellow_3" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4880, 0, 0.4900)
+
+[node name="GoalBlue" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0020, 0, 0.1360)
+
+[node name="GoalGreen" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0020, 0, -0.1360)
+
+[node name="GoalRed" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.1360, 0, -0.0020)
+
+[node name="GoalYellow" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.1360, 0, 0.0020)

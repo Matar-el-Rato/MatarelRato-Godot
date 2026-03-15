@@ -1,0 +1,9 @@
+[gd_scene format=3 uid="uid://b3fichascenek"]
+
+[ext_resource type="Script" uid="uid://1kmtygef0fga" path="res://Scripts/Game/FichaNode.cs" id="1_fichanode"]
+[ext_resource type="PackedScene" uid="uid://toswx1f0q2t" path="res://Assets/PlayingSet/ficha.glb" id="2_fichaglb"]
+
+[node name="FichaNode" type="Node3D" unique_id=100000001]
+script = ExtResource("1_fichanode")
+
+[node name="ficha" parent="." unique_id=100000002 instance=ExtResource("2_fichaglb")]
