@@ -1,78 +1,106 @@
+// ═══════════════════════════════════════════════════
+// PlayerCameraController.cs
+// FPS CharacterBody3D: WASD movement, mouse look,
+// jump, sprint, sit/unsit on chairs, footstep audio,
+// and character model/animation management.
+// ═══════════════════════════════════════════════════
 using Godot;
 
 /// <summary>
-/// PlayerCameraController – Godot 4.6 / C#
-/// FPS-style controller:
-///   • WASD to move horizontally
-///   • Space to jump
-///   • Mouse to rotate character (Yaw) and Camera (Pitch)
+/// FPS-style controller for the player character.
+///   - WASD to move horizontally; Space to jump; Shift to sprint.
+///   - Mouse X rotates the body (yaw); Mouse Y tilts the camera (pitch).
+///   - While sitting, yaw is applied to the camera only (body stays still)
+///     and clamped to ±SITTING_YAW_LIMIT radians.
+///   - <see cref="SwapCharacter"/> replaces the visible model at runtime.
+///   - <see cref="Sit"/> / <see cref="Unsit"/> manage seated transitions.
 ///
 /// Required scene tree:
 ///   CharacterBody3D (this script)
 ///   ├─ CollisionShape3D
-///   ├─ character.glb (Mesh)
-///   └─ Camera3D (Camera element)
+///   ├─ character/  (model root)
+///   └─ Camera3D
 /// </summary>
 public partial class PlayerCameraController : CharacterBody3D
 {
-	[Export] public float WalkSpeed        = 5.0f;
-	[Export] public float SprintSpeed      = 10.0f;
-	[Export] public float JumpVelocity     = 6.0f;
-	[Export] public float MouseSensitivity = 0.003f;   // rad / px
-	[Export] public float GravityMultiplier = 3.0f;    // Slightly higher for better feel
+	[Export] public float    WalkSpeed          = 5.0f;
+	[Export] public float    SprintSpeed        = 10.0f;
+	[Export] public float    JumpVelocity       = 6.0f;
+	[Export] public float    MouseSensitivity   = 0.003f;   // radians per pixel
+	[Export] public float    GravityMultiplier  = 3.0f;
 	[Export] public NodePath CharacterModelPath = "character";
-	[Export] public bool MovementEnabled = true;
+	/// <summary>When false, all movement input and physics are suppressed (e.g. during cutscenes or focus).</summary>
+	[Export] public bool     MovementEnabled    = true;
 
-	private Camera3D _camera;
-	private CollisionShape3D _collisionShape;
-	private float    _gravity;
-	private float    _pitch = 0.0f;
-	private Node3D   _activeCharacter;
+	private Camera3D           _camera;
+	private CollisionShape3D   _collisionShape;
+	private float              _gravity;
+	private float              _pitch = 0.0f;
+	private Node3D             _activeCharacter;
 	[Export] private CharacterEntry _activeEntry;
-	private Vector3  _baseCameraPos;
-	private float    _baseFOV;
+	private Vector3            _baseCameraPos;
+	private float              _baseFOV;
 
-	private bool     _isSitting = false;
-	private bool     _isTransitioning = false;
-	private Chair    _currentChair;
-	private float    _sittingYaw = 0f;
-	private Vector3  _preSitPosition;
-	private const float SITTING_YAW_LIMIT = 1.2f; // ~70 degrees
+	private bool  _isSitting      = false;
+	private bool  _isTransitioning = false;
+	private Chair _currentChair;
+	private float _sittingYaw     = 0f;
+	private Vector3 _preSitPosition;
+
+	// Maximum yaw rotation (in radians) the camera can swing while seated (~70°).
+	private const float SITTING_YAW_LIMIT = 1.2f;
+
+	private AudioStreamPlayer _footstepAudio;
+	private float             _footstepTimer = 0f;
+	private const float       WalkStepInterval = 0.54f;
+	private const float       RunStepInterval  = 0.27f; // half period = twice as fast
+
+	// ── Lifecycle ─────────────────────────────────────────────────────────────
 
 	public override void _Ready()
 	{
 		EnsureInitialized();
 
-		// CharacterBody3D floor settings
 		FloorSnapLength    = 0.3f;
 		FloorConstantSpeed = true;
 		FloorStopOnSlope   = true;
 		ApplyFloorSnap();
 	}
 
+	/// <summary>
+	/// Idempotent setup: resolves node references and project settings.
+	/// Safe to call multiple times (e.g. from SwapCharacter).
+	/// </summary>
 	private void EnsureInitialized()
 	{
 		if (_camera == null)
 		{
-			_camera = GetNode<Camera3D>("Camera3D");
+			_camera        = GetNode<Camera3D>("Camera3D");
 			_baseCameraPos = _camera.Position;
-			_baseFOV = _camera.Fov;
+			_baseFOV       = _camera.Fov;
 		}
 		if (_collisionShape == null)
-		{
 			_collisionShape = GetNodeOrNull<CollisionShape3D>("CollisionShape3D");
-		}
+
 		if (_activeCharacter == null)
-		{
 			_activeCharacter = GetNodeOrNull<Node3D>(CharacterModelPath);
-		}
+
 		_gravity = (float)ProjectSettings.GetSetting("physics/3d/default_gravity");
 		Input.MouseMode = Input.MouseModeEnum.Captured;
+
+		if (_footstepAudio == null)
+		{
+			_footstepAudio        = new AudioStreamPlayer();
+			_footstepAudio.Name   = "FootstepAudio";
+			_footstepAudio.Stream = GD.Load<AudioStream>("res://Assets/Sound FX/walking_hard.wav");
+			_footstepAudio.VolumeDb = -4f;
+			// AddChild must be deferred — calling it inside another node's _Ready is blocked.
+			CallDeferred(Node.MethodName.AddChild, _footstepAudio);
+		}
 	}
 
+	// ── Mouse look ────────────────────────────────────────────────────────────
 
-
-	// ── Mouse look (Yaw on Body, Pitch on Camera) ───────────────────────────
 	public override void _UnhandledInput(InputEvent @event)
 	{
 		if (!MovementEnabled || _isTransitioning) return;
@@ -82,25 +110,27 @@ public partial class PlayerCameraController : CharacterBody3D
 		{
 			if (_isSitting)
 			{
-				// Clamp YAW when sitting - apply to CAMERA only to keep body still
-				_sittingYaw = Mathf.Clamp(_sittingYaw - mm.Relative.X * MouseSensitivity, -SITTING_YAW_LIMIT, SITTING_YAW_LIMIT);
+				// Clamp yaw while seated — apply to camera only so the body stays still.
+				_sittingYaw = Mathf.Clamp(
+					_sittingYaw - mm.Relative.X * MouseSensitivity,
+					-SITTING_YAW_LIMIT, SITTING_YAW_LIMIT);
 			}
 			else
 			{
-				// YAW  → rotate the entire body so the character model follows.
+				// Standing: rotate the body so the character model follows the look direction.
 				RotateY(-mm.Relative.X * MouseSensitivity);
 			}
 
-			// PITCH → tilt only the Camera, clamped to ±89°.
+			// Pitch applies to the camera regardless of sitting state, clamped to ±89°.
 			_pitch -= mm.Relative.Y * MouseSensitivity;
-			_pitch = Mathf.Clamp(_pitch, Mathf.DegToRad(-89f), Mathf.DegToRad(89f));
-			
-			if (_isSitting)
-				_camera.Rotation = new Vector3(_pitch, _sittingYaw, 0);
-			else
-				_camera.Rotation = new Vector3(_pitch, 0, 0);
+			_pitch  = Mathf.Clamp(_pitch, Mathf.DegToRad(-89f), Mathf.DegToRad(89f));
+
+			_camera.Rotation = _isSitting
+				? new Vector3(_pitch, _sittingYaw, 0)
+				: new Vector3(_pitch, 0, 0);
 		}
 
+		// Toggle mouse capture with Escape.
 		if (@event.IsActionPressed("ui_cancel"))
 		{
 			Input.MouseMode = Input.MouseMode == Input.MouseModeEnum.Captured
@@ -109,51 +139,40 @@ public partial class PlayerCameraController : CharacterBody3D
 		}
 	}
 
-	// ── Physics ──────────────────────────────────────────────────────────────
+	// ── Physics ───────────────────────────────────────────────────────────────
+
 	public override void _PhysicsProcess(double delta)
 	{
 		var vel = Velocity;
 
-		// ── 1. Gravity ────────────────────────────────────────────────────
+		// ── 1. Gravity ────────────────────────────────────────────────────────
 		if (!IsOnFloor())
 		{
 			vel.Y -= _gravity * GravityMultiplier * (float)delta;
 		}
 		else
 		{
-			// Firmly stick to the ground when not jumping
-			// A small negative value ensures IsOnFloor() remains true
+			// Small negative Y keeps IsOnFloor() true without letting the player float.
 			if (vel.Y <= 0)
-				vel.Y = -0.1f; 
+				vel.Y = -0.1f;
 		}
 
-		// ── 2. Jump (Space) ───────────────────────────────────────────────
+		// ── 2. Jump ───────────────────────────────────────────────────────────
 		if (MovementEnabled && Input.IsActionJustPressed("jump") && IsOnFloor())
-		{
 			vel.Y = JumpVelocity;
-		}
 
-		// ── 3. Horizontal movement ────────────────────────────────────────
+		// ── 3. Horizontal movement ────────────────────────────────────────────
 		var direction = Vector3.Zero;
 
 		if (MovementEnabled && !_isSitting)
 		{
-			if (Input.IsActionPressed("move_forward"))
-				direction -= Transform.Basis.Z;
-
-			if (Input.IsActionPressed("move_backward"))
-				direction += Transform.Basis.Z;
-
-			if (Input.IsActionPressed("move_left"))
-				direction -= Transform.Basis.X;
-
-			if (Input.IsActionPressed("move_right"))
-				direction += Transform.Basis.X;
+			if (Input.IsActionPressed("move_forward"))  direction -= Transform.Basis.Z;
+			if (Input.IsActionPressed("move_backward")) direction += Transform.Basis.Z;
+			if (Input.IsActionPressed("move_left"))     direction -= Transform.Basis.X;
+			if (Input.IsActionPressed("move_right"))    direction += Transform.Basis.X;
 
 			direction.Y = 0f;
-
-			if (direction.LengthSquared() > 0f)
-				direction = direction.Normalized();
+			if (direction.LengthSquared() > 0f) direction = direction.Normalized();
 
 			if (direction != Vector3.Zero)
 			{
@@ -169,83 +188,106 @@ public partial class PlayerCameraController : CharacterBody3D
 		}
 		else
 		{
+			// Movement disabled or sitting: decelerate and handle unsit.
 			vel.X = Mathf.MoveToward(vel.X, 0f, WalkSpeed);
 			vel.Z = Mathf.MoveToward(vel.Z, 0f, WalkSpeed);
 
-			if (_isSitting && (Input.IsActionJustPressed("sprint") || Input.IsKeyPressed(Key.Shift))) // Use Shift to get up
-			{
+			if (_isSitting && (Input.IsActionJustPressed("sprint") || Input.IsKeyPressed(Key.Shift)))
 				Unsit();
-			}
 
-			// Force camera position while sitting (overrides animation tracks)
-			// SKIP if we are currently focused on an object via FocusController
+			// Force camera to the seated offset unless FocusController has taken over.
 			bool isFocused = FocusController.Instance != null && FocusController.Instance.IsFocused;
 			if (_isSitting && _activeEntry != null && !_isTransitioning && !isFocused)
-			{
 				_camera.Position = _baseCameraPos + _activeEntry.CameraOffset + _activeEntry.SittingCameraOffset;
-			}
 		}
 
-		// ── 4. Apply + collide ────────────────────────────────────────────
+		// ── 4. Apply velocity + collide ───────────────────────────────────────
 		Velocity = vel;
 		if (!_isSitting && !_isTransitioning)
 			MoveAndSlide();
 		else if (_isSitting && !_isTransitioning)
-			GlobalPosition = GlobalPosition; // Stay put
+			GlobalPosition = GlobalPosition; // Locked in place while seated.
 
-		// ── 5. Animations ─────────────────────────────────────────────────
+		// ── 5. Footsteps ──────────────────────────────────────────────────────
+		UpdateFootsteps(direction, (float)delta);
+
+		// ── 6. Animation ──────────────────────────────────────────────────────
 		UpdateAnimations(direction);
 
-		// ── 6. Safety net ─────────────────────────────────────────────────
-		if (GlobalPosition.Y < -50f) 
+		// ── 7. Fall recovery ──────────────────────────────────────────────────
+		if (GlobalPosition.Y < -50f)
 		{
 			GlobalPosition = new Vector3(0f, 5f, 0f);
-			Velocity = Vector3.Zero;
+			Velocity       = Vector3.Zero;
 		}
 	}
 
+	// ── Footsteps ─────────────────────────────────────────────────────────────
+
+	private void UpdateFootsteps(Vector3 direction, float delta)
+	{
+		bool isMoving = direction.LengthSquared() > 0.001f && IsOnFloor() && !_isSitting;
+
+		if (isMoving)
+		{
+			_footstepTimer -= delta;
+			if (_footstepTimer <= 0f)
+			{
+				if (_footstepAudio != null && _footstepAudio.IsInsideTree())
+					_footstepAudio.Play();
+				_footstepTimer = Input.IsActionPressed("sprint") ? RunStepInterval : WalkStepInterval;
+			}
+		}
+		else
+		{
+			// Reset so the next movement step plays immediately (no silent first frame).
+			_footstepTimer = 0f;
+		}
+	}
+
+	// ── Animations ────────────────────────────────────────────────────────────
+
+	/// <summary>
+	/// Selects and drives the correct animation (idle, walk, sit) for the active character.
+	/// Also corrects the root bone's Y rotation to counteract Blender's 90° export offset.
+	/// </summary>
 	private void UpdateAnimations(Vector3 direction)
 	{
 		if (_activeCharacter == null) return;
-		
-		var animPlayer = _activeCharacter.GetNodeOrNull<AnimationPlayer>("AnimationPlayer") ?? 
-						 _activeCharacter.FindChild("AnimationPlayer", true, false) as AnimationPlayer;
-		
+
+		var animPlayer = _activeCharacter.GetNodeOrNull<AnimationPlayer>("AnimationPlayer")
+					  ?? _activeCharacter.FindChild("AnimationPlayer", true, false) as AnimationPlayer;
+
 		if (animPlayer == null) return;
 
-		// Target names
-		string walkAnim = "WalkingCycle_001";
-		string sitAnim = "sittingidle_001";
+		const string walkAnim = "WalkingCycle_001";
+		const string sitAnim  = "sittingidle_001";
 
 		if (_isSitting)
 		{
-			if (animPlayer.HasAnimation(sitAnim))
+			if (animPlayer.HasAnimation(sitAnim) && animPlayer.CurrentAnimation != sitAnim)
 			{
-				if (animPlayer.CurrentAnimation != sitAnim)
-				{
-					var anim = animPlayer.GetAnimation(sitAnim);
-					if (anim != null) anim.LoopMode = Animation.LoopModeEnum.Linear;
-					animPlayer.Play(sitAnim);
-				}
+				var anim = animPlayer.GetAnimation(sitAnim);
+				if (anim != null) anim.LoopMode = Animation.LoopModeEnum.Linear;
+				animPlayer.Play(sitAnim);
 			}
-			return; // Don't apply further rotation fix while sitting
+			return; // Skip rotation correction while sitting.
 		}
 
-		// If we are NOT sitting, we must NOT be playing the sit animation.
+		// If we just stood up, stop the sit animation.
 		if (animPlayer.CurrentAnimation == sitAnim)
 		{
 			animPlayer.Stop();
 			if (animPlayer.HasAnimation(walkAnim))
 			{
 				animPlayer.Play(walkAnim);
-				animPlayer.Stop(true); // Snap to the first frame (standing)
+				animPlayer.Stop(true); // Snap to frame 0 (standing T-pose).
 			}
 			GoToIdlePose(animPlayer);
 		}
 
 		if (direction.LengthSquared() > 0.001f)
 		{
-			// ── Walking ──────────────────────────────────────────────────────
 			if (animPlayer.HasAnimation(walkAnim))
 			{
 				if (animPlayer.CurrentAnimation != walkAnim)
@@ -254,6 +296,7 @@ public partial class PlayerCameraController : CharacterBody3D
 					if (anim != null) anim.LoopMode = Animation.LoopModeEnum.Linear;
 					animPlayer.Play(walkAnim);
 				}
+				// Reverse the cycle when walking backward; double speed when sprinting.
 				float dot       = direction.Dot(-Transform.Basis.Z);
 				float speedMult = Input.IsActionPressed("sprint") ? 2.0f : 1.0f;
 				animPlayer.SpeedScale = (dot < -0.1f ? -1.0f : 1.0f) * speedMult;
@@ -261,17 +304,14 @@ public partial class PlayerCameraController : CharacterBody3D
 		}
 		else
 		{
-			// ── Idle/Stopped ─────────────────────────────────────────────────
 			if (animPlayer.CurrentAnimation == walkAnim && animPlayer.IsPlaying())
 			{
 				animPlayer.SpeedScale = 1.0f;
 				GoToIdlePose(animPlayer);
 			}
 		}
-		
-		// Correct orientation for BOTH states.
-		// Walking needs 0 (perfect) but idle needs -90 (counter parent offset).
-		// We force both because animations might lack rotation tracks and inherit previous values.
+
+		// Force the root bone Y rotation so idle and walk both face the right direction.
 		var root = animPlayer.GetNodeOrNull<Node3D>(animPlayer.RootNode);
 		if (root != null)
 		{
@@ -282,10 +322,9 @@ public partial class PlayerCameraController : CharacterBody3D
 	}
 
 	/// <summary>
-	/// Plays the RESET animation and, via a one-shot AnimationFinished signal,
-	/// applies a -90° Y correction after RESET has fully evaluated.
-	/// Fixes the 90° Y rotation Blender bakes into every exported model's bind pose.
-	/// Safe: self-disconnecting, applied exactly once per transition, not cumulative.
+	/// Plays the RESET animation (or stops the player) to return the character to the
+	/// bind-pose standing position. Fixes the 90° Y offset Blender bakes into exported models.
+	/// Safe: applied exactly once per transition, not cumulative.
 	/// </summary>
 	private static void GoToIdlePose(AnimationPlayer animPlayer)
 	{
@@ -295,18 +334,19 @@ public partial class PlayerCameraController : CharacterBody3D
 			animPlayer.Stop(false);
 	}
 
+	// ── Character swapping ────────────────────────────────────────────────────
+
 	/// <summary>
-	/// Swaps the current character model with a new one, preserving orientation nesting.
+	/// Replaces the visible character model under the orientation-fix node,
+	/// applies the entry's camera and idle-rotation offsets, then snaps to idle pose.
 	/// </summary>
 	public void SwapCharacter(CharacterEntry entry)
 	{
 		if (entry?.ModelScene == null) return;
 
 		EnsureInitialized();
-
 		_activeEntry = entry;
 
-		// We look for the orientation fix node to swap the model inside it
 		var orientationFix = GetNodeOrNull<Node3D>("character/OrientationFix");
 		if (orientationFix == null)
 		{
@@ -314,31 +354,24 @@ public partial class PlayerCameraController : CharacterBody3D
 			return;
 		}
 
-		// Remove existing children from the fix node
+		// Remove the old model.
 		foreach (var child in orientationFix.GetChildren())
-		{
 			child.QueueFree();
-		}
 
-		// Instantiate and add the new character
+		// Instantiate and attach the new model.
 		var newModel = entry.ModelScene.Instantiate<Node3D>();
 		orientationFix.AddChild(newModel);
-		
-		// Update reference and re-initialize visuals
-		_activeCharacter = orientationFix; 
+		_activeCharacter = orientationFix;
 
-		// Force an animation snap for the new model
-		var animPlayer = newModel.GetNodeOrNull<AnimationPlayer>("AnimationPlayer") ?? 
-						 newModel.FindChild("AnimationPlayer", true, false) as AnimationPlayer;
-		
+		var animPlayer = newModel.GetNodeOrNull<AnimationPlayer>("AnimationPlayer")
+					  ?? newModel.FindChild("AnimationPlayer", true, false) as AnimationPlayer;
+
 		if (animPlayer != null)
 		{
-			// Set correct initial idle rotation immediately
+			// Snap the root bone to the correct idle rotation immediately.
 			var root = animPlayer.GetNodeOrNull<Node3D>(animPlayer.RootNode);
 			if (root != null)
-			{
 				root.RotationDegrees = new Vector3(root.RotationDegrees.X, entry.IdleRotation, root.RotationDegrees.Z);
-			}
 
 			if (animPlayer.HasAnimation("WalkingCycle_001"))
 			{
@@ -347,40 +380,40 @@ public partial class PlayerCameraController : CharacterBody3D
 			}
 		}
 
-		// Apply camera offset
 		_camera.Position = _baseCameraPos + entry.CameraOffset;
-
-		// Force orientation update immediately
 		UpdateAnimations(Vector3.Zero);
 	}
 
+	// ── Sit / Unsit ───────────────────────────────────────────────────────────
+
+	/// <summary>
+	/// Transitions the player into the seated position on <paramref name="chair"/>.
+	/// Disables the collision shape to avoid physics conflicts while sitting.
+	/// </summary>
 	public void Sit(Chair chair)
 	{
 		if (_isSitting || _isTransitioning) return;
 
 		EnsureInitialized();
-		_isSitting = true;
+		_isSitting       = true;
 		_isTransitioning = true;
-		_currentChair = chair;
-		_sittingYaw = 0f;
-		_preSitPosition = GlobalPosition;
+		_currentChair    = chair;
+		_sittingYaw      = 0f;
+		_preSitPosition  = GlobalPosition;
 
 		if (_collisionShape != null)
 			_collisionShape.Disabled = true;
 
-		Vector3 targetPos = chair.GlobalPosition + (chair.GlobalTransform.Basis * (chair.SitOffset + (_activeEntry?.SittingOffset ?? Vector3.Zero)));
+		Vector3 targetPos    = chair.GlobalPosition + (chair.GlobalTransform.Basis * (chair.SitOffset + (_activeEntry?.SittingOffset ?? Vector3.Zero)));
 		Vector3 targetCamPos = _baseCameraPos + (_activeEntry?.CameraOffset ?? Vector3.Zero) + (_activeEntry?.SittingCameraOffset ?? Vector3.Zero);
-		
+
 		Tween transition = CreateTween();
 		transition.SetParallel(true);
-		
-		// Body transition
-		transition.TweenProperty(this, "global_position", targetPos, 0.6f).SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.InOut);
+
+		transition.TweenProperty(this, "global_position", targetPos,           0.6f).SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.InOut);
 		transition.TweenProperty(this, "global_rotation", chair.GlobalRotation, 0.6f).SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.InOut);
-		
-		// Camera transition
-		transition.TweenProperty(_camera, "position", targetCamPos, 0.6f).SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.InOut);
-		transition.TweenProperty(_camera, "fov", chair.SitFOV, 0.6f).SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.InOut);
+		transition.TweenProperty(_camera, "position", targetCamPos,            0.6f).SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.InOut);
+		transition.TweenProperty(_camera, "fov",      chair.SitFOV,            0.6f).SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.InOut);
 
 		transition.Finished += () => {
 			_isTransitioning = false;
@@ -390,32 +423,31 @@ public partial class PlayerCameraController : CharacterBody3D
 		UpdateAnimations(Vector3.Zero);
 	}
 
+	/// <summary>
+	/// Returns the player to the standing position they occupied before sitting.
+	/// Re-enables collision and restores the base FOV.
+	/// </summary>
 	public void Unsit()
 	{
 		if (!_isSitting || _isTransitioning) return;
 
-		_isSitting = false;
+		_isSitting       = false;
 		_isTransitioning = true;
-		_currentChair = null;
+		_currentChair    = null;
 
 		Vector3 targetCamPos = _baseCameraPos + (_activeEntry?.CameraOffset ?? Vector3.Zero);
-		
+
 		Tween transition = CreateTween();
 		transition.SetParallel(true);
-		
-		// Body transition back
-		transition.TweenProperty(this, "global_position", _preSitPosition, 0.6f).SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.InOut);
-		// Note: body rotation usually stays as it was or we can snap it forward. 
-		// Let's keep the rotation from the chair for a moment then allow mouse look to take over.
-		
-		// Camera transition back
-		transition.TweenProperty(_camera, "position", targetCamPos, 0.6f).SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.InOut);
-		transition.TweenProperty(_camera, "rotation", new Vector3(_pitch, 0, 0), 0.6f).SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.InOut);
-		transition.TweenProperty(_camera, "fov", _baseFOV, 0.6f).SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.InOut);
+
+		transition.TweenProperty(this, "global_position", _preSitPosition,          0.6f).SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.InOut);
+		transition.TweenProperty(_camera, "position", targetCamPos,                 0.6f).SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.InOut);
+		transition.TweenProperty(_camera, "rotation", new Vector3(_pitch, 0, 0),    0.6f).SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.InOut);
+		transition.TweenProperty(_camera, "fov",      _baseFOV,                     0.6f).SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.InOut);
 
 		transition.Finished += () => {
 			_isTransitioning = false;
-			_sittingYaw = 0f;
+			_sittingYaw      = 0f;
 			if (_collisionShape != null)
 				_collisionShape.Disabled = false;
 			UpdateAnimations(Vector3.Zero);

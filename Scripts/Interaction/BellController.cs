@@ -1,28 +1,39 @@
+// ═══════════════════════════════════════════════════
+// BellController.cs
+// Drives the service bell prop: plays a bell sound and
+// triggers the NPC's Appear() when the player interacts with it.
+// ═══════════════════════════════════════════════════
 using Godot;
 using System;
 
+/// <summary>
+/// Attached to the service bell prop in the scene.
+/// On interaction, plays the bell audio and calls <see cref="NPC.Appear()"/>
+/// on the target NPC. The NPC can be set via <see cref="TargetNPCPath"/>
+/// or auto-discovered as a sibling node.
+/// </summary>
 public partial class BellController : Node3D
 {
 	[Export] public AudioStreamPlayer3D BellAudio;
 	[Export] public ClipboardController ClipboardCtrl;
-	[Export] public NodePath TargetNPCPath;
-	[Export] public Interactable InteractableNode;
+	[Export] public NodePath            TargetNPCPath;
+	[Export] public Interactable        InteractableNode;
 
 	private NPC _targetNPC;
+
+	// ── Lifecycle ─────────────────────────────────────────────────────────────
 
 	public override void _Ready()
 	{
 		InteractableNode ??= GetNodeOrNull<Interactable>("Interactable");
-		BellAudio ??= GetNodeOrNull<AudioStreamPlayer3D>("BellAudio");
-		ClipboardCtrl ??= GetParent()?.GetNodeOrNull<ClipboardController>("ClipboardController");
+		BellAudio        ??= GetNodeOrNull<AudioStreamPlayer3D>("BellAudio");
+		ClipboardCtrl    ??= GetParent()?.GetNodeOrNull<ClipboardController>("ClipboardController");
 
-		// Resolve NPC from path
+		// Resolve target NPC from the explicit path export first.
 		if (TargetNPCPath != null && !TargetNPCPath.IsEmpty)
-		{
 			_targetNPC = GetNodeOrNull<NPC>(TargetNPCPath);
-		}
 
-		// Fallback: search sibling nodes for any NPC
+		// Fallback: scan siblings for any NPC node.
 		if (_targetNPC == null && GetParent() != null)
 		{
 			foreach (var child in GetParent().GetChildren())
@@ -36,21 +47,14 @@ public partial class BellController : Node3D
 		}
 
 		if (InteractableNode != null)
-		{
 			InteractableNode.Interacted += OnBellInteracted;
-		}
 	}
+
+	// ── Handler ───────────────────────────────────────────────────────────────
 
 	private void OnBellInteracted()
 	{
-		if (BellAudio != null)
-		{
-			BellAudio.Play();
-		}
-
-		if (_targetNPC != null)
-		{
-			_targetNPC.Appear();
-		}
+		BellAudio?.Play();
+		_targetNPC?.Appear();
 	}
 }

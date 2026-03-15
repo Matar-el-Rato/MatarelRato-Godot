@@ -33,6 +33,7 @@
 [ext_resource type="PackedScene" uid="uid://ikqyfcjnbajd" path="res://Scenes/Pizzeria/SignInClipboard.tscn" id="33_signin_scene"]
 [ext_resource type="PackedScene" uid="uid://p2bo4u4lncli" path="res://Scenes/Pizzeria/RegistrationClipboard.tscn" id="34_registration_scene"]
 [ext_resource type="PackedScene" uid="uid://4ype7080q81k" path="res://Scenes/NPC.tscn" id="35_npc_scene"]
+[ext_resource type="PackedScene" uid="uid://bgsky7powuwf7" path="res://Scenes/Pizzeria/AuthChoiceUI.tscn" id="36_auth_choice_ui"]
 
 [sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_moon"]
 panorama = ExtResource("1_qxria")
@@ -827,10 +828,10 @@ script = ExtResource("21_mirror")
 MirrorSize = Vector2(2.34, 3.3)
 PixelsPerUnit = 1000
 
-[node name="Registration Clipboard" parent="Pizzeria" unique_id=1320131793 instance=ExtResource("34_registration_scene")]
+[node name="SignInClipboard1" parent="Pizzeria" unique_id=1320131793 instance=ExtResource("34_registration_scene")]
 transform = Transform3D(-0.10452851, 0, 0.9945219, 0, 1, 0, -0.9945219, 0, -0.10452851, 32.61208, 1.0352813, -1.8561821)
 
-[node name="SignIn Clipboard" parent="Pizzeria" unique_id=940128104 instance=ExtResource("33_signin_scene")]
+[node name="RegistrationClipboard1" parent="Pizzeria" unique_id=940128104 instance=ExtResource("33_signin_scene")]
 transform = Transform3D(0.15643449, 0, 0.98768836, 0, 1, 0, -0.98768836, 0, 0.15643449, 32.937305, 1.0318031, -1.8546613)
 
 [node name="ClipboardController" type="Node" parent="Pizzeria" unique_id=55667788]
@@ -864,6 +865,9 @@ unit_size = 3.0
 
 [node name="PiggaNPC" parent="Pizzeria" unique_id=947763416 instance=ExtResource("35_npc_scene")]
 transform = Transform3D(-0.21480355, 0, 0.9766573, 0, 1, 0, -0.9766573, 0, -0.21480355, 33.1, -0.028534383, -0.77213186)
+
+[node name="AuthChoiceUI" parent="Pizzeria" unique_id=1967490561 instance=ExtResource("36_auth_choice_ui")]
+transform = Transform3D(-2.4175165, -1.12690035e-08, 0.10960955, -0.028369052, 2.3375406, -0.62569934, -0.105874695, -0.6263421, -2.3351417, 34.334217, 3.2708683, 0.81998694)
 
 [node name="Player" parent="." unique_id=1339342590 instance=ExtResource("6_y4jh7")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.16528296, -0.22474906, -0.35706663)

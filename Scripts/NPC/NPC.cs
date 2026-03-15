@@ -1,161 +1,323 @@
+// ═══════════════════════════════════════════════════
+// NPC.cs
+// "Pigga" — the macabre pizzeria host NPC.
+// Handles appear/disappear VFX, dialog bubble, pointing animation,
+// and orchestrates the login/register flow with AuthChoiceUI.
+// ═══════════════════════════════════════════════════
 using Godot;
 using System;
 
+/// <summary>
+/// CharacterBody3D for the pizzeria host NPC (Pigga).
+/// Manages appearance via scale tween + ember VFX, dialog bubble text,
+/// animation state (idle / point), and drives the auth flow when interacted with.
+/// </summary>
 public partial class NPC : CharacterBody3D
 {
-	[Export] public string IdleAnimation = "Armature|mixamo_com|Layer0_007";
-	[Export] public float TransitionDuration = 0.8f;
-	[Export] public Color TransitionColor = new Color(1.0f, 0.5f, 0.2f); // Orange flash
-	[Export] public string DialogText = "Good to see you again...\n what can i get for you today?";
+	/// <summary>Global singleton — set in _Ready.</summary>
+	public static NPC Instance { get; private set; }
+
+	[Export] public string IdleAnimation   = "Armature|mixamo_com|Layer0_007";
+	[Export] public string PointAnimation  = "Armature_002|mixamo_com|Layer0_001";
+	[Export] public float  TransitionDuration = 0.8f;
+	[Export] public Color  TransitionColor    = new Color(1.0f, 0.5f, 0.2f);
+	[Export] public string DialogText         = "Good to see you again...\nWhat can I get for you today?";
 	[Export] public NodePath DialogBubblePath;
-	
+
 	private AnimationPlayer _animPlayer;
-	private Node3D _model;
+	private Node3D          _model;
 	private AudioStreamPlayer3D _burnAudio;
-	private DialogBubble _dialogBubble;
-	private bool _hasAppeared = false;
+	private DialogBubble    _dialogBubble;
+	private Interactable    _interactable;
+
+	private bool _hasAppeared   = false;
 	private bool _hasInteracted = false;
+	private bool _isLoggedIn    = false;
+
+	// ── Macabre phrase pools ──────────────────────────────────────────────────
+
+	private static readonly string[] LogoutPhrases =
+	{
+		"Leaving so soon?\nThe house never forgets.",
+		"Running away?\nThe ledger stays open...",
+		"Until next time, fool.\nWe'll be waiting.",
+	};
+
+	private static readonly string[] LoginPhrases =
+	{
+		"You crawled back...\n[i]The house always wins, {0}.[/i]",
+		"Still breathing?\nWelcome back to the table,\n[i]{0}.[/i]",
+		"Ah... {0} returns.\nThe game was getting bored\nwithout you.",
+		"The ledger remembers you, {0}.\nSit down...\nThe game is just starting.",
+	};
+
+	private static readonly string[] RegisterPhrases =
+	{
+		"Fresh blood...\nThe ink is dry, [i]{0}[/i].\nYou belong to us now.",
+		"A new soul signs the ledger.\nWelcome to perdition,\n[i]{0}.[/i]",
+		"How delightful...\nAnother one.\nDon't worry, {0}...\nIt won't hurt. [i]Much.[/i]",
+		"The pact is sealed, {0}.\nThere is no leaving\nthis table.",
+	};
+
+	private static readonly string[] LoginFailPhrases =
+	{
+		"Wrong credentials, fool.\n[i]The dead don't forget.[/i]",
+		"The door is locked.\nSomeone is lying...",
+		"Incorrect. Try again.\nThe rats are watching.",
+	};
+
+	private static readonly string[] RegisterFailPhrases =
+	{
+		"That name is... taken.\nSomeone got here before you.",
+		"The ledger already has\nthat name. Try another.",
+		"Registration denied.\nThe house has\nits reasons.",
+	};
+
+	private Random _rng = new Random();
+
+	// ── Lifecycle ─────────────────────────────────────────────────────────────
 
 	public override void _Ready()
 	{
-		_model = GetNodeOrNull<Node3D>("OrientationFix");
+		Instance = this;
+
+		_model      = GetNodeOrNull<Node3D>("OrientationFix");
 		_animPlayer = GetNodeOrNull<AnimationPlayer>("OrientationFix/pigga/AnimationPlayer");
 		if (_animPlayer == null) _animPlayer = FindAnimationPlayer(this);
-		_burnAudio = GetNodeOrNull<AudioStreamPlayer3D>("BurnAudio");
+		_burnAudio  = GetNodeOrNull<AudioStreamPlayer3D>("BurnAudio");
 
 		if (_animPlayer != null && _animPlayer.HasAnimation(IdleAnimation))
 		{
+			// Force loop on the idle clip — it may not be set in the imported asset.
 			var anim = _animPlayer.GetAnimation(IdleAnimation);
 			anim.LoopMode = Animation.LoopModeEnum.Linear;
 			_animPlayer.Play(IdleAnimation);
 		}
 
-		// Hide the entire NPC (root CharacterBody3D), not just the model
+		// Start hidden and near-zero scale; Appear() tweens to full size.
 		Visible = false;
-		Scale = new Vector3(0.001f, 0.001f, 0.001f);
+		Scale   = new Vector3(0.001f, 0.001f, 0.001f);
 
-		if (DialogBubblePath != null && !DialogBubblePath.IsEmpty)
-		{
-			_dialogBubble = GetNodeOrNull<DialogBubble>(DialogBubblePath);
-		}
-		else
-		{
-			_dialogBubble = GetNodeOrNull<DialogBubble>("DialogBubble");
-		}
+		_dialogBubble = (DialogBubblePath != null && !DialogBubblePath.IsEmpty)
+			? GetNodeOrNull<DialogBubble>(DialogBubblePath)
+			: GetNodeOrNull<DialogBubble>("DialogBubble");
 
-		var interactable = GetNodeOrNull<Interactable>("Interactable");
-		if (interactable != null)
-		{
-			interactable.Interacted += OnInteracted;
-		}
+		_interactable = GetNodeOrNull<Interactable>("Interactable");
+		if (_interactable != null)
+			_interactable.Interacted += OnInteracted;
 	}
 
+	// ── Auth callbacks ────────────────────────────────────────────────────────
+
+	/// <summary>
+	/// Called by <see cref="ClipboardUI"/> after a successful login or registration.
+	/// Switches the interactable prompt to "Log Out" and marks the session active.
+	/// </summary>
+	public void OnAuthComplete(string username)
+	{
+		_isLoggedIn    = true;
+		_hasInteracted = false; // allow one more interaction for logout
+		if (_interactable != null)
+			_interactable.PromptText = "Log Out";
+	}
+
+	// ── Auth reactions ────────────────────────────────────────────────────────
+
+	/// <summary>
+	/// Displays a random macabre greeting in the dialog bubble after auth success.
+	/// </summary>
+	/// <param name="username">The authenticated player name to embed in the phrase.</param>
+	/// <param name="isNewUser">Selects the register pool when true, login pool otherwise.</param>
+	public void ReactToAuth(string username, bool isNewUser)
+	{
+		var pool   = isNewUser ? RegisterPhrases : LoginPhrases;
+		string phrase = string.Format(pool[_rng.Next(pool.Length)], username);
+		ForceShowDialog(phrase);
+	}
+
+	/// <summary>
+	/// Displays a random failure phrase after a failed login or registration attempt.
+	/// </summary>
+	/// <param name="isRegistration">Selects register-fail pool when true.</param>
+	public void ReactToAuthFailed(bool isRegistration)
+	{
+		var pool = isRegistration ? RegisterFailPhrases : LoginFailPhrases;
+		ForceShowDialog(pool[_rng.Next(pool.Length)]);
+	}
+
+	/// <summary>
+	/// Shows the given text in the dialog bubble, interrupting any in-progress typing.
+	/// </summary>
+	private void ForceShowDialog(string text)
+	{
+		if (_dialogBubble == null) return;
+		_dialogBubble.ShowDialog(text, force: true);
+	}
+
+	// ── Appear / Disappear ────────────────────────────────────────────────────
+
+	/// <summary>
+	/// Scales the NPC from near-zero to full size with a burn flash + ember burst.
+	/// Idempotent — subsequent calls while already visible are ignored.
+	/// </summary>
 	public void Appear()
 	{
 		if (_hasAppeared) return;
 		_hasAppeared = true;
-		
-		Visible = true;
 
+		Visible = true;
 		Tween tween = CreateTween();
 		tween.TweenProperty(this, "scale", Vector3.One, TransitionDuration)
 			.SetTrans(Tween.TransitionType.Quad)
 			.SetEase(Tween.EaseType.InOut);
-		
+
 		AddBurnFlash();
 		AddEmbers();
-
-		if (_burnAudio != null)
-		{
-			_burnAudio.Play();
-		}
+		_burnAudio?.Play();
 	}
 
-	private void AddBurnFlash()
+	/// <summary>
+	/// Shrinks the NPC back to near-zero, plays VFX, then hides it.
+	/// </summary>
+	private void Disappear()
 	{
-		OmniLight3D flash = new OmniLight3D();
-		flash.TopLevel = true;
-		flash.LightColor = TransitionColor;
-		flash.LightEnergy = 0.0f;
-		flash.OmniRange = 6.0f;
-		
-		Vector3 spawnPos = GlobalPosition + Vector3.Up * 1.0f;
-		GetParent().AddChild(flash);
-		flash.GlobalPosition = spawnPos;
+		_hasAppeared   = false;
+		_hasInteracted = false;
+		if (_interactable != null) _interactable.PromptText = "Talk";
 
-		Tween flashTween = CreateTween();
-		flashTween.TweenProperty(flash, "light_energy", 5.0f, TransitionDuration * 0.15f);
-		flashTween.TweenProperty(flash, "light_energy", 0.0f, TransitionDuration * 0.85f);
-		flashTween.Finished += () => flash.QueueFree();
+		_dialogBubble?.HideDialog();
+		AddBurnFlash();
+		AddEmbers();
+		_burnAudio?.Play();
+
+		Tween tween = CreateTween();
+		tween.TweenProperty(this, "scale", new Vector3(0.001f, 0.001f, 0.001f), TransitionDuration)
+			.SetTrans(Tween.TransitionType.Quad)
+			.SetEase(Tween.EaseType.InOut);
+		tween.Finished += () => Visible = false;
 	}
 
-	private void AddEmbers()
-	{
-		Vector3 spawnPos = GlobalPosition + Vector3.Up * 0.5f;
-
-		CpuParticles3D particles = new CpuParticles3D();
-		particles.TopLevel = true;
-		GetParent().AddChild(particles);
-		particles.GlobalPosition = spawnPos;
-		
-		particles.Amount = 120;
-		particles.Lifetime = TransitionDuration * 1.5f;
-		particles.OneShot = true;
-		particles.Explosiveness = 0.85f;
-		
-		particles.EmissionShape = CpuParticles3D.EmissionShapeEnum.Box;
-		particles.EmissionBoxExtents = new Vector3(0.5f, 0.8f, 0.5f);
-		particles.Direction = new Vector3(0, 1, 0);
-		particles.Spread = 55.0f;
-		particles.Gravity = new Vector3(0, 2.0f, 0); 
-		particles.InitialVelocityMin = 1.0f;
-		particles.InitialVelocityMax = 2.5f;
-		particles.ScaleAmountMin = 0.8f;
-		particles.ScaleAmountMax = 1.5f;
-		
-		Gradient gradient = new Gradient();
-		gradient.SetColor(0, new Color(1, 1, 0.5f, 1)); 
-		gradient.AddPoint(0.3f, new Color(1, 0.5f, 0.1f, 0.9f));
-		gradient.SetColor(gradient.GetPointCount() - 1, new Color(0.8f, 0.1f, 0, 0)); 
-		particles.ColorRamp = gradient;
-		
-		QuadMesh qm = new QuadMesh();
-		qm.Size = new Vector2(0.018f, 0.018f);
-		particles.Mesh = qm;
-		
-		StandardMaterial3D mat = new StandardMaterial3D();
-		mat.ShadingMode = StandardMaterial3D.ShadingModeEnum.Unshaded;
-		mat.VertexColorUseAsAlbedo = true; 
-		mat.BillboardMode = StandardMaterial3D.BillboardModeEnum.Enabled;
-		mat.Transparency = StandardMaterial3D.TransparencyEnum.Alpha;
-		particles.MaterialOverride = mat;
-		
-		particles.Emitting = true;
-		GetTree().CreateTimer(particles.Lifetime + 0.5f).Timeout += () => particles.QueueFree();
-	}
+	// ── Interaction ───────────────────────────────────────────────────────────
 
 	private async void OnInteracted()
 	{
 		if (!_hasAppeared || _hasInteracted) return;
 		_hasInteracted = true;
 
-		GD.Print("NPC Interacted, showing dialog...");
-
-		if (_dialogBubble != null)
+		// ── Logout flow ───────────────────────────────────────────────────────
+		if (_isLoggedIn)
 		{
-			_dialogBubble.ShowDialog(DialogText);
+			_isLoggedIn = false;
+			string loggedOutUser = AuthManager.Username;
+			AuthManager.NotifyLogout();
+			ForceShowDialog(LogoutPhrases[_rng.Next(LogoutPhrases.Length)]);
+			ChatManager.AddLog($"[color=#888888]{loggedOutUser} has left the fun...[/color]");
+
+			await ToSignal(GetTree().CreateTimer(4.0f), SceneTreeTimer.SignalName.Timeout);
+			Disappear();
+			return;
 		}
 
-		// Wait 1 second after interacting
-		await ToSignal(GetTree().CreateTimer(1.0f), SceneTreeTimer.SignalName.Timeout);
+		// ── Step 1: greeting ──────────────────────────────────────────────────
+		_dialogBubble?.ShowDialog(DialogText);
+		await ToSignal(GetTree().CreateTimer(4.0f), SceneTreeTimer.SignalName.Timeout);
 
-		GD.Print("Spawning clipboards...");
-		if (ClipboardController.Instance != null)
+		// ── Step 2: show choice panel and play pointing animation ─────────────
+		_dialogBubble?.ShowDialog("So what is it then?", force: true);
+
+		AuthChoiceUI.Instance?.Show(
+			onLogin: () => {
+				ForceShowDialog("Huh...");
+				ClipboardController.Instance?.ShowLoginClipboard();
+			},
+			onRegister: () => {
+				ForceShowDialog("Huh...");
+				ClipboardController.Instance?.ShowRegistrationClipboard();
+			}
+		);
+
+		if (_animPlayer != null && _animPlayer.HasAnimation(PointAnimation))
 		{
-			ClipboardController.Instance.ShowClipboards();
+			_animPlayer.Play(PointAnimation, 0.3f);
+			await ToSignal(_animPlayer, AnimationPlayer.SignalName.AnimationFinished);
+			_animPlayer.Play(IdleAnimation, 0.3f);
 		}
 	}
 
+	// ── VFX helpers ───────────────────────────────────────────────────────────
+
+	/// <summary>
+	/// Spawns a short-lived OmniLight3D that flashes orange on appear/disappear.
+	/// </summary>
+	private void AddBurnFlash()
+	{
+		OmniLight3D flash = new OmniLight3D
+		{
+			TopLevel    = true,
+			LightColor  = TransitionColor,
+			LightEnergy = 0.0f,
+			OmniRange   = 6.0f
+		};
+		GetParent().AddChild(flash);
+		flash.GlobalPosition = GlobalPosition + Vector3.Up * 1.0f;
+
+		Tween t = CreateTween();
+		t.TweenProperty(flash, "light_energy", 5.0f, TransitionDuration * 0.15f);
+		t.TweenProperty(flash, "light_energy", 0.0f, TransitionDuration * 0.85f);
+		t.Finished += () => flash.QueueFree();
+	}
+
+	/// <summary>
+	/// Spawns a one-shot CPU particle burst that mimics flying embers/sparks.
+	/// </summary>
+	private void AddEmbers()
+	{
+		Vector3 spawnPos = GlobalPosition + Vector3.Up * 0.5f;
+
+		CpuParticles3D particles = new CpuParticles3D { TopLevel = true };
+		GetParent().AddChild(particles);
+		particles.GlobalPosition     = spawnPos;
+		particles.Amount             = 120;
+		particles.Lifetime           = TransitionDuration * 1.5f;
+		particles.OneShot            = true;
+		particles.Explosiveness      = 0.85f;
+		particles.EmissionShape      = CpuParticles3D.EmissionShapeEnum.Box;
+		particles.EmissionBoxExtents = new Vector3(0.5f, 0.8f, 0.5f);
+		particles.Direction          = new Vector3(0, 1, 0);
+		particles.Spread             = 55.0f;
+		particles.Gravity            = new Vector3(0, 2.0f, 0);
+		particles.InitialVelocityMin = 1.0f;
+		particles.InitialVelocityMax = 2.5f;
+		particles.ScaleAmountMin     = 0.8f;
+		particles.ScaleAmountMax     = 1.5f;
+
+		// Yellow-white at birth → dark red at death
+		Gradient gradient = new Gradient();
+		gradient.SetColor(0, new Color(1, 1, 0.5f, 1));
+		gradient.AddPoint(0.3f, new Color(1, 0.5f, 0.1f, 0.9f));
+		gradient.SetColor(gradient.GetPointCount() - 1, new Color(0.8f, 0.1f, 0, 0));
+		particles.ColorRamp = gradient;
+
+		QuadMesh qm = new QuadMesh { Size = new Vector2(0.018f, 0.018f) };
+		particles.Mesh = qm;
+
+		StandardMaterial3D mat = new StandardMaterial3D
+		{
+			ShadingMode            = StandardMaterial3D.ShadingModeEnum.Unshaded,
+			VertexColorUseAsAlbedo = true,
+			BillboardMode          = StandardMaterial3D.BillboardModeEnum.Enabled,
+			Transparency           = StandardMaterial3D.TransparencyEnum.Alpha
+		};
+		particles.MaterialOverride = mat;
+		particles.Emitting = true;
+
+		GetTree().CreateTimer(particles.Lifetime + 0.5f).Timeout += () => particles.QueueFree();
+	}
+
+	/// <summary>
+	/// Depth-first recursive search for the first AnimationPlayer in a subtree.
+	/// Used as a fallback when the node path doesn't resolve directly.
+	/// </summary>
 	private AnimationPlayer FindAnimationPlayer(Node node)
 	{
 		if (node is AnimationPlayer ap) return ap;

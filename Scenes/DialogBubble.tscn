@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" path="res://Scripts/NPC/DialogBubble.cs" id="1_script"]
 [ext_resource type="FontFile" uid="uid://cw75wckal27hg" path="res://Assets/Fonts/Jersey10-Regular.ttf" id="2_font"]
+[ext_resource type="AudioStream" path="res://Assets/Sound FX/oink.wav" id="3_oink"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bubble"]
 bg_color = Color(0, 0, 0, 0.862745)
@@ -55,13 +56,25 @@ theme_override_constants/margin_bottom = 10
 [node name="RichTextLabel" type="RichTextLabel" parent="SubViewport/PanelContainer/MarginContainer"]
 layout_mode = 2
 theme_override_fonts/normal_font = ExtResource("2_font")
+theme_override_fonts/bold_font = ExtResource("2_font")
+theme_override_fonts/italics_font = ExtResource("2_font")
+theme_override_fonts/bold_italics_font = ExtResource("2_font")
+theme_override_fonts/mono_font = ExtResource("2_font")
 theme_override_font_sizes/normal_font_size = 32
+theme_override_font_sizes/bold_font_size = 32
+theme_override_font_sizes/italics_font_size = 32
+theme_override_font_sizes/bold_italics_font_size = 32
 bbcode_enabled = true
 text = "Sample text here..."
 fit_content = true
 autowrap_mode = 0
 scroll_active = false
 visible_characters_behavior = 1
+
+[node name="OinkAudio" type="AudioStreamPlayer3D" parent="."]
+stream = ExtResource("3_oink")
+unit_size = 5.0
+max_distance = 10.0
 
 [node name="Sprite3D" type="Sprite3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25, 0)

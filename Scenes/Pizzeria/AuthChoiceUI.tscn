@@ -1,0 +1,80 @@
+[gd_scene format=3 uid="uid://bgsky7powuwf7"]
+
+[ext_resource type="Script" uid="uid://ckihy5yahjdlm" path="res://Scripts/NPC/AuthChoiceUI.cs" id="1_authchoice"]
+[ext_resource type="Script" uid="uid://bk7ngt4ktf6i6" path="res://Scripts/Interaction/Interactable.cs" id="2_interactable"]
+[ext_resource type="FontFile" uid="uid://cw75wckal27hg" path="res://Assets/Fonts/Jersey10-Regular.ttf" id="3_font"]
+[ext_resource type="AudioStream" uid="uid://bc3dpjpyfbu0" path="res://Assets/Sound FX/light_flicker.wav" id="4_flicker_sound"]
+
+[sub_resource type="QuadMesh" id="QuadMesh_bg"]
+size = Vector2(1.26, 0.22)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_bg"]
+shading_mode = 0
+albedo_color = Color(0.02, 0.01, 0, 0.82)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_login"]
+size = Vector3(0.37296873, 0.11031494, 0.04)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_register"]
+size = Vector3(0.61677855, 0.11597595, 0.04)
+
+[node name="AuthChoiceUI" type="Node3D" unique_id=2128123005]
+script = ExtResource("1_authchoice")
+
+[node name="Background" type="MeshInstance3D" parent="." unique_id=25861978]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.026531577, 0, -0.000402282)
+cast_shadow = 0
+mesh = SubResource("QuadMesh_bg")
+surface_material_override/0 = SubResource("StandardMaterial3D_bg")
+
+[node name="LoginOption" type="Node3D" parent="." unique_id=1239949962]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.35365564, 0, 0)
+
+[node name="Label3D" type="Label3D" parent="LoginOption" unique_id=1956894474]
+pixel_size = 0.004
+modulate = Color(1, 0.35, 0.05, 1)
+text = "LOGIN"
+font = ExtResource("3_font")
+font_size = 52
+outline_size = 0
+
+[node name="Interactable" type="Node3D" parent="LoginOption" unique_id=54140946]
+script = ExtResource("2_interactable")
+PromptText = "Login"
+UseLeftClick = true
+AutoGenerateCollision = false
+HandleHighlight = false
+
+[node name="Collision" type="StaticBody3D" parent="LoginOption/Interactable" unique_id=836995276]
+
+[node name="Shape" type="CollisionShape3D" parent="LoginOption/Interactable/Collision" unique_id=1948161380]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0033691525, 0.0020446777, 0)
+shape = SubResource("BoxShape3D_login")
+
+[node name="RegisterOption" type="Node3D" parent="." unique_id=1638831032]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.29044166, 0, 0)
+
+[node name="Label3D" type="Label3D" parent="RegisterOption" unique_id=759168505]
+pixel_size = 0.004
+modulate = Color(1, 0.35, 0.05, 1)
+text = "REGISTER"
+font = ExtResource("3_font")
+font_size = 52
+outline_size = 0
+
+[node name="Interactable" type="Node3D" parent="RegisterOption" unique_id=1000942864]
+script = ExtResource("2_interactable")
+PromptText = "Register"
+UseLeftClick = true
+AutoGenerateCollision = false
+HandleHighlight = false
+
+[node name="Collision" type="StaticBody3D" parent="RegisterOption/Interactable" unique_id=1600428352]
+
+[node name="Shape" type="CollisionShape3D" parent="RegisterOption/Interactable/Collision" unique_id=522701583]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.004519671, 0.00047454238, 0)
+shape = SubResource("BoxShape3D_register")
+
+[node name="FlickerAudio" type="AudioStreamPlayer3D" parent="." unique_id=486525400]
+stream = ExtResource("4_flicker_sound")
+unit_size = 5.0

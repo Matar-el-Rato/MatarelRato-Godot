@@ -1,137 +1,166 @@
+// ═══════════════════════════════════════════════════
+// Interactable.cs
+// Reusable Node3D component that makes any prop interactable.
+// Auto-generates trimesh collision, manages highlight/outline shaders,
+// and emits signals when focused or interacted with.
+// ═══════════════════════════════════════════════════
 using Godot;
 using System;
 using System.Collections.Generic;
 
+/// <summary>
+/// Drop-in interactable component. Place as a child of any prop Node3D.
+/// Emits <see cref="Interacted"/>, <see cref="Focused"/>, and <see cref="Unfocused"/>
+/// signals. Optionally auto-generates trimesh collision and applies a highlight
+/// shader (screen-space, shell, or overlay) when the player looks at it.
+/// </summary>
 [GlobalClass]
 public partial class Interactable : Node3D, IInteractable
 {
+	/// <summary>Emitted when the player triggers an interaction (key or click).</summary>
 	[Signal] public delegate void InteractedEventHandler();
+	/// <summary>Emitted when the player's raycast first enters this interactable.</summary>
 	[Signal] public delegate void FocusedEventHandler();
+	/// <summary>Emitted when the player's raycast leaves this interactable.</summary>
 	[Signal] public delegate void UnfocusedEventHandler();
 
-	[Export] public string PromptText = "Interact";
+	// ── Core settings ─────────────────────────────────────────────────────────
+
+	[Export] public string PromptText        = "Interact";
 	[Export] public string InteractionAction = "interact";
-	[Export] public bool UseLeftClick = false;
-	
+	/// <summary>When true, the interactable responds to left-click instead of (or in addition to) the key.</summary>
+	[Export] public bool   UseLeftClick      = false;
+
+	// ── Visuals ───────────────────────────────────────────────────────────────
+
 	[ExportGroup("Visuals")]
-	[Export] public bool ShowExclamation = false;
+	/// <summary>When true, a floating "!" label is spawned above the interactable.</summary>
+	[Export] public bool    ShowExclamation   = false;
 	[Export] public Vector3 ExclamationOffset = new Vector3(0, 2.5f, 0);
-	[Export] public float ExclamationScale = 4.0f;
-	[Export] public Font CustomFont;
-	
+	[Export] public float   ExclamationScale  = 4.0f;
+	[Export] public Font    CustomFont;
+
+	// ── Automation ────────────────────────────────────────────────────────────
+
 	[ExportGroup("Automation")]
-	[Export] public bool AutoGenerateCollision = true;
-	[Export] public bool HandleHighlight = true;
+	/// <summary>When true, trimesh collision is generated for every MeshInstance3D in the parent hierarchy.</summary>
+	[Export] public bool     AutoGenerateCollision        = true;
+	[Export] public bool     HandleHighlight              = true;
 	[Export] public NodePath HighlightTargetMesh;
-	[Export] public Color HighlightColor = Colors.Yellow;
-	[Export] public float HighlightThickness = 2.0f;
-	[Export] public float HighlightSmoothingCutoff = 0.1f;
-	[Export] public float HighlightSmoothingMax = 0.1f;
-	[Export] public float HighlightTransparencyThreshold = 0.1f;
-	[Export] public float HighlightEdgeSensitivity = 0.01f;
-	[Export] public float HighlightOcclusionBias = 0.02f;
+	[Export] public Color    HighlightColor               = Colors.Yellow;
+	[Export] public float    HighlightThickness           = 2.0f;
+	[Export] public float    HighlightSmoothingCutoff     = 0.1f;
+	[Export] public float    HighlightSmoothingMax        = 0.1f;
+	[Export] public float    HighlightTransparencyThreshold = 0.1f;
+	[Export] public float    HighlightEdgeSensitivity     = 0.01f;
+	[Export] public float    HighlightOcclusionBias       = 0.02f;
 
-	[Export] public bool UseShellHighlight = false;
-	[Export] public bool UseOverlayHighlight = false;
-	[Export] public Color OverlayColor = new Color(1, 1, 0, 0.4f);
+	/// <summary>Uses a vertex-expanded shell mesh for the outline (good for convex props).</summary>
+	[Export] public bool  UseShellHighlight       = false;
+	/// <summary>Uses a full-screen overlay material instead of an outline pass.</summary>
+	[Export] public bool  UseOverlayHighlight      = false;
+	[Export] public Color OverlayColor             = new Color(1, 1, 0, 0.4f);
 	[Export] public float HighlightOverlayInflation = 0.005f;
-	private ShaderMaterial _shellMaterial;
-	private static readonly string SHELL_SHADER_PATH = "res://Shaders/outline_vertex.gdshader";
 
-	private Label3D _exclamationLabel;
-	private Tween _floatTween;
-	private List<MeshInstance3D> _highlightMeshes = new List<MeshInstance3D>();
-	private List<MeshInstance3D> _shellMeshes = new List<MeshInstance3D>();
-	private ShaderMaterial _highlightMaterial;
-	private ShaderMaterial _overlayMaterial;
-	private static readonly string SHADER_PATH = "res://Shaders/highlight.gdshader";
+	private static readonly string SHADER_PATH         = "res://Shaders/highlight.gdshader";
 	private static readonly string OVERLAY_SHADER_PATH = "res://Shaders/overlay_highlight.gdshader";
+	private static readonly string SHELL_SHADER_PATH   = "res://Shaders/outline_vertex.gdshader";
+
+	private Label3D             _exclamationLabel;
+	private Tween               _floatTween;
+	private List<MeshInstance3D> _highlightMeshes = new List<MeshInstance3D>();
+	private List<MeshInstance3D> _shellMeshes     = new List<MeshInstance3D>();
+	private ShaderMaterial      _highlightMaterial;
+	private ShaderMaterial      _overlayMaterial;
+	private ShaderMaterial      _shellMaterial;
+
+	// ── Lifecycle ─────────────────────────────────────────────────────────────
 
 	public override void _Ready()
 	{
+		// Defer so the parent hierarchy is fully in the tree before we traverse it.
 		CallDeferred(MethodName.InitializeInteractable);
 	}
 
 	private void InitializeInteractable()
 	{
 		SetupExclamation();
-		
+
 		if (AutoGenerateCollision)
-		{
 			GenerateCollisions(GetParent());
-		}
 
 		if (HandleHighlight)
 		{
 			SetupHighlightMaterial();
 			if (UseShellHighlight)
-			{
 				SetupShellMeshes();
-			}
 		}
 	}
 
+	// ── Highlight setup ───────────────────────────────────────────────────────
+
+	/// <summary>
+	/// Creates per-mesh shell duplicates that are toggled visible/invisible on focus.
+	/// The shell shader inflates vertex normals to produce a flat-colour outline.
+	/// </summary>
 	private void SetupShellMeshes()
 	{
 		_shellMaterial = new ShaderMaterial();
 		_shellMaterial.Shader = GD.Load<Shader>(SHELL_SHADER_PATH);
 		_shellMaterial.SetShaderParameter("outline_color", HighlightColor);
-		
-		// Map pixel-style thickness to meters (e.g. 4.0 -> 0.008m)
+		// Map pixel-style thickness to world-space meters (e.g. 4.0 px → 0.008 m).
 		_shellMaterial.SetShaderParameter("thickness", HighlightThickness * 0.002f);
 
 		foreach (var mesh in _highlightMeshes)
 		{
 			var shell = new MeshInstance3D();
-			shell.Mesh = mesh.Mesh;
+			shell.Mesh             = mesh.Mesh;
 			shell.MaterialOverride = _shellMaterial;
-			shell.CastShadow = GeometryInstance3D.ShadowCastingSetting.Off;
-			shell.Visible = false;
-			shell.Name = "HighlightShell_" + mesh.Name;
-			
-			// Attach to the mesh so it follows transforms/skeletons
+			shell.CastShadow       = GeometryInstance3D.ShadowCastingSetting.Off;
+			shell.Visible          = false;
+			shell.Name             = "HighlightShell_" + mesh.Name;
+
+			// Attach to the original mesh so it follows skeleton animations.
 			mesh.AddChild(shell);
 			_shellMeshes.Add(shell);
 		}
 	}
 
+	/// <summary>
+	/// Loads the highlight (or overlay) shader and collects all target mesh instances
+	/// from the parent hierarchy.
+	/// </summary>
 	private void SetupHighlightMaterial()
 	{
 		_highlightMaterial = new ShaderMaterial();
-		_highlightMaterial.Shader = GD.Load<Shader>(SHADER_PATH);
-		_highlightMaterial.RenderPriority = 10;
-		_highlightMaterial.SetShaderParameter("outline_color", HighlightColor);
-		_highlightMaterial.SetShaderParameter("thickness", HighlightThickness);
-		_highlightMaterial.SetShaderParameter("smoothing_cutoff", HighlightSmoothingCutoff);
-		_highlightMaterial.SetShaderParameter("smoothing_max", HighlightSmoothingMax);
-		_highlightMaterial.SetShaderParameter("transparency_threshold", HighlightTransparencyThreshold);
-		_highlightMaterial.SetShaderParameter("edge_sensitivity", HighlightEdgeSensitivity);
-		_highlightMaterial.SetShaderParameter("occlusion_bias", HighlightOcclusionBias);
+		_highlightMaterial.Shader          = GD.Load<Shader>(SHADER_PATH);
+		_highlightMaterial.RenderPriority  = 10;
+		_highlightMaterial.SetShaderParameter("outline_color",           HighlightColor);
+		_highlightMaterial.SetShaderParameter("thickness",               HighlightThickness);
+		_highlightMaterial.SetShaderParameter("smoothing_cutoff",        HighlightSmoothingCutoff);
+		_highlightMaterial.SetShaderParameter("smoothing_max",           HighlightSmoothingMax);
+		_highlightMaterial.SetShaderParameter("transparency_threshold",  HighlightTransparencyThreshold);
+		_highlightMaterial.SetShaderParameter("edge_sensitivity",        HighlightEdgeSensitivity);
+		_highlightMaterial.SetShaderParameter("occlusion_bias",          HighlightOcclusionBias);
 
 		if (UseOverlayHighlight)
 		{
 			_overlayMaterial = new ShaderMaterial();
-			_overlayMaterial.Shader = GD.Load<Shader>(OVERLAY_SHADER_PATH);
-			_overlayMaterial.SetShaderParameter("overlay_color", OverlayColor);
-			_overlayMaterial.SetShaderParameter("inflation", HighlightOverlayInflation);
+			_overlayMaterial.Shader         = GD.Load<Shader>(OVERLAY_SHADER_PATH);
 			_overlayMaterial.RenderPriority = 100;
-			GD.Print($"[Interactable] Initialized overlay highlight for {Name}. Priority: 100");
+			_overlayMaterial.SetShaderParameter("overlay_color", OverlayColor);
+			_overlayMaterial.SetShaderParameter("inflation",     HighlightOverlayInflation);
 		}
 
-		// Cache meshes
+		// Populate _highlightMeshes from the explicit target or the whole parent tree.
 		_highlightMeshes.Clear();
 		if (HighlightTargetMesh != null && !HighlightTargetMesh.IsEmpty)
 		{
 			var targetNode = GetNodeOrNull<Node>(HighlightTargetMesh);
 			if (targetNode is MeshInstance3D mesh)
-			{
 				_highlightMeshes.Add(mesh);
-			}
 			else if (targetNode != null)
-			{
-				// If it's a container (like a GLB root), find all meshes inside
-				FindMeshesRecursive(targetNode);
-			}
+				FindMeshesRecursive(targetNode); // GLB root: collect all meshes inside
 		}
 		else
 		{
@@ -139,6 +168,9 @@ public partial class Interactable : Node3D, IInteractable
 		}
 	}
 
+	/// <summary>
+	/// Returns the first <see cref="MeshInstance3D"/> found in the subtree (depth-first).
+	/// </summary>
 	private MeshInstance3D FindMeshRecursive(Node node)
 	{
 		if (node is MeshInstance3D mesh) return mesh;
@@ -150,37 +182,35 @@ public partial class Interactable : Node3D, IInteractable
 		return null;
 	}
 
+	/// <summary>
+	/// Collects every <see cref="MeshInstance3D"/> in the subtree into <see cref="_highlightMeshes"/>.
+	/// </summary>
 	private void FindMeshesRecursive(Node node)
 	{
 		if (node is MeshInstance3D mesh)
-		{
 			_highlightMeshes.Add(mesh);
-			GD.Print($"[Interactable] Cached mesh: {mesh.Name} for {Name}");
-		}
-		
+
 		foreach (Node child in node.GetChildren(true))
-		{
 			FindMeshesRecursive(child);
-		}
 	}
+
+	// ── Exclamation mark ──────────────────────────────────────────────────────
 
 	private void SetupExclamation()
 	{
 		if (!ShowExclamation) return;
 
 		_exclamationLabel = new Label3D();
-		_exclamationLabel.Text = "!";
-		_exclamationLabel.FontSize = (int)(32 * ExclamationScale);
+		_exclamationLabel.Text        = "!";
+		_exclamationLabel.FontSize    = (int)(32 * ExclamationScale);
 		_exclamationLabel.OutlineSize = 12;
-		_exclamationLabel.Billboard = BaseMaterial3D.BillboardModeEnum.Enabled;
-		_exclamationLabel.Position = ExclamationOffset;
-		_exclamationLabel.Modulate = Colors.Yellow;
-		
+		_exclamationLabel.Billboard   = BaseMaterial3D.BillboardModeEnum.Enabled;
+		_exclamationLabel.Position    = ExclamationOffset;
+		_exclamationLabel.Modulate    = Colors.Yellow;
+
 		if (CustomFont != null)
-		{
 			_exclamationLabel.Font = CustomFont;
-		}
-		
+
 		AddChild(_exclamationLabel);
 		AnimateExclamation();
 	}
@@ -189,16 +219,12 @@ public partial class Interactable : Node3D, IInteractable
 	{
 		if (_exclamationLabel == null || !IsInsideTree()) return;
 
-		if (_floatTween != null)
-		{
-			_floatTween.Kill();
-		}
+		if (_floatTween != null) _floatTween.Kill();
 
 		Vector3 startPos = ExclamationOffset;
-		// Bobbing height scales with the symbol size (0.075 * scale)
-		// Default scale 4.0 results in 0.3m bob
+		// Bob height scales with symbol size: default scale 4.0 → 0.3 m travel.
 		float bobHeight = 0.075f * ExclamationScale;
-		Vector3 endPos = startPos + new Vector3(0, bobHeight, 0);
+		Vector3 endPos  = startPos + new Vector3(0, bobHeight, 0);
 
 		_floatTween = CreateTween();
 		_floatTween.TweenProperty(_exclamationLabel, "position", endPos, 1.0f)
@@ -210,11 +236,16 @@ public partial class Interactable : Node3D, IInteractable
 		_floatTween.SetLoops();
 	}
 
+	// ── Collision generation ──────────────────────────────────────────────────
+
+	/// <summary>
+	/// Recursively creates trimesh collision siblings for every MeshInstance3D
+	/// that doesn't already have a StaticBody3D child.
+	/// </summary>
 	private void GenerateCollisions(Node node)
 	{
 		if (node is MeshInstance3D meshInstance)
 		{
-			// Check if it already has a StaticBody3D child
 			bool hasCollision = false;
 			foreach (Node child in meshInstance.GetChildren(true))
 			{
@@ -222,52 +253,48 @@ public partial class Interactable : Node3D, IInteractable
 			}
 
 			if (!hasCollision)
-			{
 				meshInstance.CreateTrimeshCollision();
-			}
 		}
 
 		foreach (Node child in node.GetChildren(true))
-		{
 			GenerateCollisions(child);
-		}
 	}
 
-	public void Interact()
-	{
-		EmitSignal(SignalName.Interacted);
-	}
+	// ── IInteractable ─────────────────────────────────────────────────────────
 
+	/// <summary>Fires the <see cref="Interacted"/> signal.</summary>
+	public void Interact() => EmitSignal(SignalName.Interacted);
+
+	/// <summary>Fires <see cref="Focused"/> and enables the highlight effect.</summary>
 	public void OnFocus()
 	{
 		EmitSignal(SignalName.Focused);
 		ApplyHighlight(true);
 	}
 
+	/// <summary>Fires <see cref="Unfocused"/> and disables the highlight effect.</summary>
 	public void OnBlur()
 	{
 		EmitSignal(SignalName.Unfocused);
 		ApplyHighlight(false);
 	}
 
+	// ── Highlight application ─────────────────────────────────────────────────
+
 	private void ApplyHighlight(bool active)
 	{
 		if (!HandleHighlight) return;
 
-		// Use Shell highlight for specific objects (like the clipboard)
 		if (UseShellHighlight)
 		{
 			foreach (var shell in _shellMeshes)
 			{
 				if (IsInstanceValid(shell))
-				{
 					shell.Visible = active;
-				}
 			}
 			return;
 		}
 
-		// Use Overlay highlight if enabled
 		if (UseOverlayHighlight)
 		{
 			if (_overlayMaterial == null)
@@ -275,27 +302,20 @@ public partial class Interactable : Node3D, IInteractable
 				GD.PrintErr($"[Interactable] Overlay material null for {Name} but UseOverlayHighlight is true!");
 				return;
 			}
-			
-			GD.Print($"[Interactable] Applying overlay highlight ({active}) to {_highlightMeshes.Count} meshes on {Name}");
 			foreach (var mesh in _highlightMeshes)
 			{
 				if (IsInstanceValid(mesh))
-				{
 					mesh.MaterialOverlay = active ? _overlayMaterial : null;
-					GD.Print($"[Interactable] Set MaterialOverlay on {mesh.Name} to {(active ? "material" : "null")}");
-				}
 			}
 			return;
 		}
 
-		// Fallback to Screen-Space highlight for solid objects
+		// Default: screen-space outline via MaterialOverlay.
 		if (_highlightMaterial == null) return;
 		foreach (var mesh in _highlightMeshes)
 		{
 			if (IsInstanceValid(mesh))
-			{
 				mesh.MaterialOverlay = active ? _highlightMaterial : null;
-			}
 		}
 	}
 }

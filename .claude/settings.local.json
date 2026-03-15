@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls \"c:/Users/bolty/Desktop/Matar el Rato \\(Files\\)/Version0-WinForms/ProyectoSO_Forms/\")",
+      "Bash(ls \"c:/Users/bolty/Desktop/Matar el Rato \\(Files\\)/MER-Server/\")",
+      "Bash(find \"c:\\\\Users\\\\bolty\\\\Desktop\\\\Matar el Rato \\(Files\\)\\\\MatarelRato-Godot\" -type f \\\\\\( -name \"*.gd\" -o -name \"*.tscn\" \\\\\\))",
+      "Bash(find \"c:\\\\Users\\\\bolty\\\\Desktop\\\\Matar el Rato \\(Files\\)\\\\MatarelRato-Godot\" -type d -name \"networking\" -o -type d -name \"network\")",
+      "Bash(find \"c:\\\\Users\\\\bolty\\\\Desktop\\\\Matar el Rato \\(Files\\)\\\\MatarelRato-Godot\" -type f -name \"*.gd\")"
+    ]
+  }
+}

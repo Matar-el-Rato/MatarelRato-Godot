@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://ikqyfcjnbajd"]
 
-[ext_resource type="PackedScene" uid="uid://w7l26dijqujm" path="res://Assets/Miscellaneous/signin.glb" id="1_signin_model"]
+[ext_resource type="PackedScene" uid="uid://cvc57wvgsiu8a" path="res://Assets/Miscellaneous/registration.glb" id="1_signin_model"]
 [ext_resource type="Script" uid="uid://od1qyrmyk781" path="res://Scripts/Interaction/FocusInteractable.cs" id="2_focus_script"]
 [ext_resource type="Script" uid="uid://bk7ngt4ktf6i6" path="res://Scripts/Interaction/Interactable.cs" id="3_interactable_script"]
 [ext_resource type="Script" uid="uid://by5rrpux7eqv2" path="res://Scripts/Interaction/ClipboardUIInteraction.cs" id="4_ui_interaction_script"]
