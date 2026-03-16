@@ -154,8 +154,8 @@ public partial class AuthChoiceUI : Node3D
 			SetLabelColor(_loginLabel,    _loginHovered);
 			SetLabelColor(_registerLabel, _registerHovered);
 
-			ApplyJitter(_loginLabel,    loginBase);
-			ApplyJitter(_registerLabel, registerBase);
+			ApplyJitter(_loginLabel,    loginBase,    _loginHovered);
+			ApplyJitter(_registerLabel, registerBase, _registerHovered);
 
 			float wait = 0.04f + (float)_rng.NextDouble() * 0.13f;
 			await ToSignal(GetTree().CreateTimer(wait), SceneTreeTimer.SignalName.Timeout);
@@ -188,14 +188,25 @@ public partial class AuthChoiceUI : Node3D
 	}
 
 	/// <summary>
-	/// 25% chance each tick to nudge the label a tiny random amount, simulating
-	/// a damaged neon sign vibrating in its housing.
+	/// Nudges the label randomly. When hovered, trembles every tick with stronger
+	/// displacement; otherwise 25% chance of a small neon-sign vibration.
 	/// </summary>
-	private void ApplyJitter(Label3D label, Vector3 basePos)
+	private void ApplyJitter(Label3D label, Vector3 basePos, bool hovered)
 	{
-		if (label == null || _rng.NextDouble() > 0.25) return;
-		float jx = (float)(_rng.NextDouble() * 0.003 - 0.0015);
-		float jy = (float)(_rng.NextDouble() * 0.001 - 0.0005);
-		label.Position = basePos + new Vector3(jx, jy, 0);
+		if (label == null) return;
+
+		if (hovered)
+		{
+			float jx = (float)(_rng.NextDouble() * 0.006 - 0.003);
+			float jy = (float)(_rng.NextDouble() * 0.004 - 0.002);
+			label.Position = basePos + new Vector3(jx, jy, 0);
+		}
+		else
+		{
+			if (_rng.NextDouble() > 0.25) return;
+			float jx = (float)(_rng.NextDouble() * 0.003 - 0.0015);
+			float jy = (float)(_rng.NextDouble() * 0.001 - 0.0005);
+			label.Position = basePos + new Vector3(jx, jy, 0);
+		}
 	}
 }

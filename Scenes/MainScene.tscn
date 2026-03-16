@@ -28,7 +28,6 @@
 [ext_resource type="Script" uid="uid://bmkswcfkw2bfr" path="res://Scripts/Interaction/BellController.cs" id="28_bell_script"]
 [ext_resource type="AudioStream" uid="uid://bapkmgr80xnml" path="res://Assets/Sound FX/receptionist_bell.wav" id="29_bell_sound"]
 [ext_resource type="Script" uid="uid://bkaid1pe6sdan" path="res://Scripts/Interaction/FocusController.cs" id="30_focus_ctrl"]
-[ext_resource type="Script" uid="uid://od1qyrmyk781" path="res://Scripts/Interaction/FocusInteractable.cs" id="32_focus_interactable_script"]
 [ext_resource type="Script" uid="uid://bmboldbjexyxg" path="res://Scripts/Interaction/Chair.cs" id="33_chair_script"]
 [ext_resource type="PackedScene" uid="uid://ikqyfcjnbajd" path="res://Scenes/Pizzeria/SignInClipboard.tscn" id="33_signin_scene"]
 [ext_resource type="PackedScene" uid="uid://p2bo4u4lncli" path="res://Scenes/Pizzeria/RegistrationClipboard.tscn" id="34_registration_scene"]
@@ -244,17 +243,12 @@ light_energy = 0.783
 [node name="PizzeriaLight3" type="OmniLight3D" parent="Environment/Lighting" unique_id=1969236887]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18.09094, 2.308368, -5.39094)
 light_color = Color(1, 1, 0.9254902, 1)
-light_energy = 3.45
+light_energy = 1.5
 
 [node name="PizzeriaLight4" type="OmniLight3D" parent="Environment/Lighting" unique_id=1527275724]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13.127879, 2.308368, -5.39094)
 light_color = Color(1, 1, 0.9254902, 1)
-light_energy = 1.953
-
-[node name="PizzeriaLight20" type="OmniLight3D" parent="Environment/Lighting" unique_id=1051743847]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.110998, 2.308368, -5.39094)
-light_color = Color(1, 1, 0.9254902, 1)
-light_energy = 2.778
+light_energy = 1.4
 
 [node name="PizzeriaLight5" type="OmniLight3D" parent="Environment/Lighting" unique_id=837854500]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -25.94965, 2.308368, -5.39094)
@@ -285,7 +279,7 @@ spot_angle = 44.501743
 [node name="Lamp6" type="SpotLight3D" parent="Environment/Lighting" unique_id=318180263]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -14.82505, 3.4360473, -4.5708184)
 light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
-light_energy = 0.111
+light_energy = 0.5
 spot_range = 51.321716
 spot_angle = 44.501743
 
@@ -418,7 +412,7 @@ spot_angle = 44.501743
 [node name="Lamp7" type="SpotLight3D" parent="Environment/Lighting" unique_id=42326513]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -14.82505, 3.4360473, -6.393129)
 light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
-light_energy = 1.193
+light_energy = 0.5
 spot_range = 51.321716
 spot_angle = 44.501743
 
@@ -431,102 +425,6 @@ spot_angle = 44.501743
 
 [node name="Lamp9" type="SpotLight3D" parent="Environment/Lighting" unique_id=191735631]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -18.84093, 3.4360473, -4.571615)
-light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
-light_energy = 0.384
-spot_range = 51.321716
-spot_angle = 44.501743
-
-[node name="PizzeriaLight44" type="OmniLight3D" parent="Environment/Lighting" unique_id=1768677677]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18.09094, 2.308368, 15.532433)
-light_color = Color(1, 1, 0.9254902, 1)
-light_energy = 3.45
-
-[node name="PizzeriaLight45" type="OmniLight3D" parent="Environment/Lighting" unique_id=1361559904]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13.127879, 2.308368, 15.532433)
-light_color = Color(1, 1, 0.9254902, 1)
-light_energy = 1.953
-
-[node name="PizzeriaLight46" type="OmniLight3D" parent="Environment/Lighting" unique_id=1508068559]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.110998, 2.308368, 15.532433)
-light_color = Color(1, 1, 0.9254902, 1)
-light_energy = 2.778
-
-[node name="PizzeriaLight47" type="OmniLight3D" parent="Environment/Lighting" unique_id=1850192657]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -25.94965, 2.308368, 15.532433)
-light_color = Color(1, 1, 0.9254902, 1)
-light_energy = 2.778
-
-[node name="Lamp30" type="SpotLight3D" parent="Environment/Lighting" unique_id=904111062]
-transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -14.82505, 3.4360473, 16.352554)
-light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
-light_energy = 0.111
-spot_range = 51.321716
-spot_angle = 44.501743
-
-[node name="Lamp31" type="SpotLight3D" parent="Environment/Lighting" unique_id=955224648]
-transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -14.82505, 3.4360473, 14.530243)
-light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
-light_energy = 1.193
-spot_range = 51.321716
-spot_angle = 44.501743
-
-[node name="Lamp32" type="SpotLight3D" parent="Environment/Lighting" unique_id=1647142922]
-transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -18.84093, 3.4360473, 14.530243)
-light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
-light_energy = 1.667
-spot_range = 51.321716
-spot_angle = 44.501743
-
-[node name="Lamp33" type="SpotLight3D" parent="Environment/Lighting" unique_id=411187864]
-transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -18.84093, 3.4360473, 16.351757)
-light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
-light_energy = 0.384
-spot_range = 51.321716
-spot_angle = 44.501743
-
-[node name="PizzeriaLight48" type="OmniLight3D" parent="Environment/Lighting" unique_id=1161420117]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18.09094, 2.308368, 38.374763)
-light_color = Color(1, 1, 0.9254902, 1)
-light_energy = 3.45
-
-[node name="PizzeriaLight49" type="OmniLight3D" parent="Environment/Lighting" unique_id=939502676]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13.127879, 2.308368, 38.374763)
-light_color = Color(1, 1, 0.9254902, 1)
-light_energy = 1.953
-
-[node name="PizzeriaLight50" type="OmniLight3D" parent="Environment/Lighting" unique_id=1618939979]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.110998, 2.308368, 38.374763)
-light_color = Color(1, 1, 0.9254902, 1)
-light_energy = 2.778
-
-[node name="PizzeriaLight51" type="OmniLight3D" parent="Environment/Lighting" unique_id=1802340758]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -25.94965, 2.308368, 38.374763)
-light_color = Color(1, 1, 0.9254902, 1)
-light_energy = 2.778
-
-[node name="Lamp34" type="SpotLight3D" parent="Environment/Lighting" unique_id=1429356865]
-transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -14.82505, 3.4360473, 39.194885)
-light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
-light_energy = 0.111
-spot_range = 51.321716
-spot_angle = 44.501743
-
-[node name="Lamp35" type="SpotLight3D" parent="Environment/Lighting" unique_id=1827352561]
-transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -14.82505, 3.4360473, 37.372574)
-light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
-light_energy = 1.193
-spot_range = 51.321716
-spot_angle = 44.501743
-
-[node name="Lamp36" type="SpotLight3D" parent="Environment/Lighting" unique_id=636696352]
-transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -18.84093, 3.4360473, 37.372574)
-light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
-light_energy = 1.667
-spot_range = 51.321716
-spot_angle = 44.501743
-
-[node name="Lamp37" type="SpotLight3D" parent="Environment/Lighting" unique_id=1676063843]
-transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -18.84093, 3.4360473, 39.194088)
 light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
 light_energy = 0.384
 spot_range = 51.321716
@@ -618,9 +516,6 @@ MaxVolume = -15.0
 [node name="MusicZoneShape2" type="CollisionShape3D" parent="Environment/MusicZone" unique_id=998124612]
 shape = SubResource("BoxShape3D_hx8n4")
 
-[node name="Gun" parent="Environment" unique_id=1033857442 instance=ExtResource("6_p5ymy")]
-transform = Transform3D(-5.8842733e-08, -1.3461648, -0.6616949, 1.5, -6.556708e-08, 0, -2.8923605e-08, -0.6616949, 1.3461648, -6.683686, 0.75126225, -5.599998)
-
 [node name="Room1" type="Node3D" parent="." unique_id=1422990858]
 
 [node name="AudioStreamPlayer3D" type="AudioStreamPlayer3D" parent="Room1" unique_id=975460020]
@@ -631,11 +526,11 @@ unit_size = 0.2
 autoplay = true
 
 [node name="mesa_poker" parent="Room1" unique_id=2070089762 instance=ExtResource("8_f140w")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.4568543, 0.43543047, -5.255393)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.457277, 0.43543047, -5.255393)
 script = ExtResource("7_env_collision")
 
 [node name="tablero" parent="Room1" unique_id=611242887 instance=ExtResource("9_0iob3")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.4535146, 0.7376139, -5.248031)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.453938, 0.7376139, -5.248031)
 
 [node name="left_door" parent="Room1" unique_id=1408443076 instance=ExtResource("10_4b75m")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.571119, 1.1142102, -4.5296316)
@@ -662,7 +557,7 @@ InteractionAction = ""
 HighlightThickness = 7.0
 
 [node name="chair" parent="Room1" unique_id=15228684 instance=ExtResource("18_bpy1e")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.4105206, 0.4724453, -3.848565)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.410943, 0.4724453, -3.848565)
 script = ExtResource("33_chair_script")
 
 [node name="Interactable" type="Node3D" parent="Room1/chair" unique_id=1111111001]
@@ -674,7 +569,7 @@ HighlightThickness = 3.0
 UseShellHighlight = true
 
 [node name="chair2" parent="Room1" unique_id=1754829362 instance=ExtResource("18_bpy1e")]
-transform = Transform3D(-1, 0, 8.742278e-08, 0, 1, 0, -8.742278e-08, 0, -1, -7.4105206, 0.4724453, -6.683965)
+transform = Transform3D(-1, 0, 8.742278e-08, 0, 1, 0, -8.742278e-08, 0, -1, -15.410943, 0.4724453, -6.683965)
 script = ExtResource("33_chair_script")
 
 [node name="Interactable" type="Node3D" parent="Room1/chair2" unique_id=1111111002]
@@ -686,7 +581,7 @@ HighlightThickness = 3.0
 UseShellHighlight = true
 
 [node name="chair3" parent="Room1" unique_id=219526553 instance=ExtResource("18_bpy1e")]
-transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -8.877581, 0.4724453, -5.2408323)
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -16.878002, 0.4724453, -5.2408323)
 script = ExtResource("33_chair_script")
 
 [node name="Interactable" type="Node3D" parent="Room1/chair3" unique_id=1111111003]
@@ -698,7 +593,7 @@ HighlightThickness = 3.0
 UseShellHighlight = true
 
 [node name="chair4" parent="Room1" unique_id=1487634359 instance=ExtResource("18_bpy1e")]
-transform = Transform3D(1.3113416e-07, 0, 1, 0, 1, 0, -1, 0, 1.3113416e-07, -6.0068364, 0.4724453, -5.2408323)
+transform = Transform3D(1.3113416e-07, 0, 1, 0, 1, 0, -1, 0, 1.3113416e-07, -14.007259, 0.4724453, -5.2408323)
 script = ExtResource("33_chair_script")
 
 [node name="Interactable" type="Node3D" parent="Room1/chair4" unique_id=1111111004]
@@ -710,10 +605,13 @@ HighlightThickness = 3.0
 UseShellHighlight = true
 
 [node name="CigaretteInteraction" parent="Room1" unique_id=154600386 instance=ExtResource("25_wmecs")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.626918, 0.77223104, -4.9571815)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14.62734, 0.77223104, -4.9571815)
 
 [node name="CubileteAndDice" parent="Room1" unique_id=740891976 instance=ExtResource("17_mymud")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.6635666, 0.8132103, -5.257575)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14.663989, 0.8132103, -5.257575)
+
+[node name="Gun" parent="Room1" unique_id=1033857442 instance=ExtResource("6_p5ymy")]
+transform = Transform3D(-5.8842733e-08, -1.3461648, -0.6616949, 1.5, -6.556708e-08, 0, -2.8923605e-08, -0.6616949, 1.3461648, -14.684109, 0.75126225, -5.599998)
 
 [node name="Room2" type="Node3D" parent="." unique_id=1167468490]
 
@@ -862,6 +760,9 @@ script = ExtResource("30_focus_ctrl")
 
 [node name="UI" type="CanvasLayer" parent="." unique_id=2111111103]
 
-[node name="ChatUI" parent="UI" unique_id=2111111104 instance=ExtResource("22_chat_ui")]
+[node name="ChatLayer" type="CanvasLayer" parent="."]
+layer = 11
 
-[node name="DitherEffect" parent="." instance=ExtResource("37_dither_effect")]
+[node name="ChatUI" parent="ChatLayer" unique_id=2111111104 instance=ExtResource("22_chat_ui")]
+
+[node name="DitherEffect" parent="." unique_id=1599022892 instance=ExtResource("37_dither_effect")]

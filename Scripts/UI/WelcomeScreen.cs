@@ -20,6 +20,11 @@ public partial class WelcomeScreen : Control
 	private Button _sourceCodeButton;
 	private Button _debugButton;
 
+	private Button _hoveredButton;
+	private Vector2 _hoveredOrigin;
+	private RandomNumberGenerator _rng = new();
+	private const float TrembleStrength = 1.2f;
+
 	// ── Lifecycle ─────────────────────────────────────────────────────────────
 
 	public override void _Ready()
@@ -68,16 +73,29 @@ public partial class WelcomeScreen : Control
 
 	// ── Hover effects ─────────────────────────────────────────────────────────
 
+	public override void _Process(double delta)
+	{
+		if (_hoveredButton != null)
+		{
+			float ox = _rng.RandfRange(-TrembleStrength, TrembleStrength);
+			float oy = _rng.RandfRange(-TrembleStrength, TrembleStrength);
+			_hoveredButton.Position = _hoveredOrigin + new Vector2(ox, oy);
+		}
+	}
+
 	private void OnHoverStarted(Button button)
 	{
-		// Brighten to pure white and scale up slightly for a pop effect.
 		button.AddThemeColorOverride("font_color",       new Color(1, 1, 1));
 		button.AddThemeColorOverride("font_hover_color", new Color(1, 1, 1));
 		button.Scale = new Vector2(1.05f, 1.05f);
+		_hoveredOrigin = button.Position;
+		_hoveredButton = button;
 	}
 
 	private void OnHoverEnded(Button button)
 	{
+		_hoveredButton = null;
+		button.Position = _hoveredOrigin;
 		button.RemoveThemeColorOverride("font_color");
 		button.Scale = new Vector2(1, 1);
 	}

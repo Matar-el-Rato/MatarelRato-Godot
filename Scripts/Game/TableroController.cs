@@ -108,14 +108,12 @@ public partial class TableroController : Node3D
 		var ficha = GetPiece(color, pieceIndex);
 		if (ficha == null || ficha.IsInBase() || ficha.IsFinished()) return false;
 
-		int target = ResolveTarget(ficha, steps, out bool valid);
+		int target = ResolveTarget(ficha, steps, out bool valid, out List<int> path);
 		if (!valid) return false;
 		if (!CanLand(ficha, target)) return false;
 
-		// Check for path barricade (simplified: only final square checked).
-		// A full implementation would step one square at a time.
 		var eaten = FindEatable(ficha, target);
-		ApplyMove(ficha, target);
+		ApplyMove(ficha, target, path);
 		foreach (var e in eaten) SendToBase(e);
 		return true;
 	}
@@ -123,12 +121,13 @@ public partial class TableroController : Node3D
 	// ── Movement resolution ───────────────────────────────────────────────────
 
 	/// <summary>
-	/// Computes the destination board index for <paramref name="steps"/> moves.
-	/// Sets <paramref name="valid"/> = false if the move is impossible (overshoot corridor).
+	/// Computes the destination board index and the full path of intermediate
+	/// positions the piece travels through.
 	/// </summary>
-	private int ResolveTarget(FichaNode ficha, int steps, out bool valid)
+	private int ResolveTarget(FichaNode ficha, int steps, out bool valid, out List<int> path)
 	{
 		valid = true;
+		path = new List<int>();
 		int current = ficha.BoardIndex;
 
 		// Already in home corridor
@@ -136,8 +135,13 @@ public partial class TableroController : Node3D
 		{
 			int newStep = (current - 100) + steps;
 			if (newStep > 8) { valid = false; return -1; }
-			if (newStep == 8) return 109; // finished
-			return 100 + newStep;
+			for (int i = 1; i <= steps; i++)
+			{
+				int s = (current - 100) + i;
+				if (s == 8) { path.Add(109); return 109; }
+				path.Add(100 + s);
+			}
+			return path.Count > 0 ? path[^1] : current;
 		}
 
 		// On the outer ring — walk step by step
@@ -150,10 +154,15 @@ public partial class TableroController : Node3D
 				// Remaining steps enter the corridor
 				int remaining = steps - i;
 				if (remaining > 8) { valid = false; return -1; }
-				if (remaining == 8) return 109;
-				return 100 + remaining;
+				for (int j = 1; j <= remaining; j++)
+				{
+					if (j == 8) { path.Add(109); return 109; }
+					path.Add(100 + j);
+				}
+				return path[^1];
 			}
 			pos = pos == 68 ? 1 : pos + 1;
+			path.Add(pos);
 		}
 		return pos;
 	}
@@ -188,24 +197,38 @@ public partial class TableroController : Node3D
 
 	// ── State mutation ────────────────────────────────────────────────────────
 
-	private void ApplyMove(FichaNode ficha, int index)
-	{
-		// Remove from old position
-		RemoveFromOccupancy(ficha);
+	private const float HopHeight  = 0.04f;  // how high above the board while travelling
+	private const float HopSpeed   = 0.08f;  // seconds per intermediate waypoint
+	private const float LandSpeed  = 0.10f;  // seconds for the final landing
 
+	private void ApplyMove(FichaNode ficha, int index, List<int> path = null)
+	{
+		RemoveFromOccupancy(ficha);
 		ficha.SetBoardIndex(index);
 
-		if (index == 109) return; // finished — no position to track
+		if (index == 109) return;
 
 		if (!_occupancy.ContainsKey(index))
 			_occupancy[index] = new List<FichaNode>();
 		_occupancy[index].Add(ficha);
 
-		// Tween with a small hop arc
+		var tween = CreateTween().SetTrans(Tween.TransitionType.Linear).SetEase(Tween.EaseType.InOut);
+
+		// Fly through each intermediate waypoint (airborne, not landing)
+		if (path != null && path.Count > 1)
+		{
+			for (int i = 0; i < path.Count - 1; i++)
+			{
+				var wp = GetBoardWorldPosition(path[i], ficha.PlayerColor);
+				tween.TweenProperty(ficha, "global_position", wp + Vector3.Up * HopHeight, HopSpeed);
+			}
+		}
+
+		// Land on the final destination
 		var dest = GetBoardWorldPosition(index, ficha.PlayerColor);
-		var tween = CreateTween().SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
-		tween.TweenProperty(ficha, "global_position", dest + Vector3.Up * 0.08f, 0.18f);
-		tween.TweenProperty(ficha, "global_position", dest, 0.12f);
+		tween.TweenProperty(ficha, "global_position", dest + Vector3.Up * HopHeight, HopSpeed);
+		tween.SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
+		tween.TweenProperty(ficha, "global_position", dest, LandSpeed);
 	}
 
 	private void SendToBase(FichaNode ficha)
@@ -265,6 +288,19 @@ public partial class TableroController : Node3D
 	{
 		_pieces.TryGetValue($"{color}_{index}", out var f);
 		return f;
+	}
+
+	/// <summary>
+	/// Resets a piece back to its start position on the ring (for demo looping).
+	/// </summary>
+	public void ResetToStart(string color, int pieceIndex)
+	{
+		var ficha = GetPiece(color, pieceIndex);
+		if (ficha == null) return;
+
+		RemoveFromOccupancy(ficha);
+		int target = StartPositions[color];
+		ApplyMove(ficha, target);
 	}
 
 	public bool IsSafeHouse(int index)  => SafeHouses.Contains(index);

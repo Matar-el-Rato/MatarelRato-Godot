@@ -59,7 +59,7 @@ particles_anim_loop = false
 
 [sub_resource type="QuadMesh" id="QuadMesh_smoke"]
 material = SubResource("StandardMaterial3D_smoke")
-size = Vector2(0.1, 0.1)
+size = Vector2(0.15, 0.15)
 
 [sub_resource type="Curve" id="Curve_puff_alpha"]
 _data = [Vector2(0, 0.3), 0.0, 0.0, 0, 0, Vector2(1, 0), -1.0, 0.0, 0, 0]
@@ -83,8 +83,8 @@ initial_velocity_max = 1.5
 gravity = Vector3(0, -0.1, 0)
 damping_min = 0.5
 damping_max = 1.0
-scale_min = 0.1
-scale_max = 0.4
+scale_min = 0.25
+scale_max = 0.8
 scale_curve = SubResource("CurveTexture_puff_scale")
 color = Color(0.8, 0.8, 0.8, 0.6)
 alpha_curve = SubResource("CurveTexture_puff_alpha")

@@ -23,6 +23,7 @@ class BoardPosEditor:
         self.center_x, self.center_y = 500, 500
         self.scale = 0.002 # Units per pixel (approx)
         self.symmetry_enabled = tk.BooleanVar(value=True)
+        self.show_labels = tk.BooleanVar(value=True)
         
         # Data
         self.markers = [] # List of {id, name, color, x, y, type}
@@ -51,6 +52,7 @@ class BoardPosEditor:
         tk.Label(self.control_frame, text="Board Editor Tools", font=("Arial", 14, "bold")).pack(pady=10)
         
         tk.Checkbutton(self.control_frame, text="4-Fold Symmetry (Sync)", variable=self.symmetry_enabled).pack(anchor=tk.W)
+        tk.Checkbutton(self.control_frame, text="Show Index Labels", variable=self.show_labels, command=self.draw_markers).pack(anchor=tk.W)
         
         tk.Button(self.control_frame, text="Export to Godot (.tscn format)", command=self.export_to_godot).pack(fill=tk.X, pady=5)
         tk.Button(self.control_frame, text="Export to JSON", command=self.export_to_json).pack(fill=tk.X, pady=5)
@@ -134,22 +136,24 @@ class BoardPosEditor:
         # Ring mapping (Standard 68) - uses the PHYSICAL arm (unmapped 'color') 
         # to determine its offset on the board ring.
         if mtype == "outbound" or mtype == "inbound":
-            offsets = {"Yellow": 0, "Blue": 17, "Red": 34, "Green": 51}
+            # Clockwise order on screen: Yellow(0°/S) → Green(270°/E) → Red(180°/N) → Blue(90°/W)
+            offsets = {"Yellow": 0, "Green": 17, "Red": 34, "Blue": 51}
             off = offsets[color]
-            
+
             if step_idx <= 8: # Outbound
                 return f"Pos_{(step_idx + off) % 68 or 68:02d}"
             else: # Inbound (60-67)
                 rel_step = 67 - step_idx # 0 to 7
-                base_inbound = {"Yellow": 67, "Blue": 16, "Red": 33, "Green": 50}
+                base_inbound = {"Yellow": 67, "Green": 16, "Red": 33, "Blue": 50}
                 return f"Pos_{base_inbound[color] - rel_step:02d}"
         
         if mtype == "tip":
-            # Map the tip name to the player color
+            # Tips connect inbound→outbound at each arm's outer edge
+            # Clockwise: Yellow(68) → Green(17) → Red(34) → Blue(51)
             if name_color == "Blue": return "Pos_68"
-            if name_color == "Yellow": return "Pos_17"
+            if name_color == "Red": return "Pos_17"
             if name_color == "Green": return "Pos_34"
-            if name_color == "Red": return "Pos_51"
+            if name_color == "Yellow": return "Pos_51"
             
         if mtype == "goal":
             return f"Goal{name_color}"
@@ -176,13 +180,36 @@ class BoardPosEditor:
                 messagebox.showerror("Error", "Could not load image without Pillow and default loader failed.")
         self.draw_markers()
 
+    def get_label_text(self, marker):
+        """Extract a short label from the marker name."""
+        name = marker["name"]
+        if name.startswith("Pos_"):
+            return name[4:]  # e.g. "01", "68"
+        if name.startswith("Home"):
+            idx = name.split("_")[-1]
+            c = {"yellow": "Y", "red": "R", "blue": "G", "green": "B"}[marker["color"]]
+            return f"H{c}{idx}"
+        if name.startswith("Base"):
+            idx = name.split("_")[-1]
+            c = {"yellow": "Y", "red": "R", "blue": "G", "green": "B"}[marker["color"]]
+            return f"B{c}{idx}"
+        if name.startswith("Goal"):
+            c = {"yellow": "Y", "red": "R", "blue": "G", "green": "B"}[marker["color"]]
+            return f"G{c}"
+        return name
+
     def draw_markers(self):
         self.canvas.delete("marker")
+        self.canvas.delete("label")
         for m in self.markers:
             r = 5
             fill = "lime" if m["color"] == "yellow" else "black"
-            self.canvas.create_oval(m["x"]-r, m["y"]-r, m["x"]+r, m["y"]+r, 
+            self.canvas.create_oval(m["x"]-r, m["y"]-r, m["x"]+r, m["y"]+r,
                                    fill=fill, outline="white", tags=("marker", m["name"], m["color"]))
+            if self.show_labels.get():
+                label = self.get_label_text(m)
+                self.canvas.create_text(m["x"]+8, m["y"]-8, text=label, fill="black",
+                                       font=("Arial", 7, "bold"), anchor=tk.SW, tags=("label",))
 
     def on_click(self, event):
         item = self.canvas.find_closest(event.x, event.y)
