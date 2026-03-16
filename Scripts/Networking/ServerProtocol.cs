@@ -31,6 +31,7 @@ public static class ServerProtocol
 		UserExists         = 1,
 		InvalidCredentials = 2,
 		Database           = 3,
+		InvalidInput       = 4,
 		Unknown            = 99
 	}
 

@@ -89,7 +89,6 @@ public partial class AuthChoiceUI : Node3D
 		_onRegisterChosen = onRegister;
 
 		Visible = true;
-		_storedPosition = Position;
 
 		// Start deep in the wall (positive local Z = into the wall surface)
 		Position = _storedPosition + new Vector3(0, 0, 0.35f);

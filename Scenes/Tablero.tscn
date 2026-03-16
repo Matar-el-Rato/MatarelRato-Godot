@@ -16,6 +16,7 @@ FichaScene = ExtResource("5_ficha")
 [node name="Interactable" type="Node3D" parent="." unique_id=200000003]
 script = ExtResource("2_interactable")
 PromptText = "Play Parchís"
+UseShellHighlight = true
 
 [node name="FocusInteractable" type="Node" parent="." unique_id=200000004]
 script = ExtResource("3_focus")
@@ -169,7 +170,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.546, 0, 0.212)
 [node name="Pos_47" type="Marker3D" parent="Positions" unique_id=1966297819]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.636, 0, 0.212)
 
-[node name="Pos_48" type="Marker33D" parent="Positions" unique_id=1391726663]
+[node name="Pos_48" type="Marker3D" parent="Positions" unique_id=1391726663]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.728, 0, 0.212)
 
 [node name="Pos_49" type="Marker3D" parent="Positions" unique_id=1192394299]

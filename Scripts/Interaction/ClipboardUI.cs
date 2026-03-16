@@ -212,6 +212,14 @@ public partial class ClipboardUI : Control
 			AuthManager.NotifyFailure(IsRegistration, "12 characters max. The ledger has limits.");
 			return;
 		}
+		foreach (char c in user)
+		{
+			if (c < 32 || c > 126)
+			{
+				AuthManager.NotifyFailure(IsRegistration, "No weird characters in the username, fool.");
+				return;
+			}
+		}
 
 		if (SignButton != null) SignButton.Disabled = true;
 
