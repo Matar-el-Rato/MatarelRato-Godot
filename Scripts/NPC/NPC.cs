@@ -73,6 +73,14 @@ public partial class NPC : CharacterBody3D
 		"Registration denied.\nThe house has\nits reasons.",
 	};
 
+	private static readonly string[] DismissalPhrases =
+	{
+		"Ring whenever you\nneed to annoy me...",
+		"You know where the bell is.\nDon't be shy...",
+		"I'll be around.\nJust ring that bell,\npest.",
+		"Need me? Ring the bell.\nI dare you.",
+	};
+
 	private Random _rng = new Random();
 
 	// ── Lifecycle ─────────────────────────────────────────────────────────────
@@ -113,10 +121,24 @@ public partial class NPC : CharacterBody3D
 	/// Called by <see cref="ClipboardUI"/> after a successful login or registration.
 	/// Switches the interactable prompt to "Log Out" and marks the session active.
 	/// </summary>
-	public void OnAuthComplete(string username)
+	public async void OnAuthComplete(string username)
 	{
-		_isLoggedIn    = true;
-		_hasInteracted = false; // allow one more interaction for logout
+		_isLoggedIn = true;
+		if (_interactable != null)
+			_interactable.PromptText = "Log Out";
+
+		// Wait for the auth greeting to be read
+		await ToSignal(GetTree().CreateTimer(5.0f), SceneTreeTimer.SignalName.Timeout);
+
+		// Quirky dismissal before vanishing
+		ForceShowDialog(DismissalPhrases[_rng.Next(DismissalPhrases.Length)]);
+
+		await ToSignal(GetTree().CreateTimer(4.0f), SceneTreeTimer.SignalName.Timeout);
+
+		// Disappear — player must ring the bell again to logout
+		Disappear();
+		BellController.Instance?.ShowBellExclamation();
+		// Disappear resets prompt to "Talk", restore it since we're still logged in
 		if (_interactable != null)
 			_interactable.PromptText = "Log Out";
 	}
@@ -215,6 +237,7 @@ public partial class NPC : CharacterBody3D
 
 			await ToSignal(GetTree().CreateTimer(4.0f), SceneTreeTimer.SignalName.Timeout);
 			Disappear();
+			BellController.Instance?.ShowBellExclamation();
 			return;
 		}
 

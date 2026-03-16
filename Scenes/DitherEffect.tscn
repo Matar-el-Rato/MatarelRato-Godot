@@ -1,0 +1,26 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Shader" path="res://Shaders/dither.gdshader" id="1_dither"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_dither"]
+shader = ExtResource("1_dither")
+shader_parameter/color_depth = 8.0
+shader_parameter/dither_strength = 0.8
+shader_parameter/pixel_size = 1.0
+shader_parameter/contrast = 1.3
+shader_parameter/saturation = 0.7
+shader_parameter/brightness = 0.05
+shader_parameter/tint_color = Color(1, 0.95, 0.85, 1)
+shader_parameter/tint_strength = 0.3
+
+[node name="DitherEffect" type="CanvasLayer"]
+layer = 10
+
+[node name="FullscreenRect" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+material = SubResource("ShaderMaterial_dither")

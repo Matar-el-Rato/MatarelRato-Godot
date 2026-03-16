@@ -14,6 +14,9 @@ using System;
 /// </summary>
 public partial class BellController : Node3D
 {
+	/// <summary>Global singleton — set in _Ready.</summary>
+	public static BellController Instance { get; private set; }
+
 	[Export] public AudioStreamPlayer3D BellAudio;
 	[Export] public ClipboardController ClipboardCtrl;
 	[Export] public NodePath            TargetNPCPath;
@@ -25,6 +28,8 @@ public partial class BellController : Node3D
 
 	public override void _Ready()
 	{
+		Instance = this;
+
 		InteractableNode ??= GetNodeOrNull<Interactable>("Interactable");
 		BellAudio        ??= GetNodeOrNull<AudioStreamPlayer3D>("BellAudio");
 		ClipboardCtrl    ??= GetParent()?.GetNodeOrNull<ClipboardController>("ClipboardController");
@@ -50,11 +55,20 @@ public partial class BellController : Node3D
 			InteractableNode.Interacted += OnBellInteracted;
 	}
 
+	// ── Exclamation control ──────────────────────────────────────────────────
+
+	/// <summary>Shows the bell's floating "!" indicator.</summary>
+	public void ShowBellExclamation() => InteractableNode?.SetExclamationVisible(true);
+
+	/// <summary>Hides the bell's floating "!" indicator.</summary>
+	public void HideBellExclamation() => InteractableNode?.SetExclamationVisible(false);
+
 	// ── Handler ───────────────────────────────────────────────────────────────
 
 	private void OnBellInteracted()
 	{
 		BellAudio?.Play();
+		HideBellExclamation();
 		_targetNPC?.Appear();
 	}
 }

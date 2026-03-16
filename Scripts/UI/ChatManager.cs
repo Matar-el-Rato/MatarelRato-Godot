@@ -62,18 +62,6 @@ public partial class ChatManager : Control
 
 	// ── Per-frame ─────────────────────────────────────────────────────────────
 
-	/// <summary>
-	/// Emits a periodic "Ping..." message every 30 seconds to confirm the chat is alive.
-	/// </summary>
-	public override void _Process(double delta)
-	{
-		_pingTimer += delta;
-		if (_pingTimer >= 30.0)
-		{
-			_pingTimer = 0;
-			AddLog("[color=#aaaaaa]Ping...[/color]");
-		}
-	}
 
 	private void FindPlayer()
 	{

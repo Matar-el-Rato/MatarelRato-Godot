@@ -237,7 +237,7 @@ public partial class ClipboardUI : Control
 				_mainThreadQueue.Enqueue(() => {
 					if (SignButton != null) SignButton.Disabled = false;
 					NPC.Instance?.ReactToAuthFailed(true);
-					ChatManager.AddLog($"[color=#888888]► Registration failed: {msg}[/color]");
+					ChatManager.AddLog($"[color=#888888]Registration failed: {msg}[/color]");
 				});
 				return;
 			}
@@ -259,7 +259,7 @@ public partial class ClipboardUI : Control
 				_mainThreadQueue.Enqueue(() => {
 					if (SignButton != null) SignButton.Disabled = false;
 					NPC.Instance?.ReactToAuthFailed(false);
-					ChatManager.AddLog($"[color=#888888]► Login failed: {msg}[/color]");
+					ChatManager.AddLog($"[color=#888888]Login failed: {msg}[/color]");
 				});
 				return;
 			}

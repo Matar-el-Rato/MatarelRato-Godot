@@ -215,6 +215,15 @@ public partial class Interactable : Node3D, IInteractable
 		AnimateExclamation();
 	}
 
+	/// <summary>
+	/// Programmatically shows or hides the floating exclamation mark.
+	/// </summary>
+	public void SetExclamationVisible(bool visible)
+	{
+		if (_exclamationLabel != null)
+			_exclamationLabel.Visible = visible;
+	}
+
 	private void AnimateExclamation()
 	{
 		if (_exclamationLabel == null || !IsInsideTree()) return;
