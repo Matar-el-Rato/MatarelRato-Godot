@@ -1,0 +1,200 @@
+[gd_scene format=3 uid="uid://bv4l08l3oby01"]
+
+[ext_resource type="Script" uid="uid://b46usf3rwqj8s" path="res://Scripts/Player/CharacterSelector.cs" id="1_cs_selector"]
+[ext_resource type="Script" uid="uid://bk7ngt4ktf6i6" path="res://Scripts/Interaction/Interactable.cs" id="2_cs_interactable"]
+[ext_resource type="PackedScene" uid="uid://d3ccw53yhrvja" path="res://Assets/Characters/main_character.glb" id="3_glb_main"]
+[ext_resource type="PackedScene" uid="uid://jwyxmfrbcis8" path="res://Assets/Characters/killer_1.glb" id="4_glb_killer"]
+[ext_resource type="PackedScene" uid="uid://k7mpth6i0ith" path="res://Assets/Characters/gotica_1.glb" id="5_glb_gotica"]
+[ext_resource type="PackedScene" uid="uid://wn4v51eqxph7" path="res://Assets/Characters/clown.glb" id="6_glb_clown"]
+[ext_resource type="PackedScene" uid="uid://c3g3fxjchpaf6" path="res://Assets/Characters/black_dude.glb" id="7_glb_black"]
+[ext_resource type="PackedScene" uid="uid://bc0h6r8iod2yb" path="res://Assets/Characters/police_woman.glb" id="8_glb_police"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_platform"]
+size = Vector3(6, 0.3, 1.8)
+
+[sub_resource type="StandardMaterial3D" id="Mat_platform"]
+albedo_color = Color(0.13, 0.1, 0.09, 1)
+metallic = 0.1
+roughness = 0.9
+
+[sub_resource type="BoxShape3D" id="Shape_platform"]
+size = Vector3(6, 0.3, 1.8)
+
+[sub_resource type="StandardMaterial3D" id="Mat_ring"]
+shading_mode = 0
+albedo_color = Color(0.15, 0.5, 1, 1)
+
+[sub_resource type="CylinderMesh" id="Mesh_ring"]
+height = 0.04
+radial_segments = 24
+rings = 1
+
+[sub_resource type="CapsuleShape3D" id="Shape_hit"]
+radius = 0.28
+height = 1.8034668
+
+[node name="CharacterSelector" type="Node3D" unique_id=1260416807]
+script = ExtResource("1_cs_selector")
+
+[node name="Platform" type="MeshInstance3D" parent="." unique_id=988357989]
+mesh = SubResource("BoxMesh_platform")
+surface_material_override/0 = SubResource("Mat_platform")
+
+[node name="PlatformBody" type="StaticBody3D" parent="Platform" unique_id=1117917343]
+
+[node name="PlatformCollision" type="CollisionShape3D" parent="Platform/PlatformBody" unique_id=2084002834]
+shape = SubResource("Shape_platform")
+
+[node name="Slots" type="Node3D" parent="." unique_id=1393966000]
+
+[node name="Slot_101" type="Node3D" parent="Slots" unique_id=1911240982]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -2.5, 0.15, 0.33708388)
+
+[node name="SelectionRing" type="MeshInstance3D" parent="Slots/Slot_101" unique_id=1675488718]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 0)
+material_override = SubResource("Mat_ring")
+cast_shadow = 0
+mesh = SubResource("Mesh_ring")
+
+[node name="Interactable" type="Node3D" parent="Slots/Slot_101" unique_id=1524047745]
+script = ExtResource("2_cs_interactable")
+
+[node name="OrientationFix" type="Node3D" parent="Slots/Slot_101/Interactable" unique_id=1733399638]
+transform = Transform3D(0, 0, 0.38, 0, 0.38, 0, -0.38, 0, 0, 0, 0, 0)
+
+[node name="main_character" parent="Slots/Slot_101/Interactable/OrientationFix" unique_id=1815011808 instance=ExtResource("3_glb_main")]
+
+[node name="HitBody" type="StaticBody3D" parent="Slots/Slot_101/Interactable" unique_id=1277270422]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Slots/Slot_101/Interactable/HitBody" unique_id=601857821]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.95173347, 0)
+shape = SubResource("Shape_hit")
+
+[node name="Slot_102" type="Node3D" parent="Slots" unique_id=2042232046]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -1.5, 0.15, 0.33708388)
+
+[node name="SelectionRing" type="MeshInstance3D" parent="Slots/Slot_102" unique_id=1712031496]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 0)
+material_override = SubResource("Mat_ring")
+cast_shadow = 0
+mesh = SubResource("Mesh_ring")
+
+[node name="Interactable" type="Node3D" parent="Slots/Slot_102" unique_id=1918388595]
+script = ExtResource("2_cs_interactable")
+
+[node name="OrientationFix" type="Node3D" parent="Slots/Slot_102/Interactable" unique_id=811586580]
+transform = Transform3D(0, 0, 0.38, 0, 0.38, 0, -0.38, 0, 0, 0, 0, 0)
+
+[node name="killer_1" parent="Slots/Slot_102/Interactable/OrientationFix" unique_id=457099529 instance=ExtResource("4_glb_killer")]
+
+[node name="HitBody" type="StaticBody3D" parent="Slots/Slot_102/Interactable" unique_id=33507865]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Slots/Slot_102/Interactable/HitBody" unique_id=1794907532]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.84854174, 0)
+shape = SubResource("Shape_hit")
+
+[node name="Slot_103" type="Node3D" parent="Slots" unique_id=2006889246]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -0.5, 0.15, 0.33708388)
+
+[node name="SelectionRing" type="MeshInstance3D" parent="Slots/Slot_103" unique_id=787615062]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 0)
+material_override = SubResource("Mat_ring")
+cast_shadow = 0
+mesh = SubResource("Mesh_ring")
+
+[node name="Interactable" type="Node3D" parent="Slots/Slot_103" unique_id=1694656451]
+script = ExtResource("2_cs_interactable")
+
+[node name="OrientationFix" type="Node3D" parent="Slots/Slot_103/Interactable" unique_id=1676732843]
+transform = Transform3D(0, 0, 0.38, 0, 0.38, 0, -0.38, 0, 0, 0, 0, 0)
+
+[node name="gotica_1" parent="Slots/Slot_103/Interactable/OrientationFix" unique_id=1385685966 instance=ExtResource("5_glb_gotica")]
+
+[node name="HitBody" type="StaticBody3D" parent="Slots/Slot_103/Interactable" unique_id=962029909]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Slots/Slot_103/Interactable/HitBody" unique_id=153776563]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.83670676, 0)
+shape = SubResource("Shape_hit")
+
+[node name="Slot_104" type="Node3D" parent="Slots" unique_id=1590199436]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 0.5, 0.15, 0.33708388)
+
+[node name="SelectionRing" type="MeshInstance3D" parent="Slots/Slot_104" unique_id=713771165]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 0)
+material_override = SubResource("Mat_ring")
+cast_shadow = 0
+mesh = SubResource("Mesh_ring")
+
+[node name="Interactable" type="Node3D" parent="Slots/Slot_104" unique_id=1901053466]
+script = ExtResource("2_cs_interactable")
+
+[node name="OrientationFix" type="Node3D" parent="Slots/Slot_104/Interactable" unique_id=925645611]
+transform = Transform3D(0, 0, 0.38, 0, 0.38, 0, -0.38, 0, 0, 0, 0, 0)
+
+[node name="clown" parent="Slots/Slot_104/Interactable/OrientationFix" unique_id=673554109 instance=ExtResource("6_glb_clown")]
+
+[node name="HitBody" type="StaticBody3D" parent="Slots/Slot_104/Interactable" unique_id=937137228]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Slots/Slot_104/Interactable/HitBody" unique_id=772278124]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.92572725, 0)
+shape = SubResource("Shape_hit")
+
+[node name="Slot_105" type="Node3D" parent="Slots" unique_id=1613879666]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 1.5, 0.15, 0.33708388)
+
+[node name="SelectionRing" type="MeshInstance3D" parent="Slots/Slot_105" unique_id=426252884]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 0)
+material_override = SubResource("Mat_ring")
+cast_shadow = 0
+mesh = SubResource("Mesh_ring")
+
+[node name="Interactable" type="Node3D" parent="Slots/Slot_105" unique_id=364999765]
+script = ExtResource("2_cs_interactable")
+
+[node name="OrientationFix" type="Node3D" parent="Slots/Slot_105/Interactable" unique_id=406290666]
+transform = Transform3D(0, 0, 0.38, 0, 0.38, 0, -0.38, 0, 0, 0, 0, 0)
+
+[node name="black_dude" parent="Slots/Slot_105/Interactable/OrientationFix" unique_id=1617677914 instance=ExtResource("7_glb_black")]
+
+[node name="HitBody" type="StaticBody3D" parent="Slots/Slot_105/Interactable" unique_id=1585471032]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Slots/Slot_105/Interactable/HitBody" unique_id=1169795161]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.94275343, 0)
+shape = SubResource("Shape_hit")
+
+[node name="Slot_106" type="Node3D" parent="Slots" unique_id=785358751]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 2.5, 0.15, 0.33708388)
+
+[node name="SelectionRing" type="MeshInstance3D" parent="Slots/Slot_106" unique_id=998838762]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 0)
+material_override = SubResource("Mat_ring")
+cast_shadow = 0
+mesh = SubResource("Mesh_ring")
+
+[node name="Interactable" type="Node3D" parent="Slots/Slot_106" unique_id=1697176191]
+script = ExtResource("2_cs_interactable")
+
+[node name="OrientationFix" type="Node3D" parent="Slots/Slot_106/Interactable" unique_id=2024235653]
+transform = Transform3D(0, 0, 0.38, 0, 0.38, 0, -0.38, 0, 0, 0, 0, 0)
+
+[node name="police_woman" parent="Slots/Slot_106/Interactable/OrientationFix" unique_id=174198064 instance=ExtResource("8_glb_police")]
+
+[node name="HitBody" type="StaticBody3D" parent="Slots/Slot_106/Interactable" unique_id=737059178]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Slots/Slot_106/Interactable/HitBody" unique_id=1504640068]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.83172774, 0)
+shape = SubResource("Shape_hit")
+
+[node name="SpotLight3D" type="SpotLight3D" parent="." unique_id=698435170]
+transform = Transform3D(1, 0, 0, 0, 0.2369059, -0.9715326, 0, 0.9715326, 0.2369059, -1.4215987, -0.4444952, 1.1376725)
+light_color = Color(1, 0.6862745, 0.49411765, 1)
+light_energy = 1.213
+spot_range = 8.656696
+spot_angle = 67.79322
+
+[node name="SpotLight3D2" type="SpotLight3D" parent="." unique_id=861805740]
+transform = Transform3D(1, 0, 0, 0, 0.2369059, -0.9715326, 0, 0.9715326, 0.2369059, 1.4976242, -0.4444952, 1.1376725)
+light_color = Color(1, 0.6862745, 0.49411765, 1)
+light_energy = 1.213
+spot_range = 8.656696
+spot_angle = 67.79322

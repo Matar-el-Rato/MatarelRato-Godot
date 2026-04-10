@@ -158,7 +158,7 @@ public partial class PlayerCameraController : CharacterBody3D
 		}
 
 		// ── 2. Jump ───────────────────────────────────────────────────────────
-		if (MovementEnabled && Input.IsActionJustPressed("jump") && IsOnFloor())
+		if (MovementEnabled && Input.IsActionPressed("jump") && IsOnFloor())
 			vel.Y = JumpVelocity;
 
 		// ── 3. Horizontal movement ────────────────────────────────────────────

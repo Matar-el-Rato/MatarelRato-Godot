@@ -26,6 +26,9 @@ public partial class ClipboardController : Node
 	[Export] public SubViewport         SignInViewport;
 	[Export] public SubViewport         RegistrationViewport;
 
+	/// <summary>True while at least one clipboard is on screen.</summary>
+	public bool IsVisible => _clipboardsVisible;
+
 	private bool         _clipboardsVisible        = false;
 	private Interactable _signInInteractable;
 	private Interactable _registrationInteractable;
@@ -100,6 +103,8 @@ public partial class ClipboardController : Node
 			BurnAudio.GlobalPosition = SignInClipboard?.GlobalPosition ?? Vector3.Zero;
 			BurnAudio.Play();
 		}
+
+		BellController.Instance?.SetCancelMode(true);
 	}
 
 	/// <summary>
@@ -122,6 +127,8 @@ public partial class ClipboardController : Node
 			BurnAudio.GlobalPosition = RegistrationClipboard?.GlobalPosition ?? Vector3.Zero;
 			BurnAudio.Play();
 		}
+
+		BellController.Instance?.SetCancelMode(true);
 	}
 
 	/// <summary>
@@ -164,6 +171,8 @@ public partial class ClipboardController : Node
 			BurnAudio.GlobalPosition = SignInClipboard?.GlobalPosition ?? Vector3.Zero;
 			BurnAudio.Play();
 		}
+
+		BellController.Instance?.SetCancelMode(false);
 	}
 
 	// ── Clipboard transitions ─────────────────────────────────────────────────

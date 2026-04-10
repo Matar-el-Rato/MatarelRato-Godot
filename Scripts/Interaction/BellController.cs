@@ -63,11 +63,27 @@ public partial class BellController : Node3D
 	/// <summary>Hides the bell's floating "!" indicator.</summary>
 	public void HideBellExclamation() => InteractableNode?.SetExclamationVisible(false);
 
+	/// <summary>
+	/// Switches the bell prompt between "Cancel" (clipboard visible) and "Talk".
+	/// </summary>
+	public void SetCancelMode(bool cancel)
+	{
+		if (InteractableNode != null)
+			InteractableNode.PromptText = cancel ? "Cancel" : "Talk";
+	}
+
 	// ── Handler ───────────────────────────────────────────────────────────────
 
 	private void OnBellInteracted()
 	{
 		BellAudio?.Play();
+
+		if (ClipboardCtrl?.IsVisible == true)
+		{
+			_targetNPC?.CancelAuth();
+			return;
+		}
+
 		HideBellExclamation();
 		_targetNPC?.Appear();
 	}

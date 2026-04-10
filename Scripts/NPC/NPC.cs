@@ -17,8 +17,9 @@ public partial class NPC : CharacterBody3D
 	/// <summary>Global singleton — set in _Ready.</summary>
 	public static NPC Instance { get; private set; }
 
-	[Export] public string IdleAnimation   = "Armature|mixamo_com|Layer0_007";
-	[Export] public string PointAnimation  = "Armature_002|mixamo_com|Layer0_001";
+	[Export] public string IdleAnimation        = "Armature|mixamo_com|Layer0_007";
+	[Export] public string PointAnimation       = "Armature_002|mixamo_com|Layer0_001";
+	[Export] public string BoardPointAnimation  = "Armature_001|mixamo.com|Layer0";
 	[Export] public float  TransitionDuration = 0.8f;
 	[Export] public Color  TransitionColor    = new Color(1.0f, 0.5f, 0.2f);
 	[Export] public string DialogText         = "Good to see you again...\nWhat can I get for you today?";
@@ -71,6 +72,34 @@ public partial class NPC : CharacterBody3D
 		"That name is... taken.\nSomeone got here before you.",
 		"The ledger already has\nthat name. Try another.",
 		"Registration denied.\nThe house has\nits reasons.",
+	};
+
+	private static readonly string[] BoardPointPhrases =
+	{
+		"Look behind you.\nYou have other penitent souls\ncurrently in...",
+		"Turn around, fool.\nYou are not alone\nin this wretched place.",
+		"See that board?\nOthers have already\nsigned the ledger.",
+		"You think you're special?\nCheck the board.\nYou're just another name.",
+		"The house has other guests.\nThey didn't run.\nSee for yourself.",
+	};
+
+	private static readonly string[] AfterBoardPhrases =
+	{
+		"Did you count them?\nGood.\nNow wonder how many\nwill make it out.",
+		"Each name on that board\nis another debt\nowed to the house.",
+		"They came.\nThey played.\nMost of them regretted it.\n[i]Most.[/i]",
+		"The more the merrier...\nthat's what they [i]all[/i] say,\nbefore the losses pile up.",
+		"Don't get attached\nto those names.\nThings change quickly\naround here.",
+		"Every soul in here\npaid their price.\nDon't forget yours.",
+	};
+
+	private static readonly string[] CancelPhrases =
+	{
+		"...Thought so.\nCowards always hesitate.",
+		"Running away already?\nThe door was right there.",
+		"No courage?\nThe ledger can wait...\n[i]for now.[/i]",
+		"Hm. Perhaps next time\nyou'll find your spine.",
+		"Wise choice.\nFor you.\nNot for us.",
 	};
 
 	private static readonly string[] DismissalPhrases =
@@ -130,6 +159,27 @@ public partial class NPC : CharacterBody3D
 		// Wait for the auth greeting to be read
 		await ToSignal(GetTree().CreateTimer(5.0f), SceneTreeTimer.SignalName.Timeout);
 
+		// ── Point to the connected players board ──────────────────────────────
+		// Taunt the player with the knowledge that others are watching too.
+		ForceShowDialog(BoardPointPhrases[_rng.Next(BoardPointPhrases.Length)]);
+
+		if (_animPlayer != null && _animPlayer.HasAnimation(BoardPointAnimation))
+		{
+			_animPlayer.Play(BoardPointAnimation, 0.3f);
+			await ToSignal(_animPlayer, AnimationPlayer.SignalName.AnimationFinished);
+			_animPlayer.Play(IdleAnimation, 0.3f);
+		}
+		else
+		{
+			// Fallback: wait for the dialog to be readable if the animation
+			// name doesn't match exactly (e.g. Godot import renamed the clip).
+			await ToSignal(GetTree().CreateTimer(3.5f), SceneTreeTimer.SignalName.Timeout);
+		}
+
+		// Quirky follow-up about the other souls on the board
+		ForceShowDialog(AfterBoardPhrases[_rng.Next(AfterBoardPhrases.Length)]);
+		await ToSignal(GetTree().CreateTimer(4.0f), SceneTreeTimer.SignalName.Timeout);
+
 		// Quirky dismissal before vanishing
 		ForceShowDialog(DismissalPhrases[_rng.Next(DismissalPhrases.Length)]);
 
@@ -141,6 +191,26 @@ public partial class NPC : CharacterBody3D
 		// Disappear resets prompt to "Talk", restore it since we're still logged in
 		if (_interactable != null)
 			_interactable.PromptText = "Log Out";
+	}
+
+	/// <summary>
+	/// Called when the player rings the bell while a clipboard is open.
+	/// Hides the clipboard, dismisses the NPC with a snarky farewell.
+	/// </summary>
+	public async void CancelAuth()
+	{
+		_hasInteracted = false;
+
+		AuthChoiceUI.Instance?.Hide();
+		ClipboardController.Instance?.HideClipboards();
+		FocusController.Instance?.ExitFocus();
+
+		ForceShowDialog(CancelPhrases[_rng.Next(CancelPhrases.Length)]);
+
+		await ToSignal(GetTree().CreateTimer(3.0f), SceneTreeTimer.SignalName.Timeout);
+
+		Disappear();
+		BellController.Instance?.ShowBellExclamation();
 	}
 
 	// ── Auth reactions ────────────────────────────────────────────────────────

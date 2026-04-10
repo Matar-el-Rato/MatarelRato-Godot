@@ -136,7 +136,13 @@ public partial class ChatManager : Control
 	{
 		string text = _chatInput.Text.Trim();
 		if (sendMessage && !string.IsNullOrEmpty(text))
-			AddLog($"[color=#ffffff][LOG][/color] {text}");
+		{
+			// '/' is reserved for commands — route to HandleCommand instead of logging.
+			if (text.StartsWith("/"))
+				HandleCommand(text);
+			else
+				AddLog($"[color=#ffffff][LOG][/color] {text}");
+		}
 
 		_isChatOpen                    = false;
 		_chatInput.Visible             = false;
@@ -156,6 +162,45 @@ public partial class ChatManager : Control
 	private void OnTextSubmitted(string text)
 	{
 		CloseChat(true);
+	}
+
+	// ── Command handling ──────────────────────────────────────────────────────
+
+	/// <summary>
+	/// Processes a "/" command. Returns true if the input was a recognised
+	/// command (suppresses the normal LOG message), false if unrecognised.
+	/// </summary>
+	private bool HandleCommand(string input)
+	{
+		// Commands are the first word; anything after the first space is an argument.
+		int    spaceIdx = input.IndexOf(' ');
+		string cmd      = (spaceIdx < 0 ? input : input.Substring(0, spaceIdx)).ToLower();
+
+		switch (cmd)
+		{
+			case "/players":
+				if (!AuthManager.IsLoggedIn)
+				{
+					AddLog("[color=#888888]You must be logged in to see connected players.[/color]");
+				}
+				else
+				{
+					var players = LiveConnectionManager.LastKnownPlayers;
+					if (players.Count == 0)
+						AddLog("[color=#888888]No players currently connected.[/color]");
+					else
+					{
+						AddLog($"[color=#c04040]Connected ({players.Count}):[/color]");
+						foreach (var p in players)
+							AddLog($"[color=#e89060]  {p}[/color]");
+					}
+				}
+				return true;
+
+			default:
+				AddLog($"[color=#888888]Unknown command: {cmd}[/color]");
+				return true; // still suppress the LOG echo for any "/" input
+		}
 	}
 
 	// ── Static log API ────────────────────────────────────────────────────────

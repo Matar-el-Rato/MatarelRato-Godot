@@ -23,6 +23,7 @@ public static class ServerProtocol
 	private const int  MaxPassword  = 12;
 	private const byte ReqRegister  = 1;
 	private const byte ReqLogin     = 2;
+	private const byte ReqChangeSkin = 3;
 
 	/// <summary>Server response codes as defined in the MER protocol.</summary>
 	public enum ResponseCode : byte
@@ -46,6 +47,8 @@ public static class ServerProtocol
 		public string       Message   { get; set; } = "";
 		/// <summary>Server-assigned user ID on login success; -1 otherwise.</summary>
 		public int          UserId    { get; set; } = -1;
+		/// <summary>Saved skin ID returned by the server on login; 101 (default) otherwise.</summary>
+		public int          SkinId    { get; set; } = 101;
 	}
 
 	// ── Public entry points ───────────────────────────────────────────────────
@@ -67,17 +70,56 @@ public static class ServerProtocol
 		var result = SendCredentials(host, port, ReqLogin, username, password);
 		if (!result.IsSuccess) return result;
 
-		// Extract numeric ID from the server message (format: "...ID <number>")
+		// Parse "...ID <n> SKIN <n>" from the server message
 		var msg   = result.Message ?? string.Empty;
 		int idIdx = msg.IndexOf("ID ", StringComparison.OrdinalIgnoreCase);
 		if (idIdx >= 0)
 		{
-			var idPart = msg.Substring(idIdx + 3).Trim();
-			if (int.TryParse(idPart, out int id))
+			// Everything after "ID " up to the next space (or end) is the user ID
+			var afterId = msg.Substring(idIdx + 3);
+			var parts   = afterId.Trim().Split(' ');
+			if (parts.Length > 0 && int.TryParse(parts[0], out int id))
 				result.UserId = id;
 		}
 
+		int skinIdx = msg.IndexOf("SKIN ", StringComparison.OrdinalIgnoreCase);
+		if (skinIdx >= 0)
+		{
+			var skinPart = msg.Substring(skinIdx + 5).Trim();
+			if (int.TryParse(skinPart, out int skinId))
+				result.SkinId = skinId;
+		}
+
 		return result;
+	}
+
+	/// <summary>
+	/// Sends a REQ_CHANGE_SKIN packet to persist the player's chosen skin.
+	/// Packet layout: [type 1B][user_id 4B][skin_id 4B] (little-endian ints, no ntohl on server).
+	/// </summary>
+	public static ServerResult ChangeSkin(string host, int port, int userId, int skinId)
+	{
+		try
+		{
+			using var client = new TcpClient();
+			client.ConnectAsync(host, port).Wait(5000);
+			if (!client.Connected)
+				return Fail(ResponseCode.Unknown, "Connection timed out.");
+
+			using var stream = client.GetStream();
+
+			var packet = new byte[9]; // 1 + 4 + 4
+			packet[0] = ReqChangeSkin;
+			Array.Copy(BitConverter.GetBytes(userId), 0, packet, 1, 4);
+			Array.Copy(BitConverter.GetBytes(skinId), 0, packet, 5, 4);
+
+			stream.Write(packet, 0, packet.Length);
+			return ReadResponse(stream);
+		}
+		catch (Exception ex)
+		{
+			return Fail(ResponseCode.Unknown, "Network error: " + ex.Message);
+		}
 	}
 
 	// ── Internal helpers ──────────────────────────────────────────────────────

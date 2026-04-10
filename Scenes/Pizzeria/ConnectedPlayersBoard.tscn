@@ -1,0 +1,75 @@
+[gd_scene format=3 uid="uid://cjh8v5m3bxn4k"]
+
+[ext_resource type="FontFile" uid="uid://cw75wckal27hg" path="res://Assets/Fonts/Jersey10-Regular.ttf" id="1_font"]
+[ext_resource type="Script" uid="uid://jk2ldsq65siw" path="res://Scripts/NPC/ConnectedPlayersBoard.cs" id="2_script"]
+
+[sub_resource type="QuadMesh" id="QuadMesh_bg"]
+size = Vector2(2.5, 2)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_bg"]
+shading_mode = 0
+albedo_color = Color(0.02, 0.01, 0, 0.88)
+
+[node name="ConnectedPlayersBoard" type="Node3D" unique_id=1901823044]
+script = ExtResource("2_script")
+
+[node name="Background" type="MeshInstance3D" parent="." unique_id=1901823045]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.001)
+cast_shadow = 0
+mesh = SubResource("QuadMesh_bg")
+surface_material_override/0 = SubResource("StandardMaterial3D_bg")
+
+[node name="TitleLabel" type="Label3D" parent="." unique_id=1901823046]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.88, 0.001)
+pixel_size = 0.003
+modulate = Color(1, 0.35, 0.05, 1)
+text = "- CONNECTED SOULS -"
+font = ExtResource("1_font")
+font_size = 38
+outline_size = 0
+
+[node name="CounterLabel" type="Label3D" parent="." unique_id=1901823050]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.1, 0.88, 0.001)
+pixel_size = 0.003
+modulate = Color(1, 1, 1, 1)
+text = "0 / 64"
+font = ExtResource("1_font")
+font_size = 32
+outline_size = 0
+horizontal_alignment = 2
+
+[node name="Col1Label" type="Label3D" parent="." unique_id=1901823047]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.93, 0.73, 0.001)
+pixel_size = 0.003
+modulate = Color(0.95, 0.72, 0.45, 1)
+font = ExtResource("1_font")
+font_size = 22
+outline_size = 0
+vertical_alignment = 0
+
+[node name="Col2Label" type="Label3D" parent="." unique_id=1901823048]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.31, 0.73, 0.001)
+pixel_size = 0.003
+modulate = Color(0.95, 0.72, 0.45, 1)
+font = ExtResource("1_font")
+font_size = 22
+outline_size = 0
+vertical_alignment = 0
+
+[node name="Col3Label" type="Label3D" parent="." unique_id=1901823049]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.31, 0.73, 0.001)
+pixel_size = 0.003
+modulate = Color(0.95, 0.72, 0.45, 1)
+font = ExtResource("1_font")
+font_size = 22
+outline_size = 0
+vertical_alignment = 0
+
+[node name="Col4Label" type="Label3D" parent="." unique_id=1901823051]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.93, 0.73, 0.001)
+pixel_size = 0.003
+modulate = Color(0.95, 0.72, 0.45, 1)
+font = ExtResource("1_font")
+font_size = 22
+outline_size = 0
+vertical_alignment = 0

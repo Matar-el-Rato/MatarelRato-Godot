@@ -246,7 +246,8 @@ public partial class ClipboardUI : Control
 				ServerProtocol.LoginUser(ServerProtocol.DefaultHost, ServerProtocol.DefaultPort, user, pass));
 
 			int userId = loginResult.IsSuccess ? loginResult.UserId : -1;
-			_mainThreadQueue.Enqueue(() => OnAuthSuccess(user, userId, true));
+			int skinId = loginResult.IsSuccess ? loginResult.SkinId : 101;
+			_mainThreadQueue.Enqueue(() => OnAuthSuccess(user, userId, skinId, true));
 		}
 		else
 		{
@@ -265,7 +266,8 @@ public partial class ClipboardUI : Control
 			}
 
 			int userId = result.UserId;
-			_mainThreadQueue.Enqueue(() => OnAuthSuccess(user, userId, false));
+			int skinId = result.SkinId;
+			_mainThreadQueue.Enqueue(() => OnAuthSuccess(user, userId, skinId, false));
 		}
 	}
 
@@ -273,13 +275,13 @@ public partial class ClipboardUI : Control
 	/// Runs on the main thread after a successful auth round-trip.
 	/// Hides clipboards, exits focus, notifies AuthManager, and updates the NPC + chat.
 	/// </summary>
-	private void OnAuthSuccess(string username, int userId, bool isNewUser)
+	private void OnAuthSuccess(string username, int userId, int skinId, bool isNewUser)
 	{
 		StopAmbientFire();
 		ClipboardController.Instance?.HideClipboards();
 		FocusController.Instance?.ExitFocus();
 
-		AuthManager.NotifySuccess(username, userId, isNewUser);
+		AuthManager.NotifySuccess(username, userId, skinId, isNewUser);
 
 		NPC.Instance?.ReactToAuth(username, isNewUser);
 		NPC.Instance?.OnAuthComplete(username);
@@ -288,6 +290,29 @@ public partial class ClipboardUI : Control
 			ChatManager.AddLog($"[color=#c04040]{username} has joined the game for the first time, wont be his last...[/color]");
 		else
 			ChatManager.AddLog($"[color=#c04040]{username} has returned for more...[/color]");
+
+		// Apply saved skin after the camera tween back finishes.
+		float delay = (FocusController.Instance?.TransitionDuration ?? 0.6f) + 0.1f;
+		int   savedSkin = skinId;
+		GetTree().CreateTimer(delay).Timeout += () => ApplySavedSkin(savedSkin);
+	}
+
+	private void ApplySavedSkin(int skinId)
+	{
+		var player   = GetTree().Root.FindChild("Player", true, false) as PlayerCameraController;
+		var selector = player?.GetNodeOrNull<Selector>("Selector");
+		if (player == null || selector?.Entries == null) return;
+
+		foreach (var entry in selector.Entries)
+		{
+			if (entry?.ServerId == skinId)
+			{
+				player.SwapCharacter(entry);
+				if (GetTree().Root.FindChild("CharacterSelector", true, false) is CharacterSelector cs)
+					cs.SnapToSkin(skinId);
+				return;
+			}
+		}
 	}
 
 	// ── Audio ─────────────────────────────────────────────────────────────────

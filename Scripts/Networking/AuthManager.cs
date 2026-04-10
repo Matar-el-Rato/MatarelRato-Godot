@@ -23,6 +23,9 @@ public static class AuthManager
 	/// <summary>The server-assigned user ID, or -1 when logged out.</summary>
 	public static int    UserId     { get; private set; } = -1;
 
+	/// <summary>The skin ID saved on the server, or 101 (default) when logged out.</summary>
+	public static int    SkinId     { get; private set; } = 101;
+
 	// ── Events ────────────────────────────────────────────────────────────────
 
 	/// <summary>Fired after a successful login or register+auto-login.</summary>
@@ -41,12 +44,22 @@ public static class AuthManager
 	/// Called by <see cref="ClipboardUI"/> after a successful network round-trip.
 	/// Updates session state and raises <see cref="OnAuthSuccess"/>.
 	/// </summary>
-	public static void NotifySuccess(string username, int userId, bool isNewUser)
+	public static void NotifySuccess(string username, int userId, int skinId, bool isNewUser)
 	{
 		IsLoggedIn = true;
 		Username   = username;
 		UserId     = userId;
+		SkinId     = skinId;
 		OnAuthSuccess?.Invoke(username, isNewUser);
+
+		// Open the persistent live connection so the server can push user-list
+		// updates. Called after session state is set so any event subscriber that
+		// reads IsLoggedIn/Username already sees the updated values.
+		LiveConnectionManager.Connect(
+			ServerProtocol.DefaultHost,
+			ServerProtocol.DefaultPort,
+			username,
+			userId);
 	}
 
 	/// <summary>
@@ -67,5 +80,10 @@ public static class AuthManager
 		IsLoggedIn = false;
 		Username   = "";
 		UserId     = -1;
+		SkinId     = 101;
+
+		// Close the persistent connection. The server will remove this client
+		// from its table and broadcast the updated list to remaining clients.
+		LiveConnectionManager.Disconnect();
 	}
 }
