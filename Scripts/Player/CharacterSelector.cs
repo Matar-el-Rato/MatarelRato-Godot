@@ -24,8 +24,9 @@ public partial class CharacterSelector : Node3D
     private Selector               _selector;
     private Node3D                 _slotsParent;
     private AudioStreamPlayer      _burnAudio;
+    private AudioStreamPlayer      _crackleAudio;
 
-    // Single torus ring that slides between slots on selection
+    // Fire ring that slides between slots on selection
     private MeshInstance3D         _ring;
     private Tween                  _ringTween;
     private int                    _selectedIndex = 0;
@@ -36,6 +37,9 @@ public partial class CharacterSelector : Node3D
     private float _targetY;
     private bool  _isShown = false;
     private Tween _platformTween;
+
+    private OmniLight3D _fireLight;
+    private float       _flickerTime;
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -77,6 +81,26 @@ public partial class CharacterSelector : Node3D
 
         if (shouldShow  && !_isShown) EaseIn();
         if (!shouldShow &&  _isShown) EaseOut();
+
+        // Flicker the fire light to simulate a real fireplace
+        if (_isShown && _fireLight != null)
+        {
+            float dt = (float)delta;
+            _flickerTime += dt;
+            float flicker = 2.0f
+                + 0.6f * Mathf.Sin(_flickerTime * 8.0f)
+                + 0.4f * Mathf.Sin(_flickerTime * 13.7f)
+                + 0.3f * Mathf.Sin(_flickerTime * 23.1f);
+            _fireLight.LightEnergy = flicker;
+
+            // Subtle color shift between orange and warm yellow
+            float t = (Mathf.Sin(_flickerTime * 5.3f) + 1f) * 0.5f;
+            _fireLight.LightColor = new Color(
+                1.0f,
+                Mathf.Lerp(0.45f, 0.7f, t),
+                Mathf.Lerp(0.1f, 0.25f, t)
+            );
+        }
     }
 
     // ── Setup ─────────────────────────────────────────────────────────────────
@@ -105,6 +129,16 @@ public partial class CharacterSelector : Node3D
         _burnAudio.Stream   = stream;
         _burnAudio.VolumeDb = -3f;
         AddChild(_burnAudio);
+
+        _crackleAudio = new AudioStreamPlayer();
+        _crackleAudio.Stream   = GD.Load<AudioStream>("res://Assets/Sound FX/fire_crackle.wav");
+        _crackleAudio.VolumeDb = -8f;
+        _crackleAudio.Finished += () =>
+        {
+            if (_isShown && IsInstanceValid(_crackleAudio))
+                _crackleAudio.Play();
+        };
+        AddChild(_crackleAudio);
     }
 
     private void WireSlots()
@@ -119,7 +153,7 @@ public partial class CharacterSelector : Node3D
 
             int capturedIndex = i;
 
-            // Hide the per-slot SelectionRing nodes — a single shared torus
+            // Hide the per-slot SelectionRing nodes — a single shared fire
             // ring is used instead and slides between slot positions.
             slot.GetNodeOrNull<MeshInstance3D>("SelectionRing")?.Hide();
 
@@ -180,33 +214,89 @@ public partial class CharacterSelector : Node3D
 
     private void CreateRing()
     {
-        var torus = new TorusMesh();
-        torus.InnerRadius    = 0.28f;  // small tight ring
-        torus.OuterRadius    = 0.32f;  // tube diameter ≈ 0.04 — very thin
-        torus.Rings          = 48;
-        torus.RingSegments   = 10;
+        // Build a capless tube so the top face doesn't show flat fire
+        const int   segments = 32;
+        const float radius   = 0.35f;
+        const float halfH    = 0.45f; // total height 0.9
 
-        var mat = new StandardMaterial3D();
-        mat.ShadingMode              = BaseMaterial3D.ShadingModeEnum.Unshaded;
-        mat.AlbedoColor              = new Color(0.85f, 0.93f, 1f);
-        mat.EmissionEnabled          = true;
-        mat.Emission                 = new Color(0.25f, 0.55f, 1.00f);
-        mat.EmissionEnergyMultiplier = 6.0f;
+        var st = new SurfaceTool();
+        st.Begin(Mesh.PrimitiveType.Triangles);
+
+        for (int i = 0; i < segments; i++)
+        {
+            float a0 = Mathf.Tau * i / segments;
+            float a1 = Mathf.Tau * (i + 1) / segments;
+            float u0 = (float)i / segments;
+            float u1 = (float)(i + 1) / segments;
+
+            var bot0 = new Vector3(Mathf.Cos(a0) * radius, -halfH, Mathf.Sin(a0) * radius);
+            var bot1 = new Vector3(Mathf.Cos(a1) * radius, -halfH, Mathf.Sin(a1) * radius);
+            var top0 = new Vector3(Mathf.Cos(a0) * radius,  halfH, Mathf.Sin(a0) * radius);
+            var top1 = new Vector3(Mathf.Cos(a1) * radius,  halfH, Mathf.Sin(a1) * radius);
+
+            var nOut0 = new Vector3(Mathf.Cos(a0), 0, Mathf.Sin(a0));
+            var nOut1 = new Vector3(Mathf.Cos(a1), 0, Mathf.Sin(a1));
+            var nIn0  = -nOut0;
+            var nIn1  = -nOut1;
+
+            // UV.y = 0 at top (tip, fades out) — UV.y = 1 at bottom (root, bright)
+            // Outer faces
+            st.SetNormal(nOut0); st.SetUV(new Vector2(u0, 1)); st.AddVertex(bot0);
+            st.SetNormal(nOut1); st.SetUV(new Vector2(u1, 1)); st.AddVertex(bot1);
+            st.SetNormal(nOut0); st.SetUV(new Vector2(u0, 0)); st.AddVertex(top0);
+
+            st.SetNormal(nOut1); st.SetUV(new Vector2(u1, 1)); st.AddVertex(bot1);
+            st.SetNormal(nOut1); st.SetUV(new Vector2(u1, 0)); st.AddVertex(top1);
+            st.SetNormal(nOut0); st.SetUV(new Vector2(u0, 0)); st.AddVertex(top0);
+
+            // Inner faces (reversed winding)
+            st.SetNormal(nIn1); st.SetUV(new Vector2(u1, 1)); st.AddVertex(bot1);
+            st.SetNormal(nIn0); st.SetUV(new Vector2(u0, 1)); st.AddVertex(bot0);
+            st.SetNormal(nIn0); st.SetUV(new Vector2(u0, 0)); st.AddVertex(top0);
+
+            st.SetNormal(nIn1); st.SetUV(new Vector2(u1, 0)); st.AddVertex(top1);
+            st.SetNormal(nIn1); st.SetUV(new Vector2(u1, 1)); st.AddVertex(bot1);
+            st.SetNormal(nIn0); st.SetUV(new Vector2(u0, 0)); st.AddVertex(top0);
+        }
+
+        var tubeMesh = st.Commit();
+
+        // Noise texture for the fire shader
+        var noise = new FastNoiseLite();
+        noise.NoiseType = FastNoiseLite.NoiseTypeEnum.Simplex;
+        noise.Frequency = 0.04f;
+
+        var noiseTex = new NoiseTexture2D();
+        noiseTex.Noise    = noise;
+        noiseTex.Width    = 128;
+        noiseTex.Height   = 128;
+        noiseTex.Seamless = true;
+
+        // Fire shader material
+        var fireShader = GD.Load<Shader>("res://addons/fire/fire3d.gdshader");
+        var mat = new ShaderMaterial();
+        mat.Shader = fireShader;
+        mat.SetShaderParameter("noise_tex",     noiseTex);
+        mat.SetShaderParameter("root_color",    new Color(1.0f, 0.85f, 0.4f, 1.0f));
+        mat.SetShaderParameter("tip_color",     new Color(1.0f, 0.15f, 0.01f, 1.0f));
+        mat.SetShaderParameter("fire_alpha",    0.9f);
+        mat.SetShaderParameter("fire_speed",    new Vector2(0.0f, 1.5f));
+        mat.SetShaderParameter("fire_aperture", 0.25f);
 
         _ring = new MeshInstance3D();
-        _ring.Name             = "SelectionRing";
-        _ring.Mesh             = torus;
+        _ring.Name             = "FireRing";
+        _ring.Mesh             = tubeMesh;
         _ring.MaterialOverride = mat;
         _ring.CastShadow       = GeometryInstance3D.ShadowCastingSetting.Off;
         AddChild(_ring);
 
-        // OmniLight so the ring actually casts blue light on the platform surface
-        var light = new OmniLight3D();
-        light.LightColor    = new Color(0.3f, 0.6f, 1.0f);
-        light.LightEnergy   = 2.0f;
-        light.OmniRange     = 1.5f;
-        light.ShadowEnabled = false;
-        _ring.AddChild(light);
+        // Warm fire-colored OmniLight — flickered in _Process
+        _fireLight = new OmniLight3D();
+        _fireLight.LightColor    = new Color(1.0f, 0.6f, 0.2f);
+        _fireLight.LightEnergy   = 2.5f;
+        _fireLight.OmniRange     = 2.2f;
+        _fireLight.ShadowEnabled = false;
+        _ring.AddChild(_fireLight);
 
         // Snap to initial slot without tweening
         _ring.Position = SlotLocalPos(_selectedIndex);
@@ -228,7 +318,7 @@ public partial class CharacterSelector : Node3D
         // slot.Position is relative to _slotsParent.
         // _slotsParent.Position is relative to this (CharacterSelector).
         var posInMySpace = _slotsParent.Position + slot.Position;
-        return new Vector3(posInMySpace.X, 0.17f, posInMySpace.Z);
+        return new Vector3(posInMySpace.X, 0.55f, posInMySpace.Z);
     }
 
     // ── Hover highlight ───────────────────────────────────────────────────────
@@ -268,15 +358,29 @@ public partial class CharacterSelector : Node3D
 
         _selectedIndex = index;
 
-        // Slide the ring to the new slot with a smooth ease
+        // Compress fire down, teleport to new slot, expand back up
         if (_ring != null)
         {
             _ringTween?.Kill();
             _ringTween = CreateTween();
+
+            // Phase 1: squash Y scale to 0 at current position
             _ringTween
-                .TweenProperty(_ring, "position", SlotLocalPos(index), 0.4f)
-                .SetTrans(Tween.TransitionType.Sine)
-                .SetEase(Tween.EaseType.InOut);
+                .TweenProperty(_ring, "scale:y", 0.0f, 0.5f)
+                .SetTrans(Tween.TransitionType.Cubic)
+                .SetEase(Tween.EaseType.In);
+
+            // Phase 2: teleport to new slot (instant callback)
+            _ringTween.TweenCallback(Callable.From(() =>
+            {
+                _ring.Position = SlotLocalPos(index);
+            }));
+
+            // Phase 3: expand Y scale back to full
+            _ringTween
+                .TweenProperty(_ring, "scale:y", 1.0f, 0.7f)
+                .SetTrans(Tween.TransitionType.Elastic)
+                .SetEase(Tween.EaseType.Out);
         }
 
 
@@ -321,6 +425,8 @@ public partial class CharacterSelector : Node3D
 
         SpawnEmbers(GlobalPosition + Vector3.Up * 0.15f, 80, 1.2f);
         _burnAudio?.Play();
+        if (_crackleAudio != null && !_crackleAudio.Playing)
+            _crackleAudio.Play();
     }
 
     private void EaseOut()
@@ -335,6 +441,7 @@ public partial class CharacterSelector : Node3D
 
         SpawnEmbers(GlobalPosition + Vector3.Up * 0.15f, 60, 1.0f);
         _burnAudio?.Play();
+        _crackleAudio?.Stop();
     }
 
     // ── Fire VFX ─────────────────────────────────────────────────────────────
