@@ -5,11 +5,14 @@
 // ═══════════════════════════════════════════════════
 using Godot;
 using System;
+using System.Collections.Concurrent;
 
 /// <summary>
 /// HUD chat panel displayed in the corner of the screen.
-/// Accepts free-text messages via the static <see cref="AddLog"/> helper.
 /// Press T to open, Enter to submit, Escape to cancel.
+/// Messages are sent to the server (REQ_SEND_CHAT) and displayed only
+/// when the server echoes them back as MSG_CHAT — so all players see the
+/// same messages in the same order.
 /// Auto-fades after 3 seconds of inactivity.
 /// </summary>
 public partial class ChatManager : Control
@@ -17,19 +20,31 @@ public partial class ChatManager : Control
 	// Static reference so any script can call AddLog without a node reference.
 	private static ChatManager _instance;
 
-	private RichTextLabel _chatHistory;
-	private ScrollContainer _scrollContainer;
-	private PanelContainer _panelContainer;
-	private Control _inputWrapper;
-	private Control _bottomSpacer;
-	private LineEdit _chatInput;
+	private RichTextLabel    _chatHistory;
+	private ScrollContainer  _scrollContainer;
+	private PanelContainer   _panelContainer;
+	private Control          _inputWrapper;
+	private Control          _bottomSpacer;
+	private LineEdit         _chatInput;
 	private PlayerCameraController _player;
 
 	private bool   _isChatOpen = false;
 	private Tween  _fadeTween;
 	private double _pingTimer  = 0;
 
+	// Incoming chat messages from the background listener thread are enqueued here
+	// and drained on the main thread in _Process — the same pattern as ConnectedPlayersBoard.
+	private readonly ConcurrentQueue<(string sender, string message)> _pendingMessages = new();
+
 	// ── Lifecycle ─────────────────────────────────────────────────────────────
+
+	public override void _EnterTree()
+	{
+		// Subscribe here (not in _Ready) so the subscription is guaranteed to be
+		// in place even if _Ready throws before reaching the subscription line,
+		// and so it is properly restored if the node ever re-enters the tree.
+		LiveConnectionManager.OnChatMessageReceived += OnChatMessageReceivedBackground;
+	}
 
 	public override void _Ready()
 	{
@@ -45,6 +60,7 @@ public partial class ChatManager : Control
 		_chatHistory.ScrollFollowing = true;
 		_chatHistory.FitContent     = true;
 		_chatInput.Visible          = false;
+		_chatInput.MaxLength        = 100;
 
 		// Reserve space at the bottom so the log doesn't jump when the input opens.
 		_inputWrapper.Visible                    = false;
@@ -57,15 +73,39 @@ public partial class ChatManager : Control
 		Visible  = false;
 
 		_pingTimer = 0;
+
+		// Explicitly enable _Process. Godot does not automatically enable it for
+		// nodes that did not previously override it in a prior compiled version.
+		SetProcess(true);
+
 		CallDeferred(MethodName.FindPlayer);
 	}
 
-	// ── Per-frame ─────────────────────────────────────────────────────────────
+	public override void _ExitTree()
+	{
+		LiveConnectionManager.OnChatMessageReceived -= OnChatMessageReceivedBackground;
+	}
 
+	public override void _Process(double delta)
+	{
+		while (_pendingMessages.TryDequeue(out var item))
+			AddLog($"[color=#e8e0a0]{item.sender}[/color]: {item.message}");
+	}
 
 	private void FindPlayer()
 	{
 		_player = GetTree().Root.FindChild("Player", true, false) as PlayerCameraController;
+	}
+
+	// ── Network chat ──────────────────────────────────────────────────────────
+
+	/// <summary>
+	/// Called on the background listener thread — must NOT touch Godot nodes.
+	/// Enqueues to be drained on the main thread in _Process.
+	/// </summary>
+	private void OnChatMessageReceivedBackground(string sender, string message)
+	{
+		_pendingMessages.Enqueue((sender, message));
 	}
 
 	// ── Input ─────────────────────────────────────────────────────────────────
@@ -131,17 +171,17 @@ public partial class ChatManager : Control
 	/// Hides the input field and optionally submits the current text.
 	/// Restores player movement and recaptures the mouse.
 	/// </summary>
-	/// <param name="sendMessage">If true, appends the input text to the log before closing.</param>
+	/// <param name="sendMessage">If true, sends the input text to the server before closing.</param>
 	public void CloseChat(bool sendMessage)
 	{
 		string text = _chatInput.Text.Trim();
 		if (sendMessage && !string.IsNullOrEmpty(text))
 		{
-			// '/' is reserved for commands — route to HandleCommand instead of logging.
+			// '/' is reserved for commands — route to HandleCommand instead of sending.
 			if (text.StartsWith("/"))
 				HandleCommand(text);
 			else
-				AddLog($"[color=#ffffff][LOG][/color] {text}");
+				SendMessage(text);
 		}
 
 		_isChatOpen                    = false;
@@ -164,15 +204,25 @@ public partial class ChatManager : Control
 		CloseChat(true);
 	}
 
+	/// <summary>Sends a message to the server. The server echoes it back to all clients.</summary>
+	private void SendMessage(string text)
+	{
+		if (!AuthManager.IsLoggedIn || !LiveConnectionManager.IsConnected)
+		{
+			AddLog("[color=#888888]You must be connected to send messages.[/color]");
+			return;
+		}
+		LiveConnectionManager.SendChatMessage(text);
+	}
+
 	// ── Command handling ──────────────────────────────────────────────────────
 
 	/// <summary>
 	/// Processes a "/" command. Returns true if the input was a recognised
-	/// command (suppresses the normal LOG message), false if unrecognised.
+	/// command (suppresses the normal send), false if unrecognised.
 	/// </summary>
 	private bool HandleCommand(string input)
 	{
-		// Commands are the first word; anything after the first space is an argument.
 		int    spaceIdx = input.IndexOf(' ');
 		string cmd      = (spaceIdx < 0 ? input : input.Substring(0, spaceIdx)).ToLower();
 
@@ -197,9 +247,15 @@ public partial class ChatManager : Control
 				}
 				return true;
 
+			case "/tell":
+				// TODO: Direct message to a specific player: "/tell <playername> <message>"
+				// Requires a new REQ_SEND_TELL packet type and server routing by username.
+				AddLog("[color=#888888]/tell is not yet implemented.[/color]");
+				return true;
+
 			default:
 				AddLog($"[color=#888888]Unknown command: {cmd}[/color]");
-				return true; // still suppress the LOG echo for any "/" input
+				return true; // suppress the send echo for any "/" input
 		}
 	}
 
@@ -230,7 +286,6 @@ public partial class ChatManager : Control
 	{
 		_chatHistory.QueueRedraw();
 
-		// Two-frame wait: first frame triggers layout, second ensures height is correct.
 		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
 		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
 
@@ -249,7 +304,7 @@ public partial class ChatManager : Control
 		if (_chatHistory == null || _scrollContainer == null) return;
 
 		float historyHeight = _chatHistory.GetContentHeight();
-		if (historyHeight <= 0) return; // Skip if layout hasn't been evaluated yet.
+		if (historyHeight <= 0) return;
 
 		float screenHeight = GetViewportRect().Size.Y;
 		float maxHeight    = screenHeight * 0.4f - 20;

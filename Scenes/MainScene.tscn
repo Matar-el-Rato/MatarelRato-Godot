@@ -36,6 +36,8 @@
 [ext_resource type="PackedScene" uid="uid://4ype7080q81k" path="res://Scenes/NPC.tscn" id="35_npc_scene"]
 [ext_resource type="PackedScene" uid="uid://bgsky7powuwf7" path="res://Scenes/Pizzeria/AuthChoiceUI.tscn" id="36_auth_choice_ui"]
 [ext_resource type="PackedScene" path="res://Scenes/DitherEffect.tscn" id="37_dither_effect"]
+[ext_resource type="PackedScene" uid="uid://7wo01740hwje" path="res://Assets/Environment/right_apparel.glb" id="37_rmfi2"]
+[ext_resource type="PackedScene" uid="uid://ctgddf3ju3tkv" path="res://Assets/Environment/left_apparel.glb" id="38_sl126"]
 
 [sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_moon"]
 panorama = ExtResource("1_qxria")
@@ -526,6 +528,12 @@ stream = ExtResource("4_hx8n4")
 volume_db = -5.0
 unit_size = 0.2
 autoplay = true
+
+[node name="right_apparel" parent="Room1" unique_id=426509205 instance=ExtResource("37_rmfi2")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.8120937, 0.6798404, -7.1012263)
+
+[node name="left_apparel" parent="Room1" unique_id=1505938799 instance=ExtResource("38_sl126")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.168406, 0.68421197, -3.629694)
 
 [node name="mesa_poker" parent="Room1" unique_id=2070089762 instance=ExtResource("8_f140w")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.457277, 0.43543047, -5.255393)

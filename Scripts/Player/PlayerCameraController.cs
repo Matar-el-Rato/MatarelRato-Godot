@@ -40,6 +40,7 @@ public partial class PlayerCameraController : CharacterBody3D
 	[Export] private CharacterEntry _activeEntry;
 	private Vector3            _baseCameraPos;
 	private float              _baseFOV;
+	private Tween _cameraMoveTween; //for lerping between characters
 
 	private bool  _isSitting      = false;
 	private bool  _isTransitioning = false;
@@ -337,52 +338,67 @@ public partial class PlayerCameraController : CharacterBody3D
 	// ── Character swapping ────────────────────────────────────────────────────
 
 	/// <summary>
-	/// Replaces the visible character model under the orientation-fix node,
-	/// applies the entry's camera and idle-rotation offsets, then snaps to idle pose.
-	/// </summary>
-	public void SwapCharacter(CharacterEntry entry)
+/// Replaces the visible character model and tweens the camera to the new offset.
+/// </summary>
+public void SwapCharacter(CharacterEntry entry, float duration = 0.8f)
+{
+	if (entry?.ModelScene == null) return;
+
+	EnsureInitialized();
+	_activeEntry = entry;
+
+	var orientationFix = GetNodeOrNull<Node3D>("character/OrientationFix");
+	if (orientationFix == null)
 	{
-		if (entry?.ModelScene == null) return;
-
-		EnsureInitialized();
-		_activeEntry = entry;
-
-		var orientationFix = GetNodeOrNull<Node3D>("character/OrientationFix");
-		if (orientationFix == null)
-		{
-			GD.PrintErr("PlayerCameraController: Could not find 'character/OrientationFix' to swap model.");
-			return;
-		}
-
-		// Remove the old model.
-		foreach (var child in orientationFix.GetChildren())
-			child.QueueFree();
-
-		// Instantiate and attach the new model.
-		var newModel = entry.ModelScene.Instantiate<Node3D>();
-		orientationFix.AddChild(newModel);
-		_activeCharacter = orientationFix;
-
-		var animPlayer = newModel.GetNodeOrNull<AnimationPlayer>("AnimationPlayer")
-					  ?? newModel.FindChild("AnimationPlayer", true, false) as AnimationPlayer;
-
-		if (animPlayer != null)
-		{
-			// Snap the root bone to the correct idle rotation immediately.
-			var root = animPlayer.GetNodeOrNull<Node3D>(animPlayer.RootNode);
-			if (root != null)
-				root.RotationDegrees = new Vector3(root.RotationDegrees.X, entry.IdleRotation, root.RotationDegrees.Z);
-
-			if (animPlayer.HasAnimation("WalkingCycle_001"))
-			{
-				animPlayer.Play("WalkingCycle_001");
-				animPlayer.Stop();
-			}
-		}
-
-		_camera.Position = _baseCameraPos + entry.CameraOffset;
-		UpdateAnimations(Vector3.Zero);
+		GD.PrintErr("PlayerCameraController: Could not find 'character/OrientationFix' to swap model.");
+		return;
 	}
+
+	// --- 1. Model Swap Logic (Keep your existing logic) ---
+	foreach (var child in orientationFix.GetChildren())
+		child.QueueFree();
+
+	var newModel = entry.ModelScene.Instantiate<Node3D>();
+	orientationFix.AddChild(newModel);
+	_activeCharacter = orientationFix;
+
+	var animPlayer = newModel.GetNodeOrNull<AnimationPlayer>("AnimationPlayer")
+					?? newModel.FindChild("AnimationPlayer", true, false) as AnimationPlayer;
+
+	if (animPlayer != null)
+	{
+		var root = animPlayer.GetNodeOrNull<Node3D>(animPlayer.RootNode);
+		if (root != null)
+			root.RotationDegrees = new Vector3(root.RotationDegrees.X, entry.IdleRotation, root.RotationDegrees.Z);
+
+		if (animPlayer.HasAnimation("WalkingCycle_001"))
+		{
+			animPlayer.Play("WalkingCycle_001");
+			animPlayer.Stop();
+		}
+	}
+
+	// --- 2. SMOOTH CAMERA TRANSITION ---
+	Vector3 targetLocalPos = _baseCameraPos + entry.CameraOffset;
+
+	// Kill any previous tween to prevent "fighting" if the user clicks fast
+	if (_cameraMoveTween != null && _cameraMoveTween.IsValid())
+		_cameraMoveTween.Kill();
+
+	if (duration > 0)
+	{
+		_cameraMoveTween = CreateTween();
+		_cameraMoveTween.TweenProperty(_camera, "position", targetLocalPos, duration)
+			.SetTrans(Tween.TransitionType.Cubic)
+			.SetEase(Tween.EaseType.Out);
+	}
+	else
+	{
+		_camera.Position = targetLocalPos;
+	}
+
+	UpdateAnimations(Vector3.Zero);
+}
 
 	// ── Sit / Unsit ───────────────────────────────────────────────────────────
 

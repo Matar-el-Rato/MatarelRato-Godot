@@ -1,16 +1,17 @@
 // ═══════════════════════════════════════════════════
 // LiveConnectionManager.cs
 // Manages a single persistent TCP connection to the server used
-// exclusively for server-push notifications (MSG_USER_LIST broadcasts).
+// for server-push notifications (MSG_USER_LIST, MSG_CHAT broadcasts)
+// and for sending chat messages (REQ_SEND_CHAT).
 //
 // After a successful login, Connect() opens the socket and spawns
 // a dedicated System.Threading.Thread — not a Task — that blocks
-// on NetworkStream.Read() and fires OnUserListUpdated whenever a
-// MSG_USER_LIST packet arrives from the server.
+// on NetworkStream.Read() and fires events whenever a server-push
+// packet arrives.
 //
 // All subscribers that touch Godot nodes MUST marshal updates to
-// the main thread (e.g. via ConcurrentQueue<Action>) because this
-// event fires from the background listener thread.
+// the main thread (e.g. via ConcurrentQueue<Action>) because events
+// fire from the background listener thread.
 // ═══════════════════════════════════════════════════
 using Godot;
 using System;
@@ -23,26 +24,28 @@ using System.Threading;
 public static class LiveConnectionManager
 {
 	private const byte ReqConnectLive = 9;
+	private const byte ReqSendChat    = 6;
 	private const byte MsgUserList    = 10;
+	private const byte MsgChat        = 11;
 	private const int  MaxUsername    = 12;
 	private const int  MaxClients     = 64;
+	private const int  MaxChatMessage = 100;
 
 	// ── Shared state ──────────────────────────────────────────────────────────
 	//
 	// MUTUAL EXCLUSION — _client / _stream:
-	// _client is written in Connect() / Disconnect() on the Godot main thread
-	// and read in ListenerLoop() on the background listener thread. We protect
-	// accesses with _lock so that Disconnect() cannot Close() and null _client
-	// while the listener thread is mid-read on its NetworkStream. Without the
-	// lock a race between Close() and Read() can break
+	// _client and _stream are written in Connect() / Disconnect() on the Godot
+	// main thread and read in ListenerLoop() on the background listener thread.
+	// We protect lifecycle accesses with _lock. NetworkStream.Read() and Write()
+	// are safe to call simultaneously from different threads per .NET docs, so
+	// concurrent listen (read) and send (write) do not need further locking.
 	//
 	// _running is volatile: written by Disconnect() on the main thread and read
-	// in ListenerLoop() on the background thread. volatile guarantees that the
-	// loop always sees the latest value without needing a full lock acquisition
-	// on every iteration, avoiding unnecessary blocking.
+	// in ListenerLoop() on the background thread without a full lock acquisition.
 	private static readonly object _lock    = new();
 	private static volatile bool   _running = false;
 	private static TcpClient       _client;
+	private static NetworkStream   _stream;
 	private static Thread          _listenerThread;
 
 	/// <summary>
@@ -54,12 +57,20 @@ public static class LiveConnectionManager
 	public static event Action<List<string>> OnUserListUpdated;
 
 	/// <summary>
-	/// Last player list received from the server. Updated on the background
-	/// listener thread; read by ConnectedPlayersBoard._Ready() to catch up on
-	/// any broadcasts that arrived while the board was out of the tree.
-	/// Initialized to an empty list so callers never receive null.
+	/// Fired on the background listener thread whenever the server broadcasts
+	/// a chat message. Subscribers MUST marshal to the Godot main thread before
+	/// touching any Godot node (e.g. via CallDeferred or ConcurrentQueue).
+	/// </summary>
+	public static event Action<string, string> OnChatMessageReceived;
+
+	/// <summary>
+	/// Last player list received from the server. Initialized to an empty list
+	/// so callers never receive null.
 	/// </summary>
 	public static List<string> LastKnownPlayers { get; private set; } = new();
+
+	/// <summary>True while the live connection is active.</summary>
+	public static bool IsConnected => _running;
 
 	// ── Public API ────────────────────────────────────────────────────────────
 
@@ -70,9 +81,6 @@ public static class LiveConnectionManager
 	public static void Connect(string host, int port, string username, int userId)
 	{
 		// RISK: double-connect guard.
-		// If the user logs out and immediately logs back in, a previous listener
-		// thread may still be alive. Disconnect() joins the thread before we
-		// start a new one, so we never have two listener threads running at once.
 		Disconnect();
 
 		try
@@ -93,26 +101,22 @@ public static class LiveConnectionManager
 			var userBytes = Encoding.ASCII.GetBytes(username);
 			Array.Copy(userBytes, 0, packet, 1, Math.Min(userBytes.Length, MaxUsername));
 
-			// ENDIANNESS: user_id must be transmitted in network byte order
-			// (big-endian). The C server calls ntohl() on receipt, so we use
-			// IPAddress.HostToNetworkOrder to convert from host byte order.
+			// ENDIANNESS: user_id transmitted in network byte order (big-endian).
 			int beId    = IPAddress.HostToNetworkOrder(userId);
 			var idBytes = BitConverter.GetBytes(beId);
 			Array.Copy(idBytes, 0, packet, 1 + MaxUsername, 4);
 
-			client.GetStream().Write(packet, 0, packet.Length);
+			var stream = client.GetStream();
+			stream.Write(packet, 0, packet.Length);
 
-			// MUTUAL EXCLUSION: write _client and _running together under the
-			// lock so ListenerLoop never sees a state where _running is true
-			// but _client is still null.
+			// MUTUAL EXCLUSION: publish _client, _stream and _running together.
 			lock (_lock)
 			{
 				_client  = client;
+				_stream  = stream;
 				_running = true;
 			}
 
-			// Spawn a dedicated System.Threading.Thread (not Task.Run) as
-			// required: one thread exclusively handles incoming server messages.
 			_listenerThread = new Thread(ListenerLoop)
 			{
 				IsBackground = true,
@@ -134,86 +138,103 @@ public static class LiveConnectionManager
 	{
 		_running = false;
 
-		// MUTUAL EXCLUSION: closing _client must be done under the lock.
-		// Calling Close() causes the blocked NetworkStream.Read() in the
-		// listener thread to throw IOException/ObjectDisposedException, which
-		// is the intended .NET shutdown signal. Without the lock, a concurrent
-		// Connect() on the main thread could have already written a new TcpClient
-		// into _client — and we would close the wrong (new) connection.
 		lock (_lock)
 		{
 			_client?.Close();
 			_client = null;
+			_stream = null;
 		}
 
-		// Join the listener thread so Connect() can safely start a fresh one.
-		// RISK: if the thread is stuck in a blocking recv() with no FIN from
-		// the server (e.g. abrupt network loss), Close() will still unblock it
-		// by disposing the socket. The 2s timeout is a last-resort safeguard.
 		if (_listenerThread != null && _listenerThread.IsAlive)
 			_listenerThread.Join(2000);
 		_listenerThread = null;
+	}
+
+	/// <summary>
+	/// Sends a REQ_SEND_CHAT packet on the live connection.
+	/// Silently no-ops if not connected. Max 100 chars enforced client-side.
+	/// </summary>
+	public static void SendChatMessage(string message)
+	{
+		if (message.Length > MaxChatMessage)
+			message = message.Substring(0, MaxChatMessage);
+
+		NetworkStream stream;
+		lock (_lock) { stream = _stream; }
+		if (stream == null) return;
+
+		var packet = new byte[1 + MaxChatMessage];
+		packet[0] = ReqSendChat;
+		var msgBytes = Encoding.ASCII.GetBytes(message);
+		Array.Copy(msgBytes, 0, packet, 1, Math.Min(msgBytes.Length, MaxChatMessage));
+
+		// NetworkStream.Write is safe to call concurrently with Read per .NET docs.
+		try { stream.Write(packet, 0, packet.Length); }
+		catch (Exception ex) { GD.PrintErr($"[LCM] SendChatMessage failed: {ex.Message}"); }
 	}
 
 	// ── Listener thread ───────────────────────────────────────────────────────
 
 	/// <summary>
 	/// Runs on the dedicated listener thread. Blocks on NetworkStream reads
-	/// and processes every MSG_USER_LIST packet the server pushes.
+	/// and processes MSG_USER_LIST and MSG_CHAT packets from the server.
 	/// </summary>
 	private static void ListenerLoop()
 	{
-		// MUTUAL EXCLUSION: snapshot the stream reference under the lock.
-		// After this point we have a stable local reference; Disconnect() can
-		// null _client without affecting our local 'stream' variable.
 		NetworkStream stream;
 		lock (_lock)
 		{
 			if (_client == null) return;
-			stream = _client.GetStream();
+			stream = _stream;
 		}
 
-		// Reusable read buffers — allocated once outside the loop.
-		var headerBuf = new byte[2];                        // [type][count]
-		var usersBuf  = new byte[MaxClients * MaxUsername]; // max payload
+		var typeBuf  = new byte[1];
+		var usersBuf = new byte[MaxClients * MaxUsername];
+		var chatBuf  = new byte[MaxUsername + MaxChatMessage];
 
 		try
 		{
 			while (_running)
 			{
-				// Read 2-byte header: message type + user count.
-				// PARTIAL READ RISK: TCP is a stream protocol. A single send()
-				// on the server may be split across multiple Read() calls here.
-				// ReadExact() loops until all expected bytes have arrived.
-				if (!ReadExact(stream, headerBuf, 2)) break;
-
-				byte msgType  = headerBuf[0];
-				int  msgCount = headerBuf[1];
+				// Read 1-byte message type.
+				if (!ReadExact(stream, typeBuf, 1)) break;
+				byte msgType = typeBuf[0];
 
 				if (msgType == MsgUserList)
 				{
-					int toRead = msgCount * MaxUsername;
+					var countBuf = new byte[1];
+					if (!ReadExact(stream, countBuf, 1)) break;
+					int msgCount = countBuf[0];
 
-					// RISK: empty list (count == 0) is a valid state and must
-					// be handled — it means everyone disconnected.
+					int toRead = msgCount * MaxUsername;
 					if (toRead > 0 && !ReadExact(stream, usersBuf, toRead)) break;
 
 					var users = new List<string>(msgCount);
 					for (int i = 0; i < msgCount; i++)
 					{
 						int start = i * MaxUsername;
-						// Find the null terminator within the 12-byte window.
-						int len = 0;
+						int len   = 0;
 						while (len < MaxUsername && usersBuf[start + len] != 0) len++;
 						users.Add(Encoding.ASCII.GetString(usersBuf, start, len));
 					}
 
-					// Cache before firing so a newly-subscribing board can always
-					// call LastKnownPlayers and get a non-stale snapshot.
 					LastKnownPlayers = users;
-
-					// Fire on background thread — subscribers must marshal to main thread.
 					OnUserListUpdated?.Invoke(users);
+				}
+				else if (msgType == MsgChat)
+				{
+					// Payload: username[12B] + message[100B] = 112 bytes
+					if (!ReadExact(stream, chatBuf, MaxUsername + MaxChatMessage)) break;
+
+					int uLen = 0;
+					while (uLen < MaxUsername && chatBuf[uLen] != 0) uLen++;
+					string sender = Encoding.ASCII.GetString(chatBuf, 0, uLen);
+
+					int mLen = 0;
+					while (mLen < MaxChatMessage && chatBuf[MaxUsername + mLen] != 0) mLen++;
+					string message = Encoding.ASCII.GetString(chatBuf, MaxUsername, mLen);
+
+					OnChatMessageReceived?.Invoke(sender, message);
 				}
 			}
 		}
@@ -229,7 +250,6 @@ public static class LiveConnectionManager
 	/// <summary>
 	/// Reads exactly <paramref name="count"/> bytes into <paramref name="buf"/>
 	/// starting at offset 0, looping until all bytes arrive or the stream ends.
-	/// Returns false if the stream closes before all bytes are read.
 	/// </summary>
 	private static bool ReadExact(NetworkStream stream, byte[] buf, int count)
 	{
