@@ -25,6 +25,8 @@ public partial class WelcomeScreen : Control
 	private RandomNumberGenerator _rng = new();
 	private const float TrembleStrength = 1.2f;
 
+	private bool _debugMode = false;
+
 	// Intro camera transition
 	private Camera3D       _introCamera;
 	private Camera3D       _playerCamera;
@@ -104,8 +106,12 @@ public partial class WelcomeScreen : Control
 
 	// ── Button handlers ───────────────────────────────────────────────────────
 
-	private void OnPlayPressed()   => StartIntroTransition();
-	private void OnDebugPressed()  => StartIntroTransition();
+	private void OnPlayPressed()  => StartIntroTransition();
+	private void OnDebugPressed()
+	{
+		_debugMode = true;
+		StartIntroTransition();
+	}
 
 	private void OnSourceCodePressed()
 	{
@@ -238,6 +244,26 @@ public partial class WelcomeScreen : Control
 				player.MovementEnabled = true;
 				Input.MouseMode        = Input.MouseModeEnum.Captured;
 			}
+		}
+
+		if (_debugMode)
+		{
+			// Wait one frame for all scene _Ready() calls to complete, then autologin.
+			// Uses a SceneTree timer (not tied to this node) so it survives QueueFree.
+			GetTree().CreateTimer(0.3f).Timeout += async () =>
+			{
+				var result = await System.Threading.Tasks.Task.Run(() =>
+					ServerProtocol.LoginUser(
+						ServerProtocol.DefaultHost,
+						ServerProtocol.DefaultPort,
+						"admin-godot", "godot"));
+
+				if (result.IsSuccess)
+				{
+					AuthManager.NotifySuccess("admin-godot", result.UserId, result.SkinId, false);
+					ChatManager.AddLog("[color=#888888][debug] logged in as admin-godot[/color]");
+				}
+			};
 		}
 
 		QueueFree();

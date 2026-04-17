@@ -38,6 +38,9 @@
 [ext_resource type="PackedScene" path="res://Scenes/DitherEffect.tscn" id="37_dither_effect"]
 [ext_resource type="PackedScene" uid="uid://7wo01740hwje" path="res://Assets/Environment/right_apparel.glb" id="37_rmfi2"]
 [ext_resource type="PackedScene" uid="uid://ctgddf3ju3tkv" path="res://Assets/Environment/left_apparel.glb" id="38_sl126"]
+[ext_resource type="Script" uid="uid://1ehk7tcxo3pm" path="res://Scripts/NPC/RoomNPC.cs" id="39_room_npc_script"]
+[ext_resource type="Script" uid="uid://dyddsownfiqxf" path="res://Scripts/Environment/RoomJoin.cs" id="40_room_join_script"]
+[ext_resource type="PackedScene" uid="uid://cok64jr501daj" path="res://Scenes/RoomJoiner.tscn" id="41_75tun"]
 
 [sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_moon"]
 panorama = ExtResource("1_qxria")
@@ -68,6 +71,9 @@ size = Vector3(25.297192, 7.634369, 1)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_hx8n4"]
 size = Vector3(51.375, 5.825, 81.03)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_ergw4"]
+size = Vector3(14.614136, 4.0545654, 4.798706)
 
 [node name="Main3D" type="Node3D" unique_id=2050789802]
 
@@ -244,21 +250,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18.693594, 2.5446298, 9.22573
 light_color = Color(0.86185503, 0.84023947, 0.7068503, 1)
 light_energy = 0.783
 
-[node name="PizzeriaLight3" type="OmniLight3D" parent="Environment/Lighting" unique_id=1969236887]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18.09094, 2.308368, -5.39094)
-light_color = Color(1, 1, 0.9254902, 1)
-light_energy = 1.5
-
-[node name="PizzeriaLight4" type="OmniLight3D" parent="Environment/Lighting" unique_id=1527275724]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13.127879, 2.308368, -5.39094)
-light_color = Color(1, 1, 0.9254902, 1)
-light_energy = 1.4
-
-[node name="PizzeriaLight5" type="OmniLight3D" parent="Environment/Lighting" unique_id=837854500]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -25.94965, 2.308368, -5.39094)
-light_color = Color(1, 1, 0.9254902, 1)
-light_energy = 2.778
-
 [node name="Lamp" type="SpotLight3D" parent="Environment/Lighting" unique_id=1327523990]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 7.268309, 10.788387, -21.691822)
 light_color = Color(1, 1, 0.7411765, 1)
@@ -278,13 +269,6 @@ transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 19.8
 light_color = Color(1, 1, 0.7411765, 1)
 light_energy = 8.395
 spot_range = 14.361938
-spot_angle = 44.501743
-
-[node name="Lamp6" type="SpotLight3D" parent="Environment/Lighting" unique_id=318180263]
-transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -14.82505, 3.4360473, -4.5708184)
-light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
-light_energy = 0.5
-spot_range = 51.321716
 spot_angle = 44.501743
 
 [node name="Lamp10" type="SpotLight3D" parent="Environment/Lighting" unique_id=1217093783]
@@ -413,27 +397,6 @@ light_energy = 0.59
 spot_range = 51.321716
 spot_angle = 44.501743
 
-[node name="Lamp7" type="SpotLight3D" parent="Environment/Lighting" unique_id=42326513]
-transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -14.82505, 3.4360473, -6.393129)
-light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
-light_energy = 0.5
-spot_range = 51.321716
-spot_angle = 44.501743
-
-[node name="Lamp8" type="SpotLight3D" parent="Environment/Lighting" unique_id=892589631]
-transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -18.84093, 3.4360473, -6.393129)
-light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
-light_energy = 1.667
-spot_range = 51.321716
-spot_angle = 44.501743
-
-[node name="Lamp9" type="SpotLight3D" parent="Environment/Lighting" unique_id=191735631]
-transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -18.84093, 3.4360473, -4.571615)
-light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
-light_energy = 0.384
-spot_range = 51.321716
-spot_angle = 44.501743
-
 [node name="Lamp2" type="SpotLight3D" parent="Environment/Lighting" unique_id=1069850226]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 9.2743225, 10.788387, -24.651516)
 light_color = Color(1, 1, 0.7411765, 1)
@@ -547,6 +510,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.571119, 1.1142102, -4.529
 script = ExtResource("12_door_script")
 OpenAngle = -120.0
 LinkedDoorPath = NodePath("../right_door")
+RequiresLogin = true
 
 [node name="Interactable" type="Node3D" parent="Room1/left_door" unique_id=1068874910]
 script = ExtResource("13_interactable_script")
@@ -559,12 +523,18 @@ HighlightThickness = 7.0
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.571119, 1.1142102, -6.1595936)
 script = ExtResource("12_door_script")
 LinkedDoorPath = NodePath("../left_door")
+RequiresLogin = true
 
 [node name="Interactable" type="Node3D" parent="Room1/right_door" unique_id=1732529641]
 script = ExtResource("13_interactable_script")
 PromptText = "Open Door"
 InteractionAction = ""
 HighlightThickness = 7.0
+
+[node name="PiggaNPC" parent="Room1" unique_id=839475480 instance=ExtResource("35_npc_scene")]
+transform = Transform3D(0.99975204, 0, 0.022268664, 0, 1, 0, -0.022268664, 0, 0.99975204, -19.503555, -0.028534383, -5.231407)
+script = ExtResource("39_room_npc_script")
+TalkAnimation = "Armature_002|mixamo_com|Layer0_001"
 
 [node name="chair" parent="Room1" unique_id=15228684 instance=ExtResource("18_bpy1e")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.410943, 0.4724453, -3.848565)
@@ -623,6 +593,67 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14.663989, 0.8132103, -5.257
 [node name="Gun" parent="Room1" unique_id=1033857442 instance=ExtResource("6_p5ymy")]
 transform = Transform3D(-5.8842733e-08, -1.3461648, -0.6616949, 1.5, -6.556708e-08, 0, -2.8923605e-08, -0.6616949, 1.3461648, -14.684109, 0.75126225, -5.599998)
 
+[node name="RoomJoin" type="Node3D" parent="Room1" unique_id=1122334455 node_paths=PackedStringArray("LightingNode", "RoomArea", "Player", "RoomNpc")]
+script = ExtResource("40_room_join_script")
+LeftDoorPath = NodePath("../left_door")
+RightDoorPath = NodePath("../right_door")
+LightingNode = NodePath("../Lighting")
+RoomArea = NodePath("../RoomBounds")
+Player = NodePath("../../Player")
+RoomNpc = NodePath("../PiggaNPC")
+
+[node name="Lighting" type="Node3D" parent="Room1" unique_id=2086741960]
+
+[node name="PizzeriaLight3" type="OmniLight3D" parent="Room1/Lighting" unique_id=1969236887]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18.09094, 2.308368, -5.39094)
+light_color = Color(1, 1, 0.9254902, 1)
+light_energy = 1.5
+
+[node name="PizzeriaLight4" type="OmniLight3D" parent="Room1/Lighting" unique_id=1527275724]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13.127879, 2.308368, -5.39094)
+light_color = Color(1, 1, 0.9254902, 1)
+light_energy = 1.4
+
+[node name="PizzeriaLight5" type="OmniLight3D" parent="Room1/Lighting" unique_id=837854500]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -25.94965, 2.308368, -5.39094)
+light_color = Color(1, 1, 0.9254902, 1)
+light_energy = 2.778
+
+[node name="Lamp6" type="SpotLight3D" parent="Room1/Lighting" unique_id=318180263]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -14.82505, 3.4360473, -4.5708184)
+light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
+light_energy = 0.5
+spot_range = 51.321716
+spot_angle = 44.501743
+
+[node name="Lamp7" type="SpotLight3D" parent="Room1/Lighting" unique_id=42326513]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -14.82505, 3.4360473, -6.393129)
+light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
+light_energy = 0.5
+spot_range = 51.321716
+spot_angle = 44.501743
+
+[node name="Lamp8" type="SpotLight3D" parent="Room1/Lighting" unique_id=892589631]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -18.84093, 3.4360473, -6.393129)
+light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
+light_energy = 1.667
+spot_range = 51.321716
+spot_angle = 44.501743
+
+[node name="Lamp9" type="SpotLight3D" parent="Room1/Lighting" unique_id=191735631]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -18.84093, 3.4360473, -4.571615)
+light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
+light_energy = 0.384
+spot_range = 51.321716
+spot_angle = 44.501743
+
+[node name="RoomBounds" type="Area3D" parent="Room1" unique_id=1435420068]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13.980343, 0, -5.9173303)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Room1/RoomBounds" unique_id=1052295317]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.0573406, 1.5272827, 0.5214219)
+shape = SubResource("BoxShape3D_ergw4")
+
 [node name="Room2" type="Node3D" parent="." unique_id=1167468490]
 
 [node name="AudioStreamPlayer3D2" type="AudioStreamPlayer3D" parent="Room2" unique_id=1161319522]
@@ -637,6 +668,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.571119, 1.1142102, 16.247
 script = ExtResource("12_door_script")
 OpenAngle = -120.0
 LinkedDoorPath = NodePath("../right_door2")
+RequiresLogin = true
 
 [node name="Interactable" type="Node3D" parent="Room2/left_door2" unique_id=1411790049]
 script = ExtResource("13_interactable_script")
@@ -649,6 +681,7 @@ HighlightThickness = 7.0
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.571119, 1.1142102, 14.617755)
 script = ExtResource("12_door_script")
 LinkedDoorPath = NodePath("../left_door2")
+RequiresLogin = true
 
 [node name="Interactable" type="Node3D" parent="Room2/right_door2" unique_id=1510353381]
 script = ExtResource("13_interactable_script")
@@ -670,6 +703,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.571119, 1.1142102, 39.036
 script = ExtResource("12_door_script")
 OpenAngle = -120.0
 LinkedDoorPath = NodePath("../right_door3")
+RequiresLogin = true
 
 [node name="Interactable" type="Node3D" parent="Room3/left_door3" unique_id=1025236678]
 script = ExtResource("13_interactable_script")
@@ -682,6 +716,7 @@ HighlightThickness = 7.0
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.571119, 1.1142102, 37.406635)
 script = ExtResource("12_door_script")
 LinkedDoorPath = NodePath("../left_door3")
+RequiresLogin = true
 
 [node name="Interactable" type="Node3D" parent="Room3/right_door3" unique_id=48348540]
 script = ExtResource("13_interactable_script")
@@ -785,3 +820,6 @@ layer = 11
 [node name="ChatUI" parent="ChatLayer" unique_id=2111111104 instance=ExtResource("22_chat_ui")]
 
 [node name="DitherEffect" parent="." unique_id=1599022892 instance=ExtResource("37_dither_effect")]
+
+[node name="RoomJoiner" parent="." unique_id=454782750 instance=ExtResource("41_75tun")]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -19.969053, 2.893496, -5.0405297)

@@ -44,6 +44,7 @@ public partial class PlayerCameraController : CharacterBody3D
 
 	private bool  _isSitting      = false;
 	private bool  _isTransitioning = false;
+	public  bool  IsSitting => _isSitting;
 	private Chair _currentChair;
 	private float _sittingYaw     = 0f;
 	private Vector3 _preSitPosition;

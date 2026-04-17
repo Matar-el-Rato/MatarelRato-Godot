@@ -271,6 +271,15 @@ public partial class Interactable : Node3D, IInteractable
 
 	// ── IInteractable ─────────────────────────────────────────────────────────
 
+	/// <summary>Changes the highlight color at runtime (e.g., to show a locked state).</summary>
+	public void SetHighlightColor(Color color)
+	{
+		_highlightMaterial?.SetShaderParameter("outline_color", color);
+		_shellMaterial?.SetShaderParameter("outline_color", color);
+		if (_overlayMaterial != null)
+			_overlayMaterial.SetShaderParameter("overlay_color", new Color(color.R, color.G, color.B, OverlayColor.A));
+	}
+
 	/// <summary>Fires the <see cref="Interacted"/> signal.</summary>
 	public void Interact() => EmitSignal(SignalName.Interacted);
 
