@@ -1,23 +1,26 @@
 // ═══════════════════════════════════════════════════
 // RoomNPC.cs
 // Standalone Pigga NPC for private rooms.
-// Appears on player proximity, interactable for quirky "Wanna join?" dialogue.
+// Appears on player proximity, interactable for quirky dialogue.
+// First interaction: welcome cutscene (camera lock, player turn, apparel open).
 // Entirely independent of the auth system and the pizzeria NPC.
 // ═══════════════════════════════════════════════════
 using Godot;
 using System;
 
-/// <summary>
-/// Lightweight room NPC that scales in when triggered via <see cref="Appear"/>,
-/// shows a random quirky phrase when interacted with, and plays the pointing animation.
-/// No auth connection — completely standalone.
-/// </summary>
 public partial class RoomNPC : CharacterBody3D
 {
-	[Export] public string IdleAnimation     = "Armature|mixamo_com|Layer0_007";
-	[Export] public string TalkAnimation     = "Armature_002|mixamo_com|Layer0_001";
+	[Export] public string IdleAnimation      = "Armature|mixamo_com|Layer0_007";
+	[Export] public string TalkAnimation      = "Armature_002|mixamo_com|Layer0_001";
 	[Export] public float  TransitionDuration = 0.8f;
 	[Export] public Color  TransitionColor    = new Color(1.0f, 0.5f, 0.2f);
+
+	/// <summary>Player reference needed for the welcome camera sequence.</summary>
+	[Export] public CharacterBody3D Player;
+	/// <summary>Left apparel Node3D — slides out on welcome, resets on room exit.</summary>
+	[Export] public Node3D LeftApparel;
+	/// <summary>Right apparel Node3D — slides out on welcome, resets on room exit.</summary>
+	[Export] public Node3D RightApparel;
 
 	private static readonly string[] TalkPhrases =
 	{
@@ -37,6 +40,7 @@ public partial class RoomNPC : CharacterBody3D
 	private readonly Random     _rng = new Random();
 
 	private bool _hasAppeared   = false;
+	private bool _hasGreeted    = false;
 	private bool _hasInteracted = false;
 
 	public bool HasAppeared => _hasAppeared;
@@ -63,14 +67,21 @@ public partial class RoomNPC : CharacterBody3D
 
 		if (_interactable != null)
 		{
-			_interactable.PromptText = "Talk";
+			_interactable.PromptText  = "Talk";
 			_interactable.Interacted += OnInteracted;
 		}
+
+		// Auto-find if not wired in editor
+		if (Player == null)
+			Player = GetTree().Root.FindChild("Player", true, false) as CharacterBody3D;
+		if (LeftApparel == null)
+			LeftApparel  = GetTree().Root.FindChild("left_apparel",  true, false) as Node3D;
+		if (RightApparel == null)
+			RightApparel = GetTree().Root.FindChild("right_apparel", true, false) as Node3D;
 	}
 
 	// ── Appear / Disappear ────────────────────────────────────────────────────
 
-	/// <summary>Scales the NPC in from near-zero with burn VFX. Idempotent.</summary>
 	public void Appear()
 	{
 		if (_hasAppeared) return;
@@ -87,7 +98,6 @@ public partial class RoomNPC : CharacterBody3D
 		_burnAudio?.Play();
 	}
 
-	/// <summary>Shrinks the NPC back to near-zero with burn VFX, then hides it.</summary>
 	public void Disappear()
 	{
 		if (!_hasAppeared) return;
@@ -106,6 +116,9 @@ public partial class RoomNPC : CharacterBody3D
 		tween.Finished += () => Visible = false;
 	}
 
+	/// <summary>Resets the first-talk state so the welcome sequence fires again next time.</summary>
+	public void ResetWelcome() => _hasGreeted = false;
+
 	// ── Interaction ───────────────────────────────────────────────────────────
 
 	private async void OnInteracted()
@@ -113,9 +126,98 @@ public partial class RoomNPC : CharacterBody3D
 		if (!_hasAppeared || _hasInteracted) return;
 		_hasInteracted = true;
 
-		string phrase = TalkPhrases[_rng.Next(TalkPhrases.Length)];
-		_dialogBubble?.ShowDialog(phrase, force: true);
+		if (!_hasGreeted)
+		{
+			_hasGreeted = true;
+			await DoWelcomeSequence();
+		}
+		else
+		{
+			string phrase = TalkPhrases[_rng.Next(TalkPhrases.Length)];
+			_dialogBubble?.ShowDialog(phrase, force: true);
 
+			if (_animPlayer != null && _animPlayer.HasAnimation(TalkAnimation))
+			{
+				_animPlayer.Play(TalkAnimation, 0.3f);
+				await ToSignal(_animPlayer, AnimationPlayer.SignalName.AnimationFinished);
+				if (!IsInsideTree()) return;
+				_animPlayer.Play(IdleAnimation, 0.3f);
+			}
+		}
+
+		_hasInteracted = false;
+	}
+
+	// ── Welcome sequence ──────────────────────────────────────────────────────
+
+	private async System.Threading.Tasks.Task DoWelcomeSequence()
+	{
+		// 1. Show dialog and immediately lock camera look.
+		_dialogBubble?.ShowDialog("Welcome.\nThe room is yours.", force: true);
+		var pcc    = Player as PlayerCameraController;
+		var camera = Player?.GetNodeOrNull<Camera3D>("Camera3D");
+		if (pcc != null) pcc.MouseLookEnabled = false;
+
+		float originalRotY = Player?.Rotation.Y ?? 0f;
+		float originalFov  = camera?.Fov ?? 75f;
+
+		// 2. Hold 2 seconds on the dialog.
+		await ToSignal(GetTree().CreateTimer(2.0f), SceneTreeTimer.SignalName.Timeout);
+		if (!IsInsideTree()) return;
+
+		// 3. Snap-turn to +X and expand FOV slightly (0.6s).
+		{
+			var turnTween = CreateTween();
+			turnTween.SetParallel(true);
+			turnTween.TweenInterval(0.6f); // safety — guarantees Finished fires
+			if (Player != null)
+				turnTween.TweenProperty(Player, "rotation:y", -Mathf.Pi / 2f, 0.6f)
+						 .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
+			if (camera != null)
+				turnTween.TweenProperty(camera, "fov", originalFov + 14f, 0.6f)
+						 .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.Out);
+			await ToSignal(turnTween, Tween.SignalName.Finished);
+			if (!IsInsideTree()) return;
+		}
+
+		// 4. Wait 0.5s, then slide apparel out (left goes +Z, right goes -Z).
+		await ToSignal(GetTree().CreateTimer(0.5f), SceneTreeTimer.SignalName.Timeout);
+		if (!IsInsideTree()) return;
+
+		if (LeftApparel != null || RightApparel != null)
+		{
+			var apparelTween = CreateTween();
+			apparelTween.SetParallel(true);
+			if (LeftApparel != null)
+				apparelTween.TweenProperty(LeftApparel,  "position:z", LeftApparel.Position.Z  + 1.5f, 1.0f)
+							.SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.InOut);
+			if (RightApparel != null)
+				apparelTween.TweenProperty(RightApparel, "position:z", RightApparel.Position.Z - 1.5f, 1.0f)
+							.SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.InOut);
+			// Fire and don't await — apparel keeps sliding while sequence continues.
+		}
+
+		// 5. Wait 1.5s after apparel starts, then return rotation + FOV together.
+		await ToSignal(GetTree().CreateTimer(1.5f), SceneTreeTimer.SignalName.Timeout);
+		if (!IsInsideTree()) return;
+
+		{
+			var returnTween = CreateTween();
+			returnTween.SetParallel(true);
+			returnTween.TweenInterval(0.6f);
+			if (Player != null)
+				returnTween.TweenProperty(Player, "rotation:y", originalRotY, 0.6f)
+						   .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
+			if (camera != null)
+				returnTween.TweenProperty(camera, "fov", originalFov, 0.6f)
+						   .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
+			await ToSignal(returnTween, Tween.SignalName.Finished);
+			if (!IsInsideTree()) return;
+		}
+
+		if (pcc != null) pcc.MouseLookEnabled = true;
+
+		// 6. Play pointing animation now the player has full control back.
 		if (_animPlayer != null && _animPlayer.HasAnimation(TalkAnimation))
 		{
 			_animPlayer.Play(TalkAnimation, 0.3f);
@@ -123,8 +225,6 @@ public partial class RoomNPC : CharacterBody3D
 			if (!IsInsideTree()) return;
 			_animPlayer.Play(IdleAnimation, 0.3f);
 		}
-
-		_hasInteracted = false;
 	}
 
 	// ── VFX helpers ───────────────────────────────────────────────────────────

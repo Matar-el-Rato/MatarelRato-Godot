@@ -28,6 +28,9 @@ public partial class RoomJoin : Node3D
 	[Export] public CharacterBody3D Player;
 	[Export] public RoomNPC         RoomNpc;
 	[Export] public AudioStream     FlickerSound;
+	/// <summary>Apparel props that slide open on welcome and slide back on room exit.</summary>
+	[Export] public Node3D          LeftApparel;
+	[Export] public Node3D          RightApparel;
 
 	[ExportGroup("Tuning")]
 	[Export] public float NpcProximityDistance = 4.0f;
@@ -38,8 +41,10 @@ public partial class RoomJoin : Node3D
 	private Door _leftDoor;
 	private Door _rightDoor;
 	private readonly List<(Light3D light, float originalEnergy)> _lights = new();
-	private bool _playerInside = false;
+	private bool  _playerInside        = false;
 	private AudioStreamPlayer _flickerAudio;
+	private float _leftApparelBaseZ;
+	private float _rightApparelBaseZ;
 
 	// ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -55,6 +60,14 @@ public partial class RoomJoin : Node3D
 			_flickerAudio.Stream = FlickerSound;
 			AddChild(_flickerAudio);
 		}
+
+		if (LeftApparel == null)
+			LeftApparel  = GetTree().Root.FindChild("left_apparel",  true, false) as Node3D;
+		if (RightApparel == null)
+			RightApparel = GetTree().Root.FindChild("right_apparel", true, false) as Node3D;
+
+		if (LeftApparel  != null) _leftApparelBaseZ  = LeftApparel.Position.Z;
+		if (RightApparel != null) _rightApparelBaseZ = RightApparel.Position.Z;
 
 		if (LightingNode != null)
 		{
@@ -122,6 +135,21 @@ public partial class RoomJoin : Node3D
 		foreach (var (light, origEnergy) in _lights)
 			FlickerLightOff(light, origEnergy);
 		CloseDoorAfterDelay();
+		ResetApparel();
+		RoomNpc?.ResetWelcome();
+	}
+
+	private void ResetApparel()
+	{
+		if (LeftApparel == null && RightApparel == null) return;
+		var tween = CreateTween();
+		tween.SetParallel(true);
+		if (LeftApparel != null)
+			tween.TweenProperty(LeftApparel,  "position:z", _leftApparelBaseZ,  1.0f)
+				 .SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.InOut);
+		if (RightApparel != null)
+			tween.TweenProperty(RightApparel, "position:z", _rightApparelBaseZ, 1.0f)
+				 .SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.InOut);
 	}
 
 	// ── Per-light flicker coroutines ──────────────────────────────────────────

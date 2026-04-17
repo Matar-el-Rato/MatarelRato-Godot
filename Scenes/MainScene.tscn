@@ -23,6 +23,7 @@
 [ext_resource type="PackedScene" uid="uid://bkfh86n8876s5" path="res://Assets/Environment/Doors/right_door_pizzeria.glb" id="20_gyaec"]
 [ext_resource type="Script" uid="uid://b15eo4jowk2p3" path="res://Scripts/Environment/Mirror.cs" id="21_mirror"]
 [ext_resource type="PackedScene" uid="uid://dgv6wbfejnsf6" path="res://Scenes/UI/ChatUI.tscn" id="22_chat_ui"]
+[ext_resource type="AudioStream" uid="uid://bc3dpjpyfbu0" path="res://Assets/Sound FX/light_flicker.wav" id="23_oo3wg"]
 [ext_resource type="PackedScene" uid="uid://cx6y1r8v7k8j2" path="res://Scenes/Cigarette.tscn" id="25_wmecs"]
 [ext_resource type="PackedScene" uid="uid://b035w31kcbj6f" path="res://Assets/Pizzeria/recepcionist_bell.glb" id="27_4sso6"]
 [ext_resource type="Script" uid="uid://bmkswcfkw2bfr" path="res://Scripts/Interaction/BellController.cs" id="28_bell_script"]
@@ -493,10 +494,10 @@ unit_size = 0.2
 autoplay = true
 
 [node name="right_apparel" parent="Room1" unique_id=426509205 instance=ExtResource("37_rmfi2")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.8120937, 0.6798404, -7.1012263)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.326433, 0.6798404, -7.296217)
 
 [node name="left_apparel" parent="Room1" unique_id=1505938799 instance=ExtResource("38_sl126")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.168406, 0.68421197, -3.629694)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.682745, 0.68421197, -3.4437606)
 
 [node name="mesa_poker" parent="Room1" unique_id=2070089762 instance=ExtResource("8_f140w")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.457277, 0.43543047, -5.255393)
@@ -531,10 +532,13 @@ PromptText = "Open Door"
 InteractionAction = ""
 HighlightThickness = 7.0
 
-[node name="PiggaNPC" parent="Room1" unique_id=839475480 instance=ExtResource("35_npc_scene")]
+[node name="PiggaNPC" parent="Room1" unique_id=839475480 node_paths=PackedStringArray("Player", "LeftApparel", "RightApparel") instance=ExtResource("35_npc_scene")]
 transform = Transform3D(0.99975204, 0, 0.022268664, 0, 1, 0, -0.022268664, 0, 0.99975204, -19.503555, -0.028534383, -5.231407)
 script = ExtResource("39_room_npc_script")
 TalkAnimation = "Armature_002|mixamo_com|Layer0_001"
+Player = NodePath("../../Player")
+LeftApparel = NodePath("../left_apparel")
+RightApparel = NodePath("../right_apparel")
 
 [node name="chair" parent="Room1" unique_id=15228684 instance=ExtResource("18_bpy1e")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.410943, 0.4724453, -3.848565)
@@ -593,7 +597,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14.663989, 0.8132103, -5.257
 [node name="Gun" parent="Room1" unique_id=1033857442 instance=ExtResource("6_p5ymy")]
 transform = Transform3D(-5.8842733e-08, -1.3461648, -0.6616949, 1.5, -6.556708e-08, 0, -2.8923605e-08, -0.6616949, 1.3461648, -14.684109, 0.75126225, -5.599998)
 
-[node name="RoomJoin" type="Node3D" parent="Room1" unique_id=1122334455 node_paths=PackedStringArray("LightingNode", "RoomArea", "Player", "RoomNpc")]
+[node name="RoomJoin" type="Node3D" parent="Room1" unique_id=1122334455 node_paths=PackedStringArray("LightingNode", "RoomArea", "Player", "RoomNpc", "LeftApparel", "RightApparel")]
 script = ExtResource("40_room_join_script")
 LeftDoorPath = NodePath("../left_door")
 RightDoorPath = NodePath("../right_door")
@@ -601,6 +605,12 @@ LightingNode = NodePath("../Lighting")
 RoomArea = NodePath("../RoomBounds")
 Player = NodePath("../../Player")
 RoomNpc = NodePath("../PiggaNPC")
+FlickerSound = ExtResource("23_oo3wg")
+LeftApparel = NodePath("../left_apparel")
+RightApparel = NodePath("../right_apparel")
+
+[node name="RoomJoiner" parent="Room1" unique_id=454782750 instance=ExtResource("41_75tun")]
+transform = Transform3D(-4.29222e-08, 0.189164, 0.9819455, 8.2686205e-09, 0.9819455, -0.189164, -1, 0, -4.371139e-08, -20.381191, 2.9480164, -5.323478)
 
 [node name="Lighting" type="Node3D" parent="Room1" unique_id=2086741960]
 
@@ -820,6 +830,3 @@ layer = 11
 [node name="ChatUI" parent="ChatLayer" unique_id=2111111104 instance=ExtResource("22_chat_ui")]
 
 [node name="DitherEffect" parent="." unique_id=1599022892 instance=ExtResource("37_dither_effect")]
-
-[node name="RoomJoiner" parent="." unique_id=454782750 instance=ExtResource("41_75tun")]
-transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -19.969053, 2.893496, -5.0405297)

@@ -1,253 +1,128 @@
 [gd_scene format=3 uid="uid://cok64jr501daj"]
 
 [ext_resource type="Script" uid="uid://dqu6e8jl61siy" path="res://Scripts/UI/RoomJoinerUI.cs" id="1_ui_script"]
-[ext_resource type="Script" uid="uid://od1qyrmyk781" path="res://Scripts/Interaction/FocusInteractable.cs" id="2_focus_script"]
-[ext_resource type="Script" uid="uid://bk7ngt4ktf6i6" path="res://Scripts/Interaction/Interactable.cs" id="3_interactable_script"]
-[ext_resource type="Script" uid="uid://by5rrpux7eqv2" path="res://Scripts/Interaction/ClipboardUIInteraction.cs" id="4_ui_interaction_script"]
-[ext_resource type="FontFile" uid="uid://cw75wckal27hg" path="res://Assets/Fonts/Jersey10-Regular.ttf" id="5_font"]
+[ext_resource type="Script" uid="uid://bk7ngt4ktf6i6" path="res://Scripts/Interaction/Interactable.cs" id="2_interactable_script"]
+[ext_resource type="FontFile" uid="uid://cw75wckal27hg" path="res://Assets/Fonts/Jersey10-Regular.ttf" id="3_font"]
 
-[sub_resource type="QuadMesh" id="QuadMesh_overlay"]
-size = Vector2(0.8, 0.45)
+[sub_resource type="QuadMesh" id="QuadMesh_bg"]
+size = Vector2(4.715, 1.025)
 
-[sub_resource type="ViewportTexture" id="ViewportTexture_aib14"]
-viewport_path = NodePath("SubViewport")
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_overlay"]
-resource_local_to_scene = true
-transparency = 1
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_bg"]
 shading_mode = 0
-albedo_texture = SubResource("ViewportTexture_aib14")
+albedo_color = Color(0.03, 0.02, 0.01, 0.92)
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bg"]
-bg_color = Color(0.05, 0.03, 0.02, 0.95)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.95, 0.72, 0.45, 0.5)
+[sub_resource type="QuadMesh" id="QuadMesh_divider"]
+size = Vector2(0.003, 0.92)
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn"]
-bg_color = Color(0.1, 0.04, 0.02, 0.35)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.95, 0.72, 0.45, 0.45)
-corner_radius_top_left = 6
-corner_radius_top_right = 6
-corner_radius_bottom_right = 6
-corner_radius_bottom_left = 6
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_divider"]
+shading_mode = 0
+albedo_color = Color(0.95, 0.72, 0.45, 0.3)
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_pressed"]
-bg_color = Color(0.95, 0.72, 0.45, 0.28)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.95, 0.72, 0.45, 1)
-corner_radius_top_left = 6
-corner_radius_top_right = 6
-corner_radius_bottom_right = 6
-corner_radius_bottom_left = 6
+[sub_resource type="BoxShape3D" id="BoxShape3D_join"]
+size = Vector3(0.9, 0.32, 0.04)
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_hover"]
-bg_color = Color(0.95, 0.72, 0.45, 0.14)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.95, 0.72, 0.45, 0.9)
-corner_radius_top_left = 6
-corner_radius_top_right = 6
-corner_radius_bottom_right = 6
-corner_radius_bottom_left = 6
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_btn_focus"]
-
-[sub_resource type="BoxShape3D" id="BoxShape3D_rj"]
-size = Vector3(0.8, 0.45, 0.001)
-
-[node name="RoomJoiner" type="Node3D" unique_id=1934673904]
-
-[node name="UIOverlay" type="MeshInstance3D" parent="." unique_id=244532203]
-mesh = SubResource("QuadMesh_overlay")
-surface_material_override/0 = SubResource("StandardMaterial3D_overlay")
-
-[node name="SubViewport" type="SubViewport" parent="." unique_id=1763270388]
-disable_3d = true
-transparent_bg = true
-size = Vector2i(1024, 576)
-render_target_update_mode = 4
-
-[node name="RoomJoinerUI" type="Control" parent="SubViewport" unique_id=1702291466]
-layout_mode = 3
-anchors_preset = 0
-offset_right = 1024.0
-offset_bottom = 576.0
+[node name="RoomJoiner" type="Node3D" unique_id=761234745]
 script = ExtResource("1_ui_script")
 
-[node name="Background" type="Panel" parent="SubViewport/RoomJoinerUI" unique_id=931594925]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_bg")
+[node name="Background" type="MeshInstance3D" parent="." unique_id=1533038203]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.001)
+cast_shadow = 0
+mesh = SubResource("QuadMesh_bg")
+surface_material_override/0 = SubResource("StandardMaterial3D_bg")
 
-[node name="Left" type="Control" parent="SubViewport/RoomJoinerUI" unique_id=2103683438]
-layout_mode = 1
-anchors_preset = 9
-anchor_bottom = 1.0
-offset_right = 336.0
+[node name="LeftDivider" type="MeshInstance3D" parent="." unique_id=1591182181]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.179, 0, 0)
+cast_shadow = 0
+mesh = SubResource("QuadMesh_divider")
+surface_material_override/0 = SubResource("StandardMaterial3D_divider")
 
-[node name="Header" type="Label" parent="SubViewport/RoomJoinerUI/Left" unique_id=1240081329]
-layout_mode = 1
-anchors_preset = 10
-anchor_right = 1.0
-offset_top = 24.0
-offset_bottom = 72.0
-theme_override_colors/font_color = Color(0.95, 0.72, 0.45, 0.65)
-theme_override_fonts/font = ExtResource("5_font")
-theme_override_font_sizes/font_size = 30
-text = "JOIN ROOM"
-horizontal_alignment = 1
+[node name="RightDivider" type="MeshInstance3D" parent="." unique_id=639370255]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0, 0, 0)
+cast_shadow = 0
+mesh = SubResource("QuadMesh_divider")
+surface_material_override/0 = SubResource("StandardMaterial3D_divider")
 
-[node name="JoinButton" type="Button" parent="SubViewport/RoomJoinerUI/Left" unique_id=80485877]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -100.0
-offset_top = -35.0
-offset_right = 100.0
-offset_bottom = 35.0
-theme_override_colors/font_color = Color(0.95, 0.72, 0.45, 1)
-theme_override_colors/font_pressed_color = Color(1, 0.95, 0.8, 1)
-theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
-theme_override_colors/font_disabled_color = Color(0.5, 0.4, 0.3, 0.5)
-theme_override_fonts/font = ExtResource("5_font")
-theme_override_font_sizes/font_size = 38
-theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_btn_pressed")
-theme_override_styles/hover = SubResource("StyleBoxFlat_btn_hover")
-theme_override_styles/disabled = SubResource("StyleBoxFlat_btn")
-theme_override_styles/focus = SubResource("StyleBoxEmpty_btn_focus")
+[node name="JoinButton" type="Node3D" parent="." unique_id=2112248823]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.768, 0.02, 0)
+
+[node name="Label3D" type="Label3D" parent="JoinButton" unique_id=1962097715]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.001)
+pixel_size = 0.002
+modulate = Color(0.95, 0.72, 0.45, 1)
 text = "JOIN"
-
-[node name="LeftDivider" type="ColorRect" parent="SubViewport/RoomJoinerUI" unique_id=834494494]
-layout_mode = 1
-anchors_preset = 9
-anchor_bottom = 1.0
-offset_left = 336.0
-offset_right = 340.0
-color = Color(0.95, 0.72, 0.45, 0.25)
-
-[node name="Middle" type="Control" parent="SubViewport/RoomJoinerUI" unique_id=1652765812]
-layout_mode = 1
-anchors_preset = 9
-anchor_bottom = 1.0
-offset_left = 340.0
-offset_right = 684.0
-
-[node name="Header" type="Label" parent="SubViewport/RoomJoinerUI/Middle" unique_id=1933905364]
-layout_mode = 1
-anchors_preset = 10
-anchor_right = 1.0
-offset_top = 24.0
-offset_bottom = 72.0
-theme_override_colors/font_color = Color(0.95, 0.72, 0.45, 0.65)
-theme_override_fonts/font = ExtResource("5_font")
-theme_override_font_sizes/font_size = 30
-text = "STATUS"
+font = ExtResource("3_font")
+font_size = 120
+outline_size = 0
 horizontal_alignment = 1
 
-[node name="StatusDot" type="Panel" parent="SubViewport/RoomJoinerUI/Middle" unique_id=1184639636]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -16.0
-offset_top = -58.0
-offset_right = 16.0
-offset_bottom = -26.0
-
-[node name="StatusLabel" type="Label" parent="SubViewport/RoomJoinerUI/Middle" unique_id=1505810587]
-layout_mode = 1
-anchors_preset = 14
-anchor_top = 0.5
-anchor_right = 1.0
-anchor_bottom = 0.5
-offset_left = 20.0
-offset_top = -20.0
-offset_right = -20.0
-offset_bottom = 42.0
-theme_override_colors/font_color = Color(0.12, 0.85, 0.22, 1)
-theme_override_fonts/font = ExtResource("5_font")
-theme_override_font_sizes/font_size = 46
-text = "AVAILABLE"
-horizontal_alignment = 1
-
-[node name="RightDivider" type="ColorRect" parent="SubViewport/RoomJoinerUI" unique_id=1101080497]
-layout_mode = 1
-anchors_preset = 9
-anchor_bottom = 1.0
-offset_left = 684.0
-offset_right = 688.0
-color = Color(0.95, 0.72, 0.45, 0.25)
-
-[node name="Right" type="Control" parent="SubViewport/RoomJoinerUI" unique_id=293912514]
-layout_mode = 1
-anchors_preset = 9
-anchor_bottom = 1.0
-offset_left = 688.0
-offset_right = 1024.0
-
-[node name="Header" type="Label" parent="SubViewport/RoomJoinerUI/Right" unique_id=502782208]
-layout_mode = 1
-anchors_preset = 10
-anchor_right = 1.0
-offset_top = 24.0
-offset_bottom = 72.0
-theme_override_colors/font_color = Color(0.95, 0.72, 0.45, 0.65)
-theme_override_fonts/font = ExtResource("5_font")
-theme_override_font_sizes/font_size = 30
-text = "PLAYERS"
-horizontal_alignment = 1
-
-[node name="PlayerList" type="HBoxContainer" parent="SubViewport/RoomJoinerUI/Right" unique_id=949216055]
-layout_mode = 1
-anchors_preset = 14
-anchor_top = 0.5
-anchor_right = 1.0
-anchor_bottom = 0.5
-offset_left = 8.0
-offset_top = -100.0
-offset_right = -8.0
-offset_bottom = 100.0
-theme_override_constants/separation = 8
-
-[node name="Interactable" type="Node3D" parent="." unique_id=1954386300]
-script = ExtResource("3_interactable_script")
-PromptText = "Room Joiner"
+[node name="Interactable" type="Node3D" parent="JoinButton" unique_id=1995665483]
+script = ExtResource("2_interactable_script")
+PromptText = "Join Room"
 UseLeftClick = true
-UseShellHighlight = true
+AutoGenerateCollision = false
+HandleHighlight = false
 
-[node name="Collision" type="StaticBody3D" parent="Interactable" unique_id=1281923071]
+[node name="Collision" type="StaticBody3D" parent="JoinButton/Interactable" unique_id=841228029]
 
-[node name="Shape" type="CollisionShape3D" parent="Interactable/Collision" unique_id=1100982834]
-shape = SubResource("BoxShape3D_rj")
+[node name="Shape" type="CollisionShape3D" parent="JoinButton/Interactable/Collision" unique_id=1849376760]
+shape = SubResource("BoxShape3D_join")
 
-[node name="FocusInteractable" type="Node" parent="." unique_id=1295622767]
-script = ExtResource("2_focus_script")
-Distance = 0.45
+[node name="StatusLabel" type="Label3D" parent="." unique_id=1694532370]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.589, 0.0, 0.001)
+pixel_size = 0.002
+modulate = Color(0.12, 0.85, 0.22, 1)
+text = "AVAILABLE"
+font = ExtResource("3_font")
+font_size = 96
+outline_size = 0
+horizontal_alignment = 1
 
-[node name="UIInteraction" type="Node3D" parent="." unique_id=122494935 node_paths=PackedStringArray("Viewport", "Mesh")]
-script = ExtResource("4_ui_interaction_script")
-Viewport = NodePath("../SubViewport")
-Mesh = NodePath("../UIOverlay")
+[node name="PlayersHeader" type="Label3D" parent="." unique_id=1661173523]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.179, 0.3, 0.001)
+pixel_size = 0.002
+modulate = Color(0.95, 0.72, 0.45, 0.6)
+text = "PLAYERS"
+font = ExtResource("3_font")
+font_size = 60
+outline_size = 0
+horizontal_alignment = 1
+
+[node name="PlayerSlot0" type="Label3D" parent="." unique_id=1405630553]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.44, 0.03, 0.001)
+pixel_size = 0.002
+modulate = Color(0.3, 0.25, 0.2, 0.3)
+text = "---"
+font = ExtResource("3_font")
+font_size = 60
+outline_size = 0
+horizontal_alignment = 1
+
+[node name="PlayerSlot1" type="Label3D" parent="." unique_id=1945529706]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.93, 0.03, 0.001)
+pixel_size = 0.002
+modulate = Color(0.3, 0.25, 0.2, 0.3)
+text = "---"
+font = ExtResource("3_font")
+font_size = 60
+outline_size = 0
+horizontal_alignment = 1
+
+[node name="PlayerSlot2" type="Label3D" parent="." unique_id=1705771336]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.42, 0.03, 0.001)
+pixel_size = 0.002
+modulate = Color(0.3, 0.25, 0.2, 0.3)
+text = "---"
+font = ExtResource("3_font")
+font_size = 60
+outline_size = 0
+horizontal_alignment = 1
+
+[node name="PlayerSlot3" type="Label3D" parent="." unique_id=382085771]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.91, 0.03, 0.001)
+pixel_size = 0.002
+modulate = Color(0.3, 0.25, 0.2, 0.3)
+text = "---"
+font = ExtResource("3_font")
+font_size = 60
+outline_size = 0
+horizontal_alignment = 1

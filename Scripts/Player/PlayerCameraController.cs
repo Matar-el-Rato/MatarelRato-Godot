@@ -31,6 +31,8 @@ public partial class PlayerCameraController : CharacterBody3D
 	[Export] public NodePath CharacterModelPath = "character";
 	/// <summary>When false, all movement input and physics are suppressed (e.g. during cutscenes or focus).</summary>
 	[Export] public bool     MovementEnabled    = true;
+	/// <summary>When false, mouse motion no longer rotates the camera (e.g. during NPC welcome sequences).</summary>
+	public bool              MouseLookEnabled   = true;
 
 	private Camera3D           _camera;
 	private CollisionShape3D   _collisionShape;
@@ -108,7 +110,8 @@ public partial class PlayerCameraController : CharacterBody3D
 		if (!MovementEnabled || _isTransitioning) return;
 
 		if (@event is InputEventMouseMotion mm &&
-			Input.MouseMode == Input.MouseModeEnum.Captured)
+			Input.MouseMode == Input.MouseModeEnum.Captured &&
+			MouseLookEnabled)
 		{
 			if (_isSitting)
 			{
