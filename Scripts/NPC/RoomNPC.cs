@@ -7,6 +7,7 @@
 // ═══════════════════════════════════════════════════
 using Godot;
 using System;
+using System.Collections.Generic;
 
 public partial class RoomNPC : CharacterBody3D
 {
@@ -21,6 +22,8 @@ public partial class RoomNPC : CharacterBody3D
 	[Export] public Node3D LeftApparel;
 	/// <summary>Right apparel Node3D — slides out on welcome, resets on room exit.</summary>
 	[Export] public Node3D RightApparel;
+	/// <summary>Node3D whose Light3D descendants shift to moody orange on welcome.</summary>
+	[Export] public Node3D LightingNode;
 
 	private static readonly string[] TalkPhrases =
 	{
@@ -33,17 +36,38 @@ public partial class RoomNPC : CharacterBody3D
 		"You look lucky.\n[i]Dangerously[/i] lucky.",
 	};
 
+	private static readonly string[] JoinedPhrases =
+	{
+		"Don't look at me.",
+		"I'm just standing here.",
+		"...",
+		"You still here?",
+		"Go play already.",
+		"I don't do conversation.",
+		"My feet hurt.",
+		"Nice shoes.\nAnyway.",
+		"The ceiling's interesting\nisn't it.",
+		"I said what I said.",
+	};
+
+	private static readonly Color MoodyColor = new Color(1.0f, 0.82f, 0.70f);
+
 	private AnimationPlayer     _animPlayer;
 	private DialogBubble        _dialogBubble;
 	private Interactable        _interactable;
 	private AudioStreamPlayer3D _burnAudio;
 	private readonly Random     _rng = new Random();
+	private readonly List<(Light3D light, Color originalColor)> _moodLights = new();
 
 	private bool _hasAppeared   = false;
 	private bool _hasGreeted    = false;
 	private bool _hasInteracted = false;
+	private bool _playerJoined  = false;
 
 	public bool HasAppeared => _hasAppeared;
+
+	/// <summary>Fired once when the first-entry welcome sequence fully finishes.</summary>
+	public event Action WelcomeCompleted;
 
 	// ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -78,6 +102,19 @@ public partial class RoomNPC : CharacterBody3D
 			LeftApparel  = GetTree().Root.FindChild("left_apparel",  true, false) as Node3D;
 		if (RightApparel == null)
 			RightApparel = GetTree().Root.FindChild("right_apparel", true, false) as Node3D;
+		if (LightingNode == null)
+			LightingNode = GetParent()?.GetNodeOrNull<Node3D>("Lighting");
+
+		if (LightingNode != null)
+			CollectMoodLights(LightingNode);
+	}
+
+	private void CollectMoodLights(Node node)
+	{
+		if (node is Light3D light)
+			_moodLights.Add((light, light.LightColor));
+		foreach (Node child in node.GetChildren())
+			CollectMoodLights(child);
 	}
 
 	// ── Appear / Disappear ────────────────────────────────────────────────────
@@ -116,8 +153,22 @@ public partial class RoomNPC : CharacterBody3D
 		tween.Finished += () => Visible = false;
 	}
 
-	/// <summary>Resets the first-talk state so the welcome sequence fires again next time.</summary>
-	public void ResetWelcome() => _hasGreeted = false;
+	/// <summary>Called by RoomJoin when the player officially joins or leaves the room.</summary>
+	public void SetPlayerJoined(bool joined) => _playerJoined = joined;
+
+	/// <summary>Resets the first-talk state and restores light colors for the next entry.</summary>
+	public void ResetWelcome()
+	{
+		_hasGreeted    = false;
+		_playerJoined  = false;
+		foreach (var (light, originalColor) in _moodLights)
+			if (IsInstanceValid(light))
+			{
+				var t = CreateTween();
+				t.TweenProperty(light, "light_color", originalColor, 1.0f)
+				 .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
+			}
+	}
 
 	// ── Interaction ───────────────────────────────────────────────────────────
 
@@ -133,7 +184,8 @@ public partial class RoomNPC : CharacterBody3D
 		}
 		else
 		{
-			string phrase = TalkPhrases[_rng.Next(TalkPhrases.Length)];
+			var pool   = _playerJoined ? JoinedPhrases : TalkPhrases;
+			string phrase = pool[_rng.Next(pool.Length)];
 			_dialogBubble?.ShowDialog(phrase, force: true);
 
 			if (_animPlayer != null && _animPlayer.HasAnimation(TalkAnimation))
@@ -143,6 +195,8 @@ public partial class RoomNPC : CharacterBody3D
 				if (!IsInsideTree()) return;
 				_animPlayer.Play(IdleAnimation, 0.3f);
 			}
+
+			_dialogBubble?.HideDialog();
 		}
 
 		_hasInteracted = false;
@@ -156,7 +210,7 @@ public partial class RoomNPC : CharacterBody3D
 		_dialogBubble?.ShowDialog("Welcome.\nThe room is yours.", force: true);
 		var pcc    = Player as PlayerCameraController;
 		var camera = Player?.GetNodeOrNull<Camera3D>("Camera3D");
-		if (pcc != null) pcc.MouseLookEnabled = false;
+		if (pcc != null) { pcc.MouseLookEnabled = false; pcc.MovementEnabled = false; }
 
 		float originalRotY = Player?.Rotation.Y ?? 0f;
 		float originalFov  = camera?.Fov ?? 75f;
@@ -174,7 +228,7 @@ public partial class RoomNPC : CharacterBody3D
 				turnTween.TweenProperty(Player, "rotation:y", -Mathf.Pi / 2f, 0.6f)
 						 .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
 			if (camera != null)
-				turnTween.TweenProperty(camera, "fov", originalFov + 14f, 0.6f)
+				turnTween.TweenProperty(camera, "fov", originalFov + 22f, 0.6f)
 						 .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.Out);
 			await ToSignal(turnTween, Tween.SignalName.Finished);
 			if (!IsInsideTree()) return;
@@ -184,7 +238,6 @@ public partial class RoomNPC : CharacterBody3D
 		await ToSignal(GetTree().CreateTimer(0.5f), SceneTreeTimer.SignalName.Timeout);
 		if (!IsInsideTree()) return;
 
-		if (LeftApparel != null || RightApparel != null)
 		{
 			var apparelTween = CreateTween();
 			apparelTween.SetParallel(true);
@@ -194,7 +247,12 @@ public partial class RoomNPC : CharacterBody3D
 			if (RightApparel != null)
 				apparelTween.TweenProperty(RightApparel, "position:z", RightApparel.Position.Z - 1.5f, 1.0f)
 							.SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.InOut);
-			// Fire and don't await — apparel keeps sliding while sequence continues.
+			// Lights shift to moody orange in sync with apparel.
+			foreach (var (light, _) in _moodLights)
+				if (IsInstanceValid(light))
+					apparelTween.TweenProperty(light, "light_color", MoodyColor, 1.2f)
+								.SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
+			// Fire and don't await — everything slides while sequence continues.
 		}
 
 		// 5. Wait 1.5s after apparel starts, then return rotation + FOV together.
@@ -215,7 +273,9 @@ public partial class RoomNPC : CharacterBody3D
 			if (!IsInsideTree()) return;
 		}
 
-		if (pcc != null) pcc.MouseLookEnabled = true;
+		if (pcc != null) { pcc.MouseLookEnabled = true; pcc.MovementEnabled = true; }
+
+		WelcomeCompleted?.Invoke();
 
 		// 6. Play pointing animation now the player has full control back.
 		if (_animPlayer != null && _animPlayer.HasAnimation(TalkAnimation))
@@ -225,6 +285,8 @@ public partial class RoomNPC : CharacterBody3D
 			if (!IsInsideTree()) return;
 			_animPlayer.Play(IdleAnimation, 0.3f);
 		}
+
+		_dialogBubble?.HideDialog();
 	}
 
 	// ── VFX helpers ───────────────────────────────────────────────────────────

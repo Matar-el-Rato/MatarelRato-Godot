@@ -37,6 +37,27 @@ import_script/path=""
 materials/extract=0
 materials/extract_format=0
 materials/extract_path=""
-_subresources={}
+_subresources={
+"nodes": {
+"PATH:Chair_Table_002": {
+"generate/physics": true
+},
+"PATH:Chair_Table_003": {
+"generate/physics": true
+},
+"PATH:Chair_Table_004": {
+"generate/physics": true
+},
+"PATH:Chair_Table_005": {
+"generate/physics": true
+},
+"PATH:Chair_Table_006": {
+"generate/physics": true
+},
+"PATH:Chair_Table_007": {
+"generate/physics": true
+}
+}
+}
 gltf/naming_version=2
 gltf/embedded_image_handling=1

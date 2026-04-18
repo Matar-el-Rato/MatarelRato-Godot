@@ -25,11 +25,16 @@ public static class LiveConnectionManager
 {
 	private const byte ReqConnectLive = 9;
 	private const byte ReqSendChat    = 6;
+	private const byte ReqJoinRoom    = 5;
+	private const byte ReqLeaveRoom   = 8;
 	private const byte MsgUserList    = 10;
 	private const byte MsgChat        = 11;
+	private const byte MsgRoomState   = 12;
 	private const int  MaxUsername    = 12;
 	private const int  MaxClients     = 64;
 	private const int  MaxChatMessage = 100;
+	private const int  MaxRoomPlayers = 4;
+	private const int  NumRooms       = 3;
 
 	// ── Shared state ──────────────────────────────────────────────────────────
 	//
@@ -47,27 +52,29 @@ public static class LiveConnectionManager
 	private static TcpClient       _client;
 	private static NetworkStream   _stream;
 	private static Thread          _listenerThread;
+	private static string          _localUsername = "";
 
-	/// <summary>
-	/// Fired on the background listener thread whenever the server pushes an
-	/// updated connected-users list. Subscribers MUST NOT touch Godot nodes
-	/// directly — enqueue updates via ConcurrentQueue&lt;Action&gt; and apply
-	/// them in _Process().
-	/// </summary>
+	/// <summary>Fired on the background thread when the server pushes an updated user list.</summary>
 	public static event Action<List<string>> OnUserListUpdated;
 
-	/// <summary>
-	/// Fired on the background listener thread whenever the server broadcasts
-	/// a chat message. Subscribers MUST marshal to the Godot main thread before
-	/// touching any Godot node (e.g. via CallDeferred or ConcurrentQueue).
-	/// </summary>
+	/// <summary>Fired on the background thread when the server broadcasts a chat message.</summary>
 	public static event Action<string, string> OnChatMessageReceived;
 
 	/// <summary>
-	/// Last player list received from the server. Initialized to an empty list
-	/// so callers never receive null.
+	/// Fired on the background thread when a room's player list changes.
+	/// roomId: 1-3. players: current occupants (empty when room is cleared).
+	/// Subscribers MUST NOT touch Godot nodes directly.
 	/// </summary>
+	public static event Action<int, string[]> OnRoomStateUpdated;
+
+	/// <summary>Last player list received from the server.</summary>
 	public static List<string> LastKnownPlayers { get; private set; } = new();
+
+	/// <summary>The room the local player is currently in (0 = lobby).</summary>
+	public static int CurrentRoomId { get; private set; } = 0;
+
+	/// <summary>Last known player lists per room (index 1-3; index 0 unused).</summary>
+	public static string[][] RoomPlayers { get; private set; } = new string[NumRooms + 1][];
 
 	/// <summary>True while the live connection is active.</summary>
 	public static bool IsConnected => _running;
@@ -80,6 +87,10 @@ public static class LiveConnectionManager
 	/// </summary>
 	public static void Connect(string host, int port, string username, int userId)
 	{
+		_localUsername = username;
+		CurrentRoomId  = 0;
+		for (int i = 0; i <= NumRooms; i++) RoomPlayers[i] = System.Array.Empty<string>();
+
 		// RISK: double-connect guard.
 		Disconnect();
 
@@ -173,6 +184,30 @@ public static class LiveConnectionManager
 		catch (Exception ex) { GD.PrintErr($"[LCM] SendChatMessage failed: {ex.Message}"); }
 	}
 
+	/// <summary>Sends REQ_JOIN_ROOM on the live connection. roomId must be 1-3.</summary>
+	public static void SendJoinRoom(int roomId)
+	{
+		NetworkStream stream;
+		lock (_lock) { stream = _stream; }
+		if (stream == null) return;
+
+		var packet = new byte[] { ReqJoinRoom, (byte)roomId };
+		try { stream.Write(packet, 0, packet.Length); }
+		catch (Exception ex) { GD.PrintErr($"[LCM] SendJoinRoom failed: {ex.Message}"); }
+	}
+
+	/// <summary>Sends REQ_LEAVE_ROOM on the live connection.</summary>
+	public static void SendLeaveRoom()
+	{
+		NetworkStream stream;
+		lock (_lock) { stream = _stream; }
+		if (stream == null) return;
+
+		var packet = new byte[] { ReqLeaveRoom };
+		try { stream.Write(packet, 0, packet.Length); }
+		catch (Exception ex) { GD.PrintErr($"[LCM] SendLeaveRoom failed: {ex.Message}"); }
+	}
+
 	// ── Listener thread ───────────────────────────────────────────────────────
 
 	/// <summary>
@@ -235,6 +270,39 @@ public static class LiveConnectionManager
 					string message = Encoding.ASCII.GetString(chatBuf, MaxUsername, mLen);
 
 					OnChatMessageReceived?.Invoke(sender, message);
+				}
+				else if (msgType == MsgRoomState)
+				{
+					// Payload: room_id[1B] + count[1B] + players[4][12B] = 50 bytes
+					var roomBuf = new byte[2 + MaxRoomPlayers * MaxUsername];
+					if (!ReadExact(stream, roomBuf, roomBuf.Length)) break;
+
+					int roomId = roomBuf[0];
+					int count  = roomBuf[1];
+					if (count > MaxRoomPlayers) count = MaxRoomPlayers;
+
+					var players = new string[count];
+					for (int i = 0; i < count; i++)
+					{
+						int start = 2 + i * MaxUsername;
+						int len   = 0;
+						while (len < MaxUsername && roomBuf[start + len] != 0) len++;
+						players[i] = Encoding.ASCII.GetString(roomBuf, start, len);
+					}
+
+					if (roomId >= 1 && roomId <= NumRooms)
+					{
+						RoomPlayers[roomId] = players;
+
+						// Update CurrentRoomId: check if our name is in this room.
+						bool myNameHere = System.Array.IndexOf(players, _localUsername) >= 0;
+						if (myNameHere)
+							CurrentRoomId = roomId;
+						else if (CurrentRoomId == roomId)
+							CurrentRoomId = 0;
+					}
+
+					OnRoomStateUpdated?.Invoke(roomId, players);
 				}
 			}
 		}

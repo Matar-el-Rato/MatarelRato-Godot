@@ -4,13 +4,6 @@
 [ext_resource type="Script" uid="uid://bk7ngt4ktf6i6" path="res://Scripts/Interaction/Interactable.cs" id="2_interactable_script"]
 [ext_resource type="FontFile" uid="uid://cw75wckal27hg" path="res://Assets/Fonts/Jersey10-Regular.ttf" id="3_font"]
 
-[sub_resource type="QuadMesh" id="QuadMesh_bg"]
-size = Vector2(4.715, 1.025)
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_bg"]
-shading_mode = 0
-albedo_color = Color(0.03, 0.02, 0.01, 0.92)
-
 [sub_resource type="QuadMesh" id="QuadMesh_divider"]
 size = Vector2(0.003, 0.92)
 
@@ -24,12 +17,6 @@ size = Vector3(0.9, 0.32, 0.04)
 [node name="RoomJoiner" type="Node3D" unique_id=761234745]
 script = ExtResource("1_ui_script")
 
-[node name="Background" type="MeshInstance3D" parent="." unique_id=1533038203]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.001)
-cast_shadow = 0
-mesh = SubResource("QuadMesh_bg")
-surface_material_override/0 = SubResource("StandardMaterial3D_bg")
-
 [node name="LeftDivider" type="MeshInstance3D" parent="." unique_id=1591182181]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.179, 0, 0)
 cast_shadow = 0
@@ -37,7 +24,6 @@ mesh = SubResource("QuadMesh_divider")
 surface_material_override/0 = SubResource("StandardMaterial3D_divider")
 
 [node name="RightDivider" type="MeshInstance3D" parent="." unique_id=639370255]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0, 0, 0)
 cast_shadow = 0
 mesh = SubResource("QuadMesh_divider")
 surface_material_override/0 = SubResource("StandardMaterial3D_divider")
@@ -53,7 +39,6 @@ text = "JOIN"
 font = ExtResource("3_font")
 font_size = 120
 outline_size = 0
-horizontal_alignment = 1
 
 [node name="Interactable" type="Node3D" parent="JoinButton" unique_id=1995665483]
 script = ExtResource("2_interactable_script")
@@ -68,14 +53,12 @@ HandleHighlight = false
 shape = SubResource("BoxShape3D_join")
 
 [node name="StatusLabel" type="Label3D" parent="." unique_id=1694532370]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.589, 0.0, 0.001)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.589, 0, 0.001)
 pixel_size = 0.002
-modulate = Color(0.12, 0.85, 0.22, 1)
 text = "AVAILABLE"
 font = ExtResource("3_font")
 font_size = 96
 outline_size = 0
-horizontal_alignment = 1
 
 [node name="PlayersHeader" type="Label3D" parent="." unique_id=1661173523]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.179, 0.3, 0.001)
@@ -85,44 +68,39 @@ text = "PLAYERS"
 font = ExtResource("3_font")
 font_size = 60
 outline_size = 0
-horizontal_alignment = 1
 
 [node name="PlayerSlot0" type="Label3D" parent="." unique_id=1405630553]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.44, 0.03, 0.001)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.68, 0.15, 0.001)
 pixel_size = 0.002
 modulate = Color(0.3, 0.25, 0.2, 0.3)
 text = "---"
 font = ExtResource("3_font")
 font_size = 60
 outline_size = 0
-horizontal_alignment = 1
 
 [node name="PlayerSlot1" type="Label3D" parent="." unique_id=1945529706]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.93, 0.03, 0.001)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.68, 0.15, 0.001)
 pixel_size = 0.002
 modulate = Color(0.3, 0.25, 0.2, 0.3)
 text = "---"
 font = ExtResource("3_font")
 font_size = 60
 outline_size = 0
-horizontal_alignment = 1
 
 [node name="PlayerSlot2" type="Label3D" parent="." unique_id=1705771336]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.42, 0.03, 0.001)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.68, -0.15, 0.001)
 pixel_size = 0.002
 modulate = Color(0.3, 0.25, 0.2, 0.3)
 text = "---"
 font = ExtResource("3_font")
 font_size = 60
 outline_size = 0
-horizontal_alignment = 1
 
 [node name="PlayerSlot3" type="Label3D" parent="." unique_id=382085771]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.91, 0.03, 0.001)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.68, -0.15, 0.001)
 pixel_size = 0.002
 modulate = Color(0.3, 0.25, 0.2, 0.3)
 text = "---"
 font = ExtResource("3_font")
 font_size = 60
 outline_size = 0
-horizontal_alignment = 1

@@ -493,18 +493,11 @@ volume_db = -5.0
 unit_size = 0.2
 autoplay = true
 
-[node name="right_apparel" parent="Room1" unique_id=426509205 instance=ExtResource("37_rmfi2")]
+[node name="right_apparel" parent="Room1" unique_id=1517514736 instance=ExtResource("37_rmfi2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.326433, 0.6798404, -7.296217)
 
-[node name="left_apparel" parent="Room1" unique_id=1505938799 instance=ExtResource("38_sl126")]
+[node name="left_apparel" parent="Room1" unique_id=1228439548 instance=ExtResource("38_sl126")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.682745, 0.68421197, -3.4437606)
-
-[node name="mesa_poker" parent="Room1" unique_id=2070089762 instance=ExtResource("8_f140w")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.457277, 0.43543047, -5.255393)
-script = ExtResource("7_env_collision")
-
-[node name="tablero" parent="Room1" unique_id=611242887 instance=ExtResource("9_0iob3")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.453938, 0.7376139, -5.248031)
 
 [node name="left_door" parent="Room1" unique_id=1408443076 instance=ExtResource("10_4b75m")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.571119, 1.1142102, -4.5296316)
@@ -540,64 +533,7 @@ Player = NodePath("../../Player")
 LeftApparel = NodePath("../left_apparel")
 RightApparel = NodePath("../right_apparel")
 
-[node name="chair" parent="Room1" unique_id=15228684 instance=ExtResource("18_bpy1e")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.410943, 0.4724453, -3.848565)
-script = ExtResource("33_chair_script")
-
-[node name="Interactable" type="Node3D" parent="Room1/chair" unique_id=1111111001]
-script = ExtResource("13_interactable_script")
-PromptText = "Sit"
-UseLeftClick = true
-HighlightColor = Color(0, 1, 1, 1)
-HighlightThickness = 3.0
-UseShellHighlight = true
-
-[node name="chair2" parent="Room1" unique_id=1754829362 instance=ExtResource("18_bpy1e")]
-transform = Transform3D(-1, 0, 8.742278e-08, 0, 1, 0, -8.742278e-08, 0, -1, -15.410943, 0.4724453, -6.683965)
-script = ExtResource("33_chair_script")
-
-[node name="Interactable" type="Node3D" parent="Room1/chair2" unique_id=1111111002]
-script = ExtResource("13_interactable_script")
-PromptText = "Sit"
-UseLeftClick = true
-HighlightColor = Color(0, 1, 1, 1)
-HighlightThickness = 3.0
-UseShellHighlight = true
-
-[node name="chair3" parent="Room1" unique_id=219526553 instance=ExtResource("18_bpy1e")]
-transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -16.878002, 0.4724453, -5.2408323)
-script = ExtResource("33_chair_script")
-
-[node name="Interactable" type="Node3D" parent="Room1/chair3" unique_id=1111111003]
-script = ExtResource("13_interactable_script")
-PromptText = "Sit"
-UseLeftClick = true
-HighlightColor = Color(0, 1, 1, 1)
-HighlightThickness = 3.0
-UseShellHighlight = true
-
-[node name="chair4" parent="Room1" unique_id=1487634359 instance=ExtResource("18_bpy1e")]
-transform = Transform3D(1.3113416e-07, 0, 1, 0, 1, 0, -1, 0, 1.3113416e-07, -14.007259, 0.4724453, -5.2408323)
-script = ExtResource("33_chair_script")
-
-[node name="Interactable" type="Node3D" parent="Room1/chair4" unique_id=1111111004]
-script = ExtResource("13_interactable_script")
-PromptText = "Sit"
-UseLeftClick = true
-HighlightColor = Color(0, 1, 1, 1)
-HighlightThickness = 3.0
-UseShellHighlight = true
-
-[node name="CigaretteInteraction" parent="Room1" unique_id=154600386 instance=ExtResource("25_wmecs")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14.62734, 0.77223104, -4.9571815)
-
-[node name="CubileteAndDice" parent="Room1" unique_id=740891976 instance=ExtResource("17_mymud")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14.663989, 0.8132103, -5.257575)
-
-[node name="Gun" parent="Room1" unique_id=1033857442 instance=ExtResource("6_p5ymy")]
-transform = Transform3D(-5.8842733e-08, -1.3461648, -0.6616949, 1.5, -6.556708e-08, 0, -2.8923605e-08, -0.6616949, 1.3461648, -14.684109, 0.75126225, -5.599998)
-
-[node name="RoomJoin" type="Node3D" parent="Room1" unique_id=1122334455 node_paths=PackedStringArray("LightingNode", "RoomArea", "Player", "RoomNpc", "LeftApparel", "RightApparel")]
+[node name="RoomJoin" type="Node3D" parent="Room1" unique_id=1122334455 node_paths=PackedStringArray("LightingNode", "RoomArea", "Player", "RoomNpc", "LeftApparel", "RightApparel", "RoomJoinerUi")]
 script = ExtResource("40_room_join_script")
 LeftDoorPath = NodePath("../left_door")
 RightDoorPath = NodePath("../right_door")
@@ -608,6 +544,7 @@ RoomNpc = NodePath("../PiggaNPC")
 FlickerSound = ExtResource("23_oo3wg")
 LeftApparel = NodePath("../left_apparel")
 RightApparel = NodePath("../right_apparel")
+RoomJoinerUi = NodePath("../RoomJoiner")
 
 [node name="RoomJoiner" parent="Room1" unique_id=454782750 instance=ExtResource("41_75tun")]
 transform = Transform3D(-4.29222e-08, 0.189164, 0.9819455, 8.2686205e-09, 0.9819455, -0.189164, -1, 0, -4.371139e-08, -20.381191, 2.9480164, -5.323478)
@@ -663,6 +600,73 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13.980343, 0, -5.9173303)
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Room1/RoomBounds" unique_id=1052295317]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.0573406, 1.5272827, 0.5214219)
 shape = SubResource("BoxShape3D_ergw4")
+
+[node name="PlayingSetup" type="Node3D" parent="Room1" unique_id=1885415639]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.6962795, 0, 0)
+
+[node name="mesa_poker" parent="Room1/PlayingSetup" unique_id=2070089762 instance=ExtResource("8_f140w")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.457277, 0.43543047, -5.255393)
+script = ExtResource("7_env_collision")
+
+[node name="tablero" parent="Room1/PlayingSetup" unique_id=611242887 instance=ExtResource("9_0iob3")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.453938, 0.7376139, -5.248031)
+
+[node name="chair" parent="Room1/PlayingSetup" unique_id=15228684 instance=ExtResource("18_bpy1e")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.410943, 0.4724453, -3.848565)
+script = ExtResource("33_chair_script")
+
+[node name="Interactable" type="Node3D" parent="Room1/PlayingSetup/chair" unique_id=1111111001]
+script = ExtResource("13_interactable_script")
+PromptText = "Sit"
+UseLeftClick = true
+HighlightColor = Color(0, 1, 1, 1)
+HighlightThickness = 3.0
+UseShellHighlight = true
+
+[node name="chair2" parent="Room1/PlayingSetup" unique_id=1754829362 instance=ExtResource("18_bpy1e")]
+transform = Transform3D(-1, 0, 8.742278e-08, 0, 1, 0, -8.742278e-08, 0, -1, -15.410943, 0.4724453, -6.683965)
+script = ExtResource("33_chair_script")
+
+[node name="Interactable" type="Node3D" parent="Room1/PlayingSetup/chair2" unique_id=1111111002]
+script = ExtResource("13_interactable_script")
+PromptText = "Sit"
+UseLeftClick = true
+HighlightColor = Color(0, 1, 1, 1)
+HighlightThickness = 3.0
+UseShellHighlight = true
+
+[node name="chair3" parent="Room1/PlayingSetup" unique_id=219526553 instance=ExtResource("18_bpy1e")]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -16.878002, 0.4724453, -5.2408323)
+script = ExtResource("33_chair_script")
+
+[node name="Interactable" type="Node3D" parent="Room1/PlayingSetup/chair3" unique_id=1111111003]
+script = ExtResource("13_interactable_script")
+PromptText = "Sit"
+UseLeftClick = true
+HighlightColor = Color(0, 1, 1, 1)
+HighlightThickness = 3.0
+UseShellHighlight = true
+
+[node name="chair4" parent="Room1/PlayingSetup" unique_id=1487634359 instance=ExtResource("18_bpy1e")]
+transform = Transform3D(1.3113416e-07, 0, 1, 0, 1, 0, -1, 0, 1.3113416e-07, -14.007259, 0.4724453, -5.2408323)
+script = ExtResource("33_chair_script")
+
+[node name="Interactable" type="Node3D" parent="Room1/PlayingSetup/chair4" unique_id=1111111004]
+script = ExtResource("13_interactable_script")
+PromptText = "Sit"
+UseLeftClick = true
+HighlightColor = Color(0, 1, 1, 1)
+HighlightThickness = 3.0
+UseShellHighlight = true
+
+[node name="CigaretteInteraction" parent="Room1/PlayingSetup" unique_id=154600386 instance=ExtResource("25_wmecs")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14.62734, 0.77223104, -4.9571815)
+
+[node name="CubileteAndDice" parent="Room1/PlayingSetup" unique_id=740891976 instance=ExtResource("17_mymud")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14.663989, 0.8132103, -5.257575)
+
+[node name="Gun" parent="Room1/PlayingSetup" unique_id=1033857442 instance=ExtResource("6_p5ymy")]
+transform = Transform3D(-5.8842733e-08, -1.3461648, -0.6616949, 1.5, -6.556708e-08, 0, -2.8923605e-08, -0.6616949, 1.3461648, -14.684109, 0.75126225, -5.599998)
 
 [node name="Room2" type="Node3D" parent="." unique_id=1167468490]
 

@@ -32,13 +32,21 @@ public partial class Door : Node3D
 	private Door    _linkedDoor;
 	private bool    _isProcessingLinked = false;
 	private bool    _isAnimating        = false;
+	private bool    _isExitMode         = false;
 
 	private Interactable        _interactable;
 	private string              _originalPromptText;
 	private Color               _originalHighlightColor;
 	private AudioStreamPlayer3D _audio;
 
-	private static readonly Color LockedHighlightColor = Colors.Red;
+	private static readonly Color LockedHighlightColor   = Colors.Red;
+	private static readonly Color ExitRoomHighlightColor = new Color(1f, 0.5f, 0f);
+
+	/// <summary>True while the door is in the open position.</summary>
+	public bool IsOpen => _isOpen;
+
+	/// <summary>Fired when the player interacts with this door while it is in exit-room mode.</summary>
+	public event Action ExitRoomRequested;
 
 	// ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -83,7 +91,7 @@ public partial class Door : Node3D
 
 	private void UpdateAuthVisuals()
 	{
-		if (_interactable == null || !RequiresLogin) return;
+		if (_interactable == null || !RequiresLogin || _isExitMode) return;
 		bool loggedIn = AuthManager.IsLoggedIn;
 		_interactable.SetHighlightColor(loggedIn ? _originalHighlightColor : LockedHighlightColor);
 		_interactable.PromptText = loggedIn ? _originalPromptText : "You must identify first";
@@ -108,7 +116,33 @@ public partial class Door : Node3D
 	private void OnInteracted()
 	{
 		if (RequiresLogin && !AuthManager.IsLoggedIn) return;
+		if (_isExitMode)
+		{
+			ExitRoomRequested?.Invoke();
+			return;
+		}
 		Interact(playSound: true);
+	}
+
+	/// <summary>
+	/// Puts the door into "Exit Room" mode: orange highlight, "Exit Room" prompt,
+	/// and interaction fires <see cref="ExitRoomRequested"/> instead of toggling.
+	/// Propagates to the linked door.
+	/// </summary>
+	public void SetExitMode(bool exit)
+	{
+		_isExitMode = exit;
+		if (_interactable != null)
+		{
+			_interactable.PromptText = exit ? "Exit Room" : _originalPromptText;
+			_interactable.SetHighlightColor(exit ? ExitRoomHighlightColor : _originalHighlightColor);
+		}
+		if (_linkedDoor != null && !_isProcessingLinked)
+		{
+			_isProcessingLinked = true;
+			_linkedDoor.SetExitMode(exit);
+			_isProcessingLinked = false;
+		}
 	}
 
 	/// <summary>Closes the door if it is currently open. Used by RoomJoin on room exit.</summary>

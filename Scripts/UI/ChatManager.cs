@@ -35,6 +35,7 @@ public partial class ChatManager : Control
 	// Incoming chat messages from the background listener thread are enqueued here
 	// and drained on the main thread in _Process — the same pattern as ConnectedPlayersBoard.
 	private readonly ConcurrentQueue<(string sender, string message)> _pendingMessages = new();
+	private int _lastKnownRoomId = 0;
 
 	// ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -90,6 +91,17 @@ public partial class ChatManager : Control
 	{
 		while (_pendingMessages.TryDequeue(out var item))
 			AddLog($"[color=#e8e0a0]{item.sender}[/color]: {item.message}");
+
+		int currentRoom = LiveConnectionManager.CurrentRoomId;
+		if (currentRoom != _lastKnownRoomId)
+		{
+			_chatHistory.Text = "";
+			if (currentRoom != 0)
+				AddLog($"[color=#e8a060]> Joined Room {currentRoom}[/color]");
+			else
+				AddLog("[color=#e8a060]> Returned to Lobby[/color]");
+			_lastKnownRoomId = currentRoom;
+		}
 	}
 
 	private void FindPlayer()
