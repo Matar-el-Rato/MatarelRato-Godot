@@ -2,12 +2,14 @@
 
 [ext_resource type="Texture2D" uid="uid://bdow7xpjm0o3" path="res://Assets/Textures/moon_sky.png" id="1_qxria"]
 [ext_resource type="AudioStream" uid="uid://d35ykscrkw14f" path="res://Assets/Music/Portal Radio Tune.mp3" id="4_hx8n4"]
-[ext_resource type="PackedScene" uid="uid://bgv6wbfejnsf6" path="res://Scenes/Gun.tscn" id="6_p5ymy"]
-[ext_resource type="PackedScene" uid="uid://b8bnktsbevaar" path="res://Assets/Environment/SceneTest.glb" id="6_scene_test"]
+[ext_resource type="PackedScene" uid="uid://dlgnmwrt1y0u" path="res://Assets/PlayingSet/PerPlayer/shell.glb" id="6_jkhus"]
+[ext_resource type="PackedScene" uid="uid://bgv6wbfejnsf6" path="res://Scenes/Game/Gun.tscn" id="6_p5ymy"]
+[ext_resource type="PackedScene" uid="uid://b8bnktsbevaar" path="res://Assets/Environment/MainScene/SceneTest.glb" id="6_scene_test"]
 [ext_resource type="PackedScene" uid="uid://bpd6m0lb3j2ls" path="res://Scenes/Player.tscn" id="6_y4jh7"]
 [ext_resource type="Script" uid="uid://ct45xk2s628kn" path="res://Scripts/Environment/EnvironmentCollision.cs" id="7_env_collision"]
-[ext_resource type="PackedScene" uid="uid://b7105h1f46xpg" path="res://Assets/PlayingSet/mesa_poker.glb" id="8_f140w"]
-[ext_resource type="PackedScene" uid="uid://ci62y8qvu2dj8" path="res://Scenes/Tablero.tscn" id="9_0iob3"]
+[ext_resource type="PackedScene" uid="uid://cw2b6orr08dac" path="res://Assets/PlayingSet/PerPlayer/Handcuffs.glb" id="7_usjqs"]
+[ext_resource type="PackedScene" uid="uid://b7105h1f46xpg" path="res://Assets/PlayingSet/General/mesa_poker.glb" id="8_f140w"]
+[ext_resource type="PackedScene" uid="uid://ci62y8qvu2dj8" path="res://Scenes/Game/Tablero.tscn" id="9_0iob3"]
 [ext_resource type="FontFile" uid="uid://cw75wckal27hg" path="res://Assets/Fonts/Jersey10-Regular.ttf" id="9_xc4hf"]
 [ext_resource type="PackedScene" uid="uid://bmmkl2x7v3kix" path="res://Assets/Environment/Doors/left_door.glb" id="10_4b75m"]
 [ext_resource type="PackedScene" uid="uid://o433j6hka6uh" path="res://Assets/Environment/Doors/right_door.glb" id="11_8ju71"]
@@ -16,15 +18,16 @@
 [ext_resource type="Script" uid="uid://xwhj5o4phi2k" path="res://Scripts/Interaction/ClipboardController.cs" id="15_clipboard_ctrl"]
 [ext_resource type="AudioStream" uid="uid://cv1yyusfc028h" path="res://Assets/Sound FX/burnfx.wav" id="16_burn_fx"]
 [ext_resource type="AudioStream" uid="uid://dclsavpljnb8a" path="res://Assets/Music/Day - No, I'm Not a Human OST.mp3" id="17_day_ost"]
-[ext_resource type="PackedScene" uid="uid://bqvjl1sdnarjm" path="res://Scenes/CubileteAndDice.tscn" id="17_mymud"]
-[ext_resource type="PackedScene" uid="uid://ce6v2ulh0yjlk" path="res://Assets/PlayingSet/chair.glb" id="18_bpy1e"]
+[ext_resource type="PackedScene" uid="uid://bqvjl1sdnarjm" path="res://Scenes/Game/CubileteAndDice.tscn" id="17_mymud"]
+[ext_resource type="PackedScene" uid="uid://ce6v2ulh0yjlk" path="res://Assets/PlayingSet/PerPlayer/chair.glb" id="18_bpy1e"]
 [ext_resource type="Script" uid="uid://cftkl2vc21msg" path="res://Scripts/Environment/MusicZone.cs" id="18_music_zone"]
 [ext_resource type="PackedScene" uid="uid://iw8e0xxwr7aq" path="res://Assets/Environment/Doors/left_door_pizzeria.glb" id="19_c1ier"]
 [ext_resource type="PackedScene" uid="uid://bkfh86n8876s5" path="res://Assets/Environment/Doors/right_door_pizzeria.glb" id="20_gyaec"]
 [ext_resource type="Script" uid="uid://b15eo4jowk2p3" path="res://Scripts/Environment/Mirror.cs" id="21_mirror"]
 [ext_resource type="PackedScene" uid="uid://dgv6wbfejnsf6" path="res://Scenes/UI/ChatUI.tscn" id="22_chat_ui"]
 [ext_resource type="AudioStream" uid="uid://bc3dpjpyfbu0" path="res://Assets/Sound FX/light_flicker.wav" id="23_oo3wg"]
-[ext_resource type="PackedScene" uid="uid://cx6y1r8v7k8j2" path="res://Scenes/Cigarette.tscn" id="25_wmecs"]
+[ext_resource type="PackedScene" uid="uid://cx6y1r8v7k8j2" path="res://Scenes/Game/Cigarette.tscn" id="25_wmecs"]
+[ext_resource type="PackedScene" uid="uid://c1o0e0sm5icp" path="res://Assets/PlayingSet/PerPlayer/axe.glb" id="26_xot12"]
 [ext_resource type="PackedScene" uid="uid://b035w31kcbj6f" path="res://Assets/Pizzeria/recepcionist_bell.glb" id="27_4sso6"]
 [ext_resource type="Script" uid="uid://bmkswcfkw2bfr" path="res://Scripts/Interaction/BellController.cs" id="28_bell_script"]
 [ext_resource type="AudioStream" uid="uid://bapkmgr80xnml" path="res://Assets/Sound FX/receptionist_bell.wav" id="29_bell_sound"]
@@ -37,11 +40,12 @@
 [ext_resource type="PackedScene" uid="uid://4ype7080q81k" path="res://Scenes/NPC.tscn" id="35_npc_scene"]
 [ext_resource type="PackedScene" uid="uid://bgsky7powuwf7" path="res://Scenes/Pizzeria/AuthChoiceUI.tscn" id="36_auth_choice_ui"]
 [ext_resource type="PackedScene" path="res://Scenes/DitherEffect.tscn" id="37_dither_effect"]
-[ext_resource type="PackedScene" uid="uid://7wo01740hwje" path="res://Assets/Environment/right_apparel.glb" id="37_rmfi2"]
-[ext_resource type="PackedScene" uid="uid://ctgddf3ju3tkv" path="res://Assets/Environment/left_apparel.glb" id="38_sl126"]
+[ext_resource type="PackedScene" uid="uid://7wo01740hwje" path="res://Assets/Environment/Apparels/right_apparel.glb" id="37_rmfi2"]
+[ext_resource type="PackedScene" uid="uid://ctgddf3ju3tkv" path="res://Assets/Environment/Apparels/left_apparel.glb" id="38_sl126"]
 [ext_resource type="Script" uid="uid://1ehk7tcxo3pm" path="res://Scripts/NPC/RoomNPC.cs" id="39_room_npc_script"]
 [ext_resource type="Script" uid="uid://dyddsownfiqxf" path="res://Scripts/Environment/RoomJoin.cs" id="40_room_join_script"]
 [ext_resource type="PackedScene" uid="uid://cok64jr501daj" path="res://Scenes/RoomJoiner.tscn" id="41_75tun"]
+[ext_resource type="PackedScene" uid="uid://cmrj85xoh8t1j" path="res://Assets/PlayingSet/PerPlayer/magnifying_glass.glb" id="45_usjqs"]
 
 [sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_moon"]
 panorama = ExtResource("1_qxria")
@@ -89,6 +93,10 @@ light_color = Color(1, 1, 0.8980392, 1)
 [node name="PizzeriaLight2" type="OmniLight3D" parent="Environment/Lighting" unique_id=574077247]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9.672098, 4.2356358, -6.8051796)
 light_color = Color(1, 1, 0.8784314, 1)
+
+[node name="PizzeriaLight3" type="OmniLight3D" parent="Environment/Lighting" unique_id=2035576438]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.7000265, 1.8394234, -5.235033)
+light_color = Color(0.8832859, 0.7541991, 0.62423795, 1)
 
 [node name="PizzeriaLight6" type="OmniLight3D" parent="Environment/Lighting" unique_id=566393621]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9.672098, 4.2356358, 17.140652)
@@ -438,7 +446,7 @@ shadow_enabled = true
 shadow_bias = 0.793
 shadow_blur = 2.485
 
-[node name="SceneTest" parent="Environment" unique_id=1565132887 instance=ExtResource("6_scene_test")]
+[node name="SceneTest" parent="Environment" unique_id=803325322 instance=ExtResource("6_scene_test")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5103102, 0.35111022, 13.224117)
 script = ExtResource("7_env_collision")
 
@@ -493,10 +501,10 @@ volume_db = -5.0
 unit_size = 0.2
 autoplay = true
 
-[node name="right_apparel" parent="Room1" unique_id=1517514736 instance=ExtResource("37_rmfi2")]
+[node name="right_apparel" parent="Room1" unique_id=16653956 instance=ExtResource("37_rmfi2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.326433, 0.6798404, -7.296217)
 
-[node name="left_apparel" parent="Room1" unique_id=1228439548 instance=ExtResource("38_sl126")]
+[node name="left_apparel" parent="Room1" unique_id=180518468 instance=ExtResource("38_sl126")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.682745, 0.68421197, -3.4437606)
 
 [node name="left_door" parent="Room1" unique_id=1408443076 instance=ExtResource("10_4b75m")]
@@ -525,15 +533,14 @@ PromptText = "Open Door"
 InteractionAction = ""
 HighlightThickness = 7.0
 
-[node name="PiggaNPC" parent="Room1" unique_id=839475480 node_paths=PackedStringArray("Player", "LeftApparel", "RightApparel") instance=ExtResource("35_npc_scene")]
+[node name="PiggaNPC" parent="Room1" unique_id=839475480 node_paths=PackedStringArray("Player", "RightApparel") instance=ExtResource("35_npc_scene")]
 transform = Transform3D(0.99975204, 0, 0.022268664, 0, 1, 0, -0.022268664, 0, 0.99975204, -19.503555, -0.028534383, -5.231407)
 script = ExtResource("39_room_npc_script")
 TalkAnimation = "Armature_002|mixamo_com|Layer0_001"
 Player = NodePath("../../Player")
-LeftApparel = NodePath("../left_apparel")
 RightApparel = NodePath("../right_apparel")
 
-[node name="RoomJoin" type="Node3D" parent="Room1" unique_id=1122334455 node_paths=PackedStringArray("LightingNode", "RoomArea", "Player", "RoomNpc", "LeftApparel", "RightApparel", "RoomJoinerUi")]
+[node name="RoomJoin" type="Node3D" parent="Room1" unique_id=1122334455 node_paths=PackedStringArray("LightingNode", "RoomArea", "Player", "RoomNpc", "RightApparel", "RoomJoinerUi")]
 script = ExtResource("40_room_join_script")
 LeftDoorPath = NodePath("../left_door")
 RightDoorPath = NodePath("../right_door")
@@ -542,7 +549,6 @@ RoomArea = NodePath("../RoomBounds")
 Player = NodePath("../../Player")
 RoomNpc = NodePath("../PiggaNPC")
 FlickerSound = ExtResource("23_oo3wg")
-LeftApparel = NodePath("../left_apparel")
 RightApparel = NodePath("../right_apparel")
 RoomJoinerUi = NodePath("../RoomJoiner")
 
@@ -604,14 +610,14 @@ shape = SubResource("BoxShape3D_ergw4")
 [node name="PlayingSetup" type="Node3D" parent="Room1" unique_id=1885415639]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.6962795, 0, 0)
 
-[node name="mesa_poker" parent="Room1/PlayingSetup" unique_id=2070089762 instance=ExtResource("8_f140w")]
+[node name="mesa_poker" parent="Room1/PlayingSetup" unique_id=474140406 instance=ExtResource("8_f140w")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.457277, 0.43543047, -5.255393)
 script = ExtResource("7_env_collision")
 
-[node name="tablero" parent="Room1/PlayingSetup" unique_id=611242887 instance=ExtResource("9_0iob3")]
+[node name="tablero" parent="Room1/PlayingSetup" unique_id=200000001 instance=ExtResource("9_0iob3")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.453938, 0.7376139, -5.248031)
 
-[node name="chair" parent="Room1/PlayingSetup" unique_id=15228684 instance=ExtResource("18_bpy1e")]
+[node name="chair" parent="Room1/PlayingSetup" unique_id=1659722830 instance=ExtResource("18_bpy1e")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.410943, 0.4724453, -3.848565)
 script = ExtResource("33_chair_script")
 
@@ -623,7 +629,7 @@ HighlightColor = Color(0, 1, 1, 1)
 HighlightThickness = 3.0
 UseShellHighlight = true
 
-[node name="chair2" parent="Room1/PlayingSetup" unique_id=1754829362 instance=ExtResource("18_bpy1e")]
+[node name="chair2" parent="Room1/PlayingSetup" unique_id=1114784548 instance=ExtResource("18_bpy1e")]
 transform = Transform3D(-1, 0, 8.742278e-08, 0, 1, 0, -8.742278e-08, 0, -1, -15.410943, 0.4724453, -6.683965)
 script = ExtResource("33_chair_script")
 
@@ -635,7 +641,7 @@ HighlightColor = Color(0, 1, 1, 1)
 HighlightThickness = 3.0
 UseShellHighlight = true
 
-[node name="chair3" parent="Room1/PlayingSetup" unique_id=219526553 instance=ExtResource("18_bpy1e")]
+[node name="chair3" parent="Room1/PlayingSetup" unique_id=1834001533 instance=ExtResource("18_bpy1e")]
 transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -16.878002, 0.4724453, -5.2408323)
 script = ExtResource("33_chair_script")
 
@@ -647,7 +653,7 @@ HighlightColor = Color(0, 1, 1, 1)
 HighlightThickness = 3.0
 UseShellHighlight = true
 
-[node name="chair4" parent="Room1/PlayingSetup" unique_id=1487634359 instance=ExtResource("18_bpy1e")]
+[node name="chair4" parent="Room1/PlayingSetup" unique_id=1623000895 instance=ExtResource("18_bpy1e")]
 transform = Transform3D(1.3113416e-07, 0, 1, 0, 1, 0, -1, 0, 1.3113416e-07, -14.007259, 0.4724453, -5.2408323)
 script = ExtResource("33_chair_script")
 
@@ -659,14 +665,34 @@ HighlightColor = Color(0, 1, 1, 1)
 HighlightThickness = 3.0
 UseShellHighlight = true
 
-[node name="CigaretteInteraction" parent="Room1/PlayingSetup" unique_id=154600386 instance=ExtResource("25_wmecs")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14.62734, 0.77223104, -4.9571815)
+[node name="items" type="Node3D" parent="Room1/PlayingSetup" unique_id=1514453484]
+
+[node name="CigaretteInteraction" parent="Room1/PlayingSetup/items" unique_id=154600386 instance=ExtResource("25_wmecs")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14.511331, 0.77223104, -4.96257)
+
+[node name="Gun" parent="Room1/PlayingSetup/items" unique_id=1033857442 instance=ExtResource("6_p5ymy")]
+transform = Transform3D(-5.700629e-08, -1.3041518, -0.7410722, 1.5, -6.556708e-08, -4.782538e-15, -3.2393295e-08, -0.7410722, 1.3041518, -14.64096, 0.75126225, -5.5435095)
+
+[node name="axe" parent="Room1/PlayingSetup/items" unique_id=1874860266 instance=ExtResource("26_xot12")]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, -14.688635, 0.73608184, -4.7886176)
+
+[node name="magnifying_glass" parent="Room1/PlayingSetup/items" unique_id=492918324 instance=ExtResource("45_usjqs")]
+transform = Transform3D(-6.1265073e-09, -0.14015815, -0.9901291, 1, -4.371139e-08, 0, -4.327992e-08, -0.9901291, 0.14015815, -14.542667, 0.74225104, -5.281911)
+
+[node name="Handcuffs" parent="Room1/PlayingSetup/items" unique_id=499970186 instance=ExtResource("7_usjqs")]
+transform = Transform3D(-0.77815545, -0.6280718, 2.745389e-08, 0, -4.371139e-08, -1, 0.6280718, -0.77815545, 3.4014256e-08, -14.667957, 0.7375071, -5.7673163)
+
+[node name="shell" parent="Room1/PlayingSetup" unique_id=2065100794 instance=ExtResource("6_jkhus")]
+transform = Transform3D(-4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0, 1, -14.380802, 0.74536484, -5.256944)
+
+[node name="shell2" parent="Room1/PlayingSetup" unique_id=1096258399 instance=ExtResource("6_jkhus")]
+transform = Transform3D(-4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0, 1, -14.380802, 0.74536484, -5.297411)
+
+[node name="shell3" parent="Room1/PlayingSetup" unique_id=505533806 instance=ExtResource("6_jkhus")]
+transform = Transform3D(-4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0, 1, -14.380802, 0.74536484, -5.2129984)
 
 [node name="CubileteAndDice" parent="Room1/PlayingSetup" unique_id=740891976 instance=ExtResource("17_mymud")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14.663989, 0.8132103, -5.257575)
-
-[node name="Gun" parent="Room1/PlayingSetup" unique_id=1033857442 instance=ExtResource("6_p5ymy")]
-transform = Transform3D(-5.8842733e-08, -1.3461648, -0.6616949, 1.5, -6.556708e-08, 0, -2.8923605e-08, -0.6616949, 1.3461648, -14.684109, 0.75126225, -5.599998)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14.709938, 0.8132103, -5.257575)
 
 [node name="Room2" type="Node3D" parent="." unique_id=1167468490]
 
@@ -808,6 +834,7 @@ unit_size = 3.0
 [node name="PiggaNPC" parent="Pizzeria" unique_id=947763416 instance=ExtResource("35_npc_scene")]
 transform = Transform3D(-0.21480355, 0, 0.9766573, 0, 1, 0, -0.9766573, 0, -0.21480355, 33.1, -0.028534383, -0.77213186)
 BoardPointAnimation = "Armature_001|mixamo_com|Layer0"
+BoardZoomFov = 12.0
 
 [node name="AuthChoiceUI" parent="Pizzeria" unique_id=1967490561 instance=ExtResource("36_auth_choice_ui")]
 transform = Transform3D(-2.4175165, -1.12690035e-08, 0.10960955, -0.028369052, 2.3375406, -0.62569934, -0.105874695, -0.6263421, -2.3351417, 34.334217, 3.2708683, 0.81998694)

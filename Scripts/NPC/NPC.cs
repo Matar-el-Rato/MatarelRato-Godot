@@ -24,6 +24,8 @@ public partial class NPC : CharacterBody3D
 	[Export] public Color  TransitionColor    = new Color(1.0f, 0.5f, 0.2f);
 	[Export] public string DialogText         = "Good to see you again...\nWhat can I get for you today?";
 	[Export] public NodePath DialogBubblePath;
+	/// <summary>FOV to zoom down to when showing the board.</summary>
+	[Export] public float  BoardZoomFov = 10f;
 
 	private AnimationPlayer _animPlayer;
 	private Node3D          _model;
@@ -160,7 +162,6 @@ public partial class NPC : CharacterBody3D
 		await ToSignal(GetTree().CreateTimer(5.0f), SceneTreeTimer.SignalName.Timeout);
 
 		// ── Point to the connected players board ──────────────────────────────
-		// Taunt the player with the knowledge that others are watching too.
 		ForceShowDialog(BoardPointPhrases[_rng.Next(BoardPointPhrases.Length)]);
 
 		if (_animPlayer != null && _animPlayer.HasAnimation(BoardPointAnimation))
@@ -171,10 +172,81 @@ public partial class NPC : CharacterBody3D
 		}
 		else
 		{
-			// Fallback: wait for the dialog to be readable if the animation
-			// name doesn't match exactly (e.g. Godot import renamed the clip).
 			await ToSignal(GetTree().CreateTimer(3.5f), SceneTreeTimer.SignalName.Timeout);
 		}
+
+		// ── Board zoom cutscene ───────────────────────────────────────────────
+		var player = GetTree().Root.FindChild("Player", true, false) as CharacterBody3D;
+		var pcc    = player as PlayerCameraController;
+		var camera = player?.GetNodeOrNull<Camera3D>("Camera3D");
+
+		if (pcc != null) { pcc.MouseLookEnabled = false; pcc.MovementEnabled = false; }
+
+		// Save originals so we can restore them exactly.
+		Transform3D originalTransform = camera?.GlobalTransform ?? Transform3D.Identity;
+		float        originalFov      = camera?.Fov ?? 75f;
+		float        originalRotY     = player?.Rotation.Y ?? 0f;
+
+		// Decouple camera from player body so global_transform tweens work freely.
+		if (camera != null) camera.TopLevel = true;
+
+		// Build a look-at transform: keep camera world position, rotate basis toward board.
+		Transform3D zoomTransform = originalTransform;
+		float       targetRotY    = originalRotY;
+		var board = ConnectedPlayersBoard.Instance
+			?? GetTree().Root.FindChild("ConnectedPlayersBoard", true, false) as Node3D;
+		if (camera != null && board != null)
+		{
+			Vector3 lookDir = (board.GlobalPosition - camera.GlobalPosition).Normalized();
+			zoomTransform = new Transform3D(Basis.LookingAt(lookDir, Vector3.Up), camera.GlobalPosition);
+			targetRotY    = Mathf.Atan2(-lookDir.X, -lookDir.Z);
+		}
+
+		// Rotate + zoom in simultaneously.
+		{
+			var zoomTween = CreateTween();
+			zoomTween.SetParallel(true);
+			zoomTween.TweenInterval(1.4f);
+			if (camera != null)
+			{
+				zoomTween.TweenProperty(camera, "global_transform", zoomTransform, 1.4f)
+						 .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
+				zoomTween.TweenProperty(camera, "fov", BoardZoomFov, 1.4f)
+						 .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.In);
+			}
+			if (player != null)
+				zoomTween.TweenProperty(player, "rotation:y", targetRotY, 1.4f)
+						 .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
+			await ToSignal(zoomTween, Tween.SignalName.Finished);
+			if (!IsInsideTree()) return;
+		}
+
+		// Hold the zoomed view on the board.
+		await ToSignal(GetTree().CreateTimer(2.0f), SceneTreeTimer.SignalName.Timeout);
+		if (!IsInsideTree()) return;
+
+		// Return simultaneously.
+		{
+			var returnTween = CreateTween();
+			returnTween.SetParallel(true);
+			returnTween.TweenInterval(1.4f);
+			if (camera != null)
+			{
+				returnTween.TweenProperty(camera, "global_transform", originalTransform, 1.4f)
+						   .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
+				returnTween.TweenProperty(camera, "fov", originalFov, 1.4f)
+						   .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.Out);
+			}
+			if (player != null)
+				returnTween.TweenProperty(player, "rotation:y", originalRotY, 1.4f)
+						   .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
+			await ToSignal(returnTween, Tween.SignalName.Finished);
+			if (!IsInsideTree()) return;
+		}
+
+		// Re-attach camera to player body, then release control.
+		if (camera != null) camera.TopLevel = false;
+		if (pcc != null) { pcc.MouseLookEnabled = true; pcc.MovementEnabled = true; }
 
 		// Quirky follow-up about the other souls on the board
 		ForceShowDialog(AfterBoardPhrases[_rng.Next(AfterBoardPhrases.Length)]);
@@ -256,6 +328,13 @@ public partial class NPC : CharacterBody3D
 	{
 		if (_hasAppeared) return;
 		_hasAppeared = true;
+
+		// Sync with AuthManager in case login happened outside the NPC flow (e.g. debug mode).
+		if (AuthManager.IsLoggedIn && !_isLoggedIn)
+		{
+			_isLoggedIn = true;
+			if (_interactable != null) _interactable.PromptText = "Log Out";
+		}
 
 		Visible = true;
 		Tween tween = CreateTween();

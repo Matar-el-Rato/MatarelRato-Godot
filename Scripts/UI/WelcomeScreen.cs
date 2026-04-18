@@ -248,9 +248,10 @@ public partial class WelcomeScreen : Control
 
 		if (_debugMode)
 		{
-			// Wait one frame for all scene _Ready() calls to complete, then autologin.
-			// Uses a SceneTree timer (not tied to this node) so it survives QueueFree.
-			GetTree().CreateTimer(0.3f).Timeout += async () =>
+			// Capture tree before QueueFree — the timer callback fires 0.3s later
+			// when this node is already freed, so GetTree() would fail.
+			var tree = GetTree();
+			tree.CreateTimer(0.3f).Timeout += async () =>
 			{
 				var result = await System.Threading.Tasks.Task.Run(() =>
 					ServerProtocol.LoginUser(
@@ -262,10 +263,29 @@ public partial class WelcomeScreen : Control
 				{
 					AuthManager.NotifySuccess("admin-godot", result.UserId, result.SkinId, false);
 					ChatManager.AddLog("[color=#888888][debug] logged in as admin-godot[/color]");
+					ApplySkin(result.SkinId, tree);
 				}
 			};
 		}
 
 		QueueFree();
+	}
+
+	private static void ApplySkin(int skinId, SceneTree tree)
+	{
+		var player   = tree.Root.FindChild("Player", true, false) as PlayerCameraController;
+		var selector = player?.GetNodeOrNull<Selector>("Selector");
+		if (player == null || selector?.Entries == null) return;
+
+		foreach (var entry in selector.Entries)
+		{
+			if (entry?.ServerId == skinId)
+			{
+				player.SwapCharacter(entry);
+				if (tree.Root.FindChild("CharacterSelector", true, false) is CharacterSelector cs)
+					cs.SnapToSkin(skinId);
+				return;
+			}
+		}
 	}
 }

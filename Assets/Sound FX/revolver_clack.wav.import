@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://ck2dq8t1yebtm"
+path="res://.godot/imported/revolver_clack.wav-40c3c7055c66080c7c5108fba9d3b25a.sample"
+
+[deps]
+
+source_file="res://Assets/Sound FX/revolver_clack.wav"
+dest_files=["res://.godot/imported/revolver_clack.wav-40c3c7055c66080c7c5108fba9d3b25a.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2

@@ -1,0 +1,130 @@
+[gd_scene format=3 uid="uid://cx6y1r8v7k8j2"]
+
+[ext_resource type="Script" uid="uid://bbv6ed3o67egh" path="res://Scripts/Game/Cigarette.cs" id="1_cig_script"]
+[ext_resource type="PackedScene" uid="uid://b782ixdxd6wym" path="res://Assets/PlayingSet/PerPlayer/ashtray_only.glb" id="2_ashtray_model"]
+[ext_resource type="PackedScene" uid="uid://nd1okptch0w3" path="res://Assets/PlayingSet/PerPlayer/ciggie_cunt.glb" id="3_ciggie_model"]
+[ext_resource type="Script" uid="uid://bk7ngt4ktf6i6" path="res://Scripts/Interaction/Interactable.cs" id="4_interactable_script"]
+[ext_resource type="AudioStream" uid="uid://nfy2kj60dh0n" path="res://Assets/Sound FX/smoking.wav" id="5_smoking_sound"]
+
+[sub_resource type="Curve" id="Curve_smoke_alpha"]
+_data = [Vector2(0, 0), 0.0, 1.0, 0, 0, Vector2(0.2, 0.45), 0.0, 0.0, 0, 0, Vector2(1, 0), -0.5, 0.0, 0, 0]
+point_count = 3
+
+[sub_resource type="CurveTexture" id="CurveTexture_smoke_alpha"]
+curve = SubResource("Curve_smoke_alpha")
+
+[sub_resource type="Curve" id="Curve_smoke_scale"]
+_data = [Vector2(0, 0.2), 0.0, 3.0, 0, 0, Vector2(1, 1.5), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="CurveTexture" id="CurveTexture_smoke_scale"]
+curve = SubResource("Curve_smoke_scale")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_smoke"]
+emission_shape = 1
+emission_sphere_radius = 0.01
+direction = Vector3(0, 1, 0)
+spread = 20.0
+initial_velocity_min = 0.05
+initial_velocity_max = 0.1
+angular_velocity_min = -50.0
+angular_velocity_max = 50.0
+gravity = Vector3(0, 0.1, 0)
+damping_min = 0.05
+damping_max = 0.1
+scale_min = 0.1
+scale_max = 0.3
+scale_curve = SubResource("CurveTexture_smoke_scale")
+color = Color(0.8, 0.8, 0.8, 0.55)
+alpha_curve = SubResource("CurveTexture_smoke_alpha")
+
+[sub_resource type="Gradient" id="Gradient_smoke"]
+offsets = PackedFloat32Array(0, 0.2, 0.8, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_smoke"]
+gradient = SubResource("Gradient_smoke")
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(0.5, 0)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_smoke"]
+transparency = 1
+vertex_color_use_as_albedo = true
+albedo_texture = SubResource("GradientTexture2D_smoke")
+billboard_mode = 3
+particles_anim_h_frames = 1
+particles_anim_v_frames = 1
+particles_anim_loop = false
+
+[sub_resource type="QuadMesh" id="QuadMesh_smoke"]
+material = SubResource("StandardMaterial3D_smoke")
+size = Vector2(0.15, 0.15)
+
+[sub_resource type="Curve" id="Curve_puff_alpha"]
+_data = [Vector2(0, 0.3), 0.0, 0.0, 0, 0, Vector2(1, 0), -1.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="CurveTexture" id="CurveTexture_puff_alpha"]
+curve = SubResource("Curve_puff_alpha")
+
+[sub_resource type="Curve" id="Curve_puff_scale"]
+_data = [Vector2(0, 0.2), 0.0, 1.5, 0, 0, Vector2(1, 1.2), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="CurveTexture" id="CurveTexture_puff_scale"]
+curve = SubResource("Curve_puff_scale")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_puff"]
+direction = Vector3(0, -0.3, -1)
+spread = 20.0
+initial_velocity_min = 1.0
+initial_velocity_max = 1.5
+gravity = Vector3(0, -0.1, 0)
+damping_min = 0.5
+damping_max = 1.0
+scale_min = 0.25
+scale_max = 0.8
+scale_curve = SubResource("CurveTexture_puff_scale")
+color = Color(0.8, 0.8, 0.8, 0.6)
+alpha_curve = SubResource("CurveTexture_puff_alpha")
+
+[node name="Cigarette" type="Node3D" unique_id=317079147]
+script = ExtResource("1_cig_script")
+InteractablePath = NodePath("Interactable")
+CigaretteModelPath = NodePath("ciggie_cunt")
+AudioPlayerPath = NodePath("AudioStreamPlayer3D")
+SmokeParticlesPath = NodePath("Ashtray/SmokeParticles")
+PuffParticlesPath = NodePath("PuffParticles")
+
+[node name="Ashtray" parent="." unique_id=799647519 instance=ExtResource("2_ashtray_model")]
+
+[node name="SmokeParticles" type="GPUParticles3D" parent="Ashtray" unique_id=11069011]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.015, 0)
+amount = 14
+lifetime = 3.0799999999999996
+speed_scale = 0.79
+process_material = SubResource("ParticleProcessMaterial_smoke")
+draw_pass_1 = SubResource("QuadMesh_smoke")
+
+[node name="ciggie_cunt" parent="." unique_id=6915370 instance=ExtResource("3_ciggie_model")]
+transform = Transform3D(0.26212183, -0.9650348, 0, 0.9650348, 0.26212183, 0, 0, 0, 1, -0.06782785, 0.02, 0)
+
+[node name="Interactable" type="Node3D" parent="." unique_id=276991405]
+script = ExtResource("4_interactable_script")
+PromptText = "Smoke Cigarette"
+UseLeftClick = true
+HighlightTargetMesh = NodePath("../ciggie_cunt")
+UseShellHighlight = true
+
+[node name="AudioStreamPlayer3D" type="AudioStreamPlayer3D" parent="." unique_id=1618617608]
+stream = ExtResource("5_smoking_sound")
+
+[node name="PuffParticles" type="GPUParticles3D" parent="." unique_id=1061046378]
+emitting = false
+amount = 32
+lifetime = 1.5
+one_shot = true
+explosiveness = 0.9
+process_material = SubResource("ParticleProcessMaterial_puff")
+draw_pass_1 = SubResource("QuadMesh_smoke")
