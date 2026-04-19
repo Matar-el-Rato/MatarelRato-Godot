@@ -4,6 +4,12 @@
 [ext_resource type="Script" uid="uid://b18xwmih2hcyd" path="res://Scripts/Environment/Ophanim.cs" id="2_script"]
 [ext_resource type="AudioStream" uid="uid://b1h14agj1fsry" path="res://Assets/Sound FX/angel_drone.wav" id="3_drone"]
 [ext_resource type="AudioStream" uid="uid://dvi0lyfrq66ng" path="res://Assets/Sound FX/angel_wing_flap.wav" id="4_wings"]
+[ext_resource type="Script" uid="uid://bk7ngt4ktf6i6" path="res://Scripts/Interaction/Interactable.cs" id="5_interactable"]
+[ext_resource type="PackedScene" uid="uid://c6f3yub4x4n1m" path="res://Scenes/DialogBubble.tscn" id="6_dialog_bubble"]
+[ext_resource type="AudioStream" uid="uid://deaee02meilgr" path="res://Assets/Sound FX/garbled_speech.wav" id="7_garbled"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_hit"]
+radius = 2.0
 
 [node name="Ophanim" type="Node3D" unique_id=1274311342]
 script = ExtResource("2_script")
@@ -20,3 +26,26 @@ max_distance = 18.0
 stream = ExtResource("4_wings")
 unit_size = 1.5
 max_distance = 14.0
+
+[node name="Interactable" type="Node3D" parent="." unique_id=650000001]
+script = ExtResource("5_interactable")
+PromptText = "Gaze"
+UseLeftClick = true
+AutoGenerateCollision = false
+HighlightTargetMesh = NodePath("../ophanim")
+HighlightColor = Color(1, 1, 1, 1)
+OverlayColor = Color(0.9570163, 0.9589767, 0.95328575, 0.4)
+
+[node name="HitBody" type="StaticBody3D" parent="." unique_id=650000004]
+transform = Transform3D(0.21, 0, 0, 0, 0.21, 0, 0, 0, 0.21, 0, 0.0067338794, 0)
+
+[node name="HitShape" type="CollisionShape3D" parent="HitBody" unique_id=650000005]
+shape = SubResource("SphereShape3D_hit")
+
+[node name="DialogBubble" parent="." unique_id=650000002 instance=ExtResource("6_dialog_bubble")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.45963395, 0)
+
+[node name="GarbledSpeech" type="AudioStreamPlayer3D" parent="." unique_id=650000003]
+stream = ExtResource("7_garbled")
+unit_size = 3.0
+max_distance = 8.0

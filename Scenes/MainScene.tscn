@@ -46,7 +46,7 @@
 [ext_resource type="Script" uid="uid://dyddsownfiqxf" path="res://Scripts/Environment/RoomJoin.cs" id="40_room_join_script"]
 [ext_resource type="PackedScene" uid="uid://cok64jr501daj" path="res://Scenes/RoomJoiner.tscn" id="41_75tun"]
 [ext_resource type="PackedScene" uid="uid://cmrj85xoh8t1j" path="res://Assets/PlayingSet/PerPlayer/magnifying_glass.glb" id="45_usjqs"]
-[ext_resource type="PackedScene" path="res://Scenes/Ophanim.tscn" id="47_uuu6x"]
+[ext_resource type="PackedScene" uid="uid://b0qrw5i73q7b3" path="res://Scenes/Ophanim.tscn" id="47_uuu6x"]
 
 [sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_moon"]
 panorama = ExtResource("1_qxria")
@@ -864,4 +864,4 @@ layer = 11
 [node name="DitherEffect" parent="." unique_id=1599022892 instance=ExtResource("37_dither_effect")]
 
 [node name="Ophanim" parent="." unique_id=711424089 instance=ExtResource("47_uuu6x")]
-transform = Transform3D(0.8783253, 0, -0.4780635, 0, 1, 0, 0.4780635, 0, 0.8783253, 35.70053, 1.239521, -13.336636)
+transform = Transform3D(0.8783253, 0, -0.4780635, 0, 1, 0, 0.4780635, 0, 0.8783253, 35.482044, 1.239521, -8.946957)
