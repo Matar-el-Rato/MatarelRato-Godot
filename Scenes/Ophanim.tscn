@@ -1,0 +1,22 @@
+[gd_scene format=3 uid="uid://b0qrw5i73q7b3"]
+
+[ext_resource type="PackedScene" uid="uid://bgsxnsm50052f" path="res://Assets/Characters/ophanim.glb" id="1_ophanim_glb"]
+[ext_resource type="Script" uid="uid://b18xwmih2hcyd" path="res://Scripts/Environment/Ophanim.cs" id="2_script"]
+[ext_resource type="AudioStream" uid="uid://b1h14agj1fsry" path="res://Assets/Sound FX/angel_drone.wav" id="3_drone"]
+[ext_resource type="AudioStream" uid="uid://dvi0lyfrq66ng" path="res://Assets/Sound FX/angel_wing_flap.wav" id="4_wings"]
+
+[node name="Ophanim" type="Node3D" unique_id=1274311342]
+script = ExtResource("2_script")
+AnimationSpeed = 2.08
+
+[node name="ophanim" parent="." unique_id=454871928 instance=ExtResource("1_ophanim_glb")]
+
+[node name="DroneAudio" type="AudioStreamPlayer3D" parent="." unique_id=272629571]
+stream = ExtResource("3_drone")
+unit_size = 2.0
+max_distance = 18.0
+
+[node name="WingFlapAudio" type="AudioStreamPlayer3D" parent="." unique_id=585093749]
+stream = ExtResource("4_wings")
+unit_size = 1.5
+max_distance = 14.0

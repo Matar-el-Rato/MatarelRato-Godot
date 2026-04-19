@@ -45,9 +45,8 @@
 [ext_resource type="Script" uid="uid://1ehk7tcxo3pm" path="res://Scripts/NPC/RoomNPC.cs" id="39_room_npc_script"]
 [ext_resource type="Script" uid="uid://dyddsownfiqxf" path="res://Scripts/Environment/RoomJoin.cs" id="40_room_join_script"]
 [ext_resource type="PackedScene" uid="uid://cok64jr501daj" path="res://Scenes/RoomJoiner.tscn" id="41_75tun"]
-[ext_resource type="Script" uid="uid://b18xwmih2hcyd" path="res://Scripts/Environment/Ophanim.cs" id="44_8um71"]
 [ext_resource type="PackedScene" uid="uid://cmrj85xoh8t1j" path="res://Assets/PlayingSet/PerPlayer/magnifying_glass.glb" id="45_usjqs"]
-[ext_resource type="PackedScene" uid="uid://bgsxnsm50052f" path="res://Assets/Characters/ophanim.glb" id="47_uuu6x"]
+[ext_resource type="PackedScene" path="res://Scenes/Ophanim.tscn" id="47_uuu6x"]
 
 [sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_moon"]
 panorama = ExtResource("1_qxria")
@@ -849,10 +848,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 31.765379, -0.09333238, -17.4
 PlayerPath = NodePath("../../Player")
 ProximityRadius = 7.0
 
-[node name="ophanim" parent="Pizzeria" unique_id=1690565914 instance=ExtResource("47_uuu6x")]
-transform = Transform3D(-4.3709765e-08, 3.7687173e-10, -1.0000001, 0.00862182, 0.9999629, 0, 0.9999628, -0.008621819, -4.371139e-08, 37.86827, 1.736659, -12.047139)
-script = ExtResource("44_8um71")
-
 [node name="Player" parent="." unique_id=1339342590 instance=ExtResource("6_y4jh7")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.16528296, -0.22474906, -0.35706663)
 
@@ -867,3 +862,6 @@ layer = 11
 [node name="ChatUI" parent="ChatLayer" unique_id=2111111104 instance=ExtResource("22_chat_ui")]
 
 [node name="DitherEffect" parent="." unique_id=1599022892 instance=ExtResource("37_dither_effect")]
+
+[node name="Ophanim" parent="." unique_id=711424089 instance=ExtResource("47_uuu6x")]
+transform = Transform3D(0.8783253, 0, -0.4780635, 0, 1, 0, 0.4780635, 0, 0.8783253, 35.70053, 1.239521, -13.336636)
