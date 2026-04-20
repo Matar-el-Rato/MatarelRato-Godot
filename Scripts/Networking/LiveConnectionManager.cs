@@ -24,6 +24,7 @@ using System.Threading;
 public static class LiveConnectionManager
 {
 	private const byte ReqConnectLive = 9;
+	private const byte ReqLogout      = 4;
 	private const byte ReqSendChat    = 6;
 	private const byte ReqJoinRoom    = 5;
 	private const byte ReqLeaveRoom   = 8;
@@ -182,6 +183,21 @@ public static class LiveConnectionManager
 		// NetworkStream.Write is safe to call concurrently with Read per .NET docs.
 		try { stream.Write(packet, 0, packet.Length); }
 		catch (Exception ex) { GD.PrintErr($"[LCM] SendChatMessage failed: {ex.Message}"); }
+	}
+
+	/// <summary>
+	/// Sends REQ_LOGOUT on the live connection so the server removes this client
+	/// gracefully before the socket is closed. Safe to call when not connected.
+	/// </summary>
+	public static void SendLogout()
+	{
+		NetworkStream stream;
+		lock (_lock) { stream = _stream; }
+		if (stream == null) return;
+
+		var packet = new byte[] { ReqLogout };
+		try { stream.Write(packet, 0, packet.Length); }
+		catch (Exception ex) { GD.PrintErr($"[LCM] SendLogout failed: {ex.Message}"); }
 	}
 
 	/// <summary>Sends REQ_JOIN_ROOM on the live connection. roomId must be 1-3.</summary>

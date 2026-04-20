@@ -82,8 +82,8 @@ public static class AuthManager
 		UserId     = -1;
 		SkinId     = 101;
 
-		// Close the persistent connection. The server will remove this client
-		// from its table and broadcast the updated list to remaining clients.
+		// Notify the server of intentional logout, then close the connection.
+		LiveConnectionManager.SendLogout();
 		LiveConnectionManager.Disconnect();
 	}
 }

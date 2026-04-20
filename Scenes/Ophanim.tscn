@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://b0qrw5i73q7b3"]
 
 [ext_resource type="PackedScene" uid="uid://bgsxnsm50052f" path="res://Assets/Characters/ophanim.glb" id="1_ophanim_glb"]
-[ext_resource type="Script" uid="uid://b18xwmih2hcyd" path="res://Scripts/Environment/Ophanim.cs" id="2_script"]
+[ext_resource type="Script" uid="uid://b18xwmih2hcyd" path="res://Scripts/Game/Ophanim.cs" id="2_script"]
 [ext_resource type="AudioStream" uid="uid://b1h14agj1fsry" path="res://Assets/Sound FX/angel_drone.wav" id="3_drone"]
 [ext_resource type="AudioStream" uid="uid://dvi0lyfrq66ng" path="res://Assets/Sound FX/angel_wing_flap.wav" id="4_wings"]
 [ext_resource type="Script" uid="uid://bk7ngt4ktf6i6" path="res://Scripts/Interaction/Interactable.cs" id="5_interactable"]
