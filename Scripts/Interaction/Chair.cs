@@ -16,7 +16,7 @@ public partial class Chair : Node3D
 	/// <summary>Local-space offset from the chair origin where the player body is placed.</summary>
 	[Export] public Vector3 SitOffset = new Vector3(0, 0.45f, 0.15f);
 	/// <summary>Camera field-of-view while the player is seated.</summary>
-	[Export] public float   SitFOV    = 100f;
+	[Export] public float   SitFOV    = 110f;
 
 	private Interactable _interactable;
 

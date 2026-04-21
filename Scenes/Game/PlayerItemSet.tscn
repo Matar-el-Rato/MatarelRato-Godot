@@ -1,0 +1,38 @@
+[gd_scene format=3 uid="uid://dp1t3ms3t0v02"]
+
+[ext_resource type="PackedScene" uid="uid://cx6y1r8v7k8j2" path="res://Scenes/Game/Cigarette.tscn" id="1_cig"]
+[ext_resource type="PackedScene" uid="uid://bgv6wbfejnsf6" path="res://Scenes/Game/Gun.tscn" id="2_gun"]
+[ext_resource type="PackedScene" uid="uid://c1o0e0sm5icp" path="res://Assets/PlayingSet/PerPlayer/axe.glb" id="3_axe"]
+[ext_resource type="PackedScene" uid="uid://cmrj85xoh8t1j" path="res://Assets/PlayingSet/PerPlayer/magnifying_glass.glb" id="4_mag"]
+[ext_resource type="PackedScene" uid="uid://cw2b6orr08dac" path="res://Assets/PlayingSet/PerPlayer/Handcuffs.glb" id="5_cuffs"]
+[ext_resource type="PackedScene" uid="uid://dlgnmwrt1y0u" path="res://Assets/PlayingSet/PerPlayer/shell.glb" id="6_shell"]
+
+; Root placed at the tablero centre by TableManager, then rotated around Y
+; so this set faces the correct player seat. All child positions are offsets
+; from that centre, matching the original hand-placed layout exactly.
+
+[node name="PlayerItemSet" type="Node3D"]
+
+[node name="CigaretteInteraction" parent="." instance=ExtResource("1_cig")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.942607, 0.034617, 0.285461)
+
+[node name="Gun" parent="." instance=ExtResource("2_gun")]
+transform = Transform3D(-5.700629e-08, -1.3041518, -0.7410722, 1.5, -6.556708e-08, -4.782538e-15, -3.2393295e-08, -0.7410722, 1.3041518, 0.812978, 0.013648, -0.295479)
+
+[node name="axe" parent="." instance=ExtResource("3_axe")]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0.765303, -0.001532, 0.459413)
+
+[node name="magnifying_glass" parent="." instance=ExtResource("4_mag")]
+transform = Transform3D(-6.1265073e-09, -0.14015815, -0.9901291, 1, -4.371139e-08, 0, -4.327992e-08, -0.9901291, 0.14015815, 0.911271, 0.004637, -0.033880)
+
+[node name="Handcuffs" parent="." instance=ExtResource("5_cuffs")]
+transform = Transform3D(-0.77815545, -0.6280718, 2.745389e-08, 0, -4.371139e-08, -1, 0.6280718, -0.77815545, 3.4014256e-08, 0.785981, -0.000107, -0.519285)
+
+[node name="shell" parent="." instance=ExtResource("6_shell")]
+transform = Transform3D(-4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0, 1, 1.073136, 0.007751, -0.008913)
+
+[node name="shell2" parent="." instance=ExtResource("6_shell")]
+transform = Transform3D(-4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0, 1, 1.073136, 0.007751, -0.049380)
+
+[node name="shell3" parent="." instance=ExtResource("6_shell")]
+transform = Transform3D(-4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0, 1, 1.073136, 0.007751, 0.035033)

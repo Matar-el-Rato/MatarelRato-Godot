@@ -1,0 +1,20 @@
+[gd_scene format=3 uid="uid://dch41rs3n3v01"]
+
+[ext_resource type="PackedScene" uid="uid://ce6v2ulh0yjlk" path="res://Assets/PlayingSet/PerPlayer/chair.glb" id="1_glb"]
+[ext_resource type="Script" uid="uid://bmboldbjexyxg" path="res://Scripts/Interaction/Chair.cs" id="2_chair_cs"]
+[ext_resource type="Script" uid="uid://bk7ngt4ktf6i6" path="res://Scripts/Interaction/Interactable.cs" id="3_interactable_cs"]
+
+[node name="Chair" type="Node3D" unique_id=2134640781]
+transform = Transform3D(-1, 0, 8.742278e-08, 0, 1, 0, -8.742278e-08, 0, -1, 0, 0, 0)
+script = ExtResource("2_chair_cs")
+
+[node name="ChairModel" parent="." unique_id=574738701 instance=ExtResource("1_glb")]
+
+[node name="Interactable" type="Node3D" parent="." unique_id=839721652]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 0, 0, 0)
+script = ExtResource("3_interactable_cs")
+PromptText = "Sit"
+UseLeftClick = true
+HighlightColor = Color(0, 1, 1, 1)
+HighlightThickness = 3.0
+UseShellHighlight = true
