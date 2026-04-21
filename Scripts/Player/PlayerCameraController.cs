@@ -33,6 +33,14 @@ public partial class PlayerCameraController : CharacterBody3D
 	[Export] public bool     MovementEnabled    = true;
 	/// <summary>When false, mouse motion no longer rotates the camera (e.g. during NPC welcome sequences).</summary>
 	public bool              MouseLookEnabled   = true;
+	/// <summary>Maximum vertical bob distance (in meters) when walking.</summary>
+	[Export] public float    WalkBobAmount      = 0.05f;
+	/// <summary>Maximum vertical bob distance (in meters) when sprinting.</summary>
+	[Export] public float    SprintBobAmount    = 0.08f;
+	/// <summary>Maximum side-to-side bob distance (in meters).</summary>
+	[Export] public float    SideBobAmount      = 0.03f;
+	/// <summary>Frequency of the bob effect (bobbing cycles per second).</summary>
+	[Export] public float    BobFrequency       = 5.0f;
 
 	private Camera3D           _camera;
 	private CollisionShape3D   _collisionShape;
@@ -59,6 +67,8 @@ public partial class PlayerCameraController : CharacterBody3D
 	private float             _footstepTimer = 0f;
 	private const float       WalkStepInterval = 0.54f;
 	private const float       RunStepInterval  = 0.27f; // half period = twice as fast
+
+	private float _bobTimer = 0f;
 
 	// ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -198,11 +208,11 @@ public partial class PlayerCameraController : CharacterBody3D
 			vel.X = Mathf.MoveToward(vel.X, 0f, WalkSpeed);
 			vel.Z = Mathf.MoveToward(vel.Z, 0f, WalkSpeed);
 
-			if (_isSitting && (Input.IsActionJustPressed("sprint") || Input.IsKeyPressed(Key.Shift)))
+			bool isFocused = FocusController.Instance != null && FocusController.Instance.IsFocused;
+			if (_isSitting && !isFocused && (Input.IsActionJustPressed("sprint") || Input.IsKeyPressed(Key.Shift)))
 				Unsit();
 
 			// Force camera to the seated offset unless FocusController has taken over.
-			bool isFocused = FocusController.Instance != null && FocusController.Instance.IsFocused;
 			if (_isSitting && _activeEntry != null && !_isTransitioning && !isFocused)
 				_camera.Position = _baseCameraPos + _activeEntry.CameraOffset + _activeEntry.SittingCameraOffset;
 		}
@@ -220,7 +230,20 @@ public partial class PlayerCameraController : CharacterBody3D
 		// ── 6. Animation ──────────────────────────────────────────────────────
 		UpdateAnimations(direction);
 
-		// ── 7. Fall recovery ──────────────────────────────────────────────────
+		// ── 7. Camera Bobbing ─────────────────────────────────────────────────
+		// Only apply camera bobbing and position updates when NOT focused on something.
+		if (FocusController.Instance == null || !FocusController.Instance.IsFocused)
+		{
+			Vector3 bobOffset = GetCameraBobOffset(direction, (float)delta);
+			Vector3 targetCameraPos = _baseCameraPos;
+			if (_activeEntry != null)
+				targetCameraPos += _activeEntry.CameraOffset;
+			if (_isSitting && _activeEntry != null)
+				targetCameraPos += _activeEntry.SittingCameraOffset;
+			_camera.Position = targetCameraPos + bobOffset;
+		}
+
+		// ── 8. Fall recovery ──────────────────────────────────────────────────
 		if (GlobalPosition.Y < -50f)
 		{
 			GlobalPosition = new Vector3(0f, 5f, 0f);
@@ -249,6 +272,40 @@ public partial class PlayerCameraController : CharacterBody3D
 			// Reset so the next movement step plays immediately (no silent first frame).
 			_footstepTimer = 0f;
 		}
+	}
+
+	// ── Camera Bobbing ────────────────────────────────────────────────────────
+
+	/// <summary>
+	/// Calculates the camera bob offset for realistic head movement while walking/running.
+	/// Uses sine waves for smooth vertical and horizontal bobbing.
+	/// </summary>
+	private Vector3 GetCameraBobOffset(Vector3 direction, float delta)
+	{
+		bool isMoving = direction.LengthSquared() > 0.001f && IsOnFloor() && !_isSitting;
+
+		if (isMoving)
+		{
+			_bobTimer += delta;
+		}
+		else
+		{
+			_bobTimer = 0f;
+			return Vector3.Zero;
+		}
+
+		float bobPhase = _bobTimer * BobFrequency * Mathf.Tau; // 2π per cycle
+
+		// Determine which bob amount to use based on sprint speed
+		float bobAmount = Input.IsActionPressed("sprint") ? SprintBobAmount : WalkBobAmount;
+
+		// Vertical bob (up and down) - primary motion
+		float verticalBob = Mathf.Sin(bobPhase) * bobAmount;
+
+		// Horizontal bob (side to side) - slower, offset phase by π/2 for realistic head tilt
+		float horizontalBob = Mathf.Sin(bobPhase + Mathf.Pi / 2f) * SideBobAmount;
+
+		return new Vector3(horizontalBob, verticalBob, 0f);
 	}
 
 	// ── Animations ────────────────────────────────────────────────────────────

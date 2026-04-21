@@ -29,6 +29,7 @@ public partial class FocusController : Node
 	private PlayerCameraController _playerBody;
 	private bool                   _isFocused = false;
 	private Transform3D            _originalCameraTransform;
+	private float                  _originalFOV;
 	private Node3D                 _currentFocusTarget;
 
 	/// <summary>True while any target is being focused.</summary>
@@ -112,6 +113,7 @@ public partial class FocusController : Node
 		_isFocused               = true;
 		_currentFocusTarget      = target;
 		_originalCameraTransform = _playerCamera.GlobalTransform;
+		_originalFOV             = _playerCamera.Fov;
 
 		if (_playerBody != null)
 		{
@@ -120,7 +122,10 @@ public partial class FocusController : Node
 		}
 
 		// Decouple camera from the player body hierarchy so transforms don't fight.
+		// Preserve the camera's current global position when switching to TopLevel.
+		Vector3 currentGlobalPos = _playerCamera.GlobalPosition;
 		_playerCamera.TopLevel = true;
+		_playerCamera.GlobalPosition = currentGlobalPos;
 
 		Interactor.IsLocked = true;
 		Input.MouseMode     = Input.MouseModeEnum.Visible;
@@ -173,7 +178,7 @@ public partial class FocusController : Node
 		tween.TweenProperty(_playerCamera, "global_transform", _originalCameraTransform, TransitionDuration)
 			.SetTrans(Tween.TransitionType.Quad)
 			.SetEase(Tween.EaseType.InOut);
-		tween.TweenProperty(_playerCamera, "fov", DefaultFOV, TransitionDuration)
+		tween.TweenProperty(_playerCamera, "fov", _originalFOV, TransitionDuration)
 			.SetTrans(Tween.TransitionType.Quad)
 			.SetEase(Tween.EaseType.InOut);
 
@@ -199,7 +204,7 @@ public partial class FocusController : Node
 
 	public override void _Input(InputEvent @event)
 	{
-		if (_isFocused && @event.IsActionPressed("ui_cancel"))
+		if (_isFocused && @event.IsActionPressed("sprint"))
 			ExitFocus();
 	}
 

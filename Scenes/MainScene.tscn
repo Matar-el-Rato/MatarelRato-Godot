@@ -2,12 +2,9 @@
 
 [ext_resource type="Texture2D" uid="uid://bdow7xpjm0o3" path="res://Assets/Textures/moon_sky.png" id="1_qxria"]
 [ext_resource type="AudioStream" uid="uid://d35ykscrkw14f" path="res://Assets/Music/Portal Radio Tune.mp3" id="4_hx8n4"]
-[ext_resource type="PackedScene" uid="uid://dlgnmwrt1y0u" path="res://Assets/PlayingSet/PerPlayer/shell.glb" id="6_jkhus"]
-[ext_resource type="PackedScene" uid="uid://bgv6wbfejnsf6" path="res://Scenes/Game/Gun.tscn" id="6_p5ymy"]
 [ext_resource type="PackedScene" uid="uid://b8bnktsbevaar" path="res://Assets/Environment/MainScene/SceneTest.glb" id="6_scene_test"]
 [ext_resource type="PackedScene" uid="uid://bpd6m0lb3j2ls" path="res://Scenes/Player.tscn" id="6_y4jh7"]
 [ext_resource type="Script" uid="uid://ct45xk2s628kn" path="res://Scripts/Environment/EnvironmentCollision.cs" id="7_env_collision"]
-[ext_resource type="PackedScene" uid="uid://cw2b6orr08dac" path="res://Assets/PlayingSet/PerPlayer/Handcuffs.glb" id="7_usjqs"]
 [ext_resource type="PackedScene" uid="uid://b7105h1f46xpg" path="res://Assets/PlayingSet/General/mesa_poker.glb" id="8_f140w"]
 [ext_resource type="PackedScene" uid="uid://ci62y8qvu2dj8" path="res://Scenes/Game/Tablero.tscn" id="9_0iob3"]
 [ext_resource type="FontFile" uid="uid://cw75wckal27hg" path="res://Assets/Fonts/Jersey10-Regular.ttf" id="9_xc4hf"]
@@ -19,21 +16,17 @@
 [ext_resource type="AudioStream" uid="uid://cv1yyusfc028h" path="res://Assets/Sound FX/burnfx.wav" id="16_burn_fx"]
 [ext_resource type="AudioStream" uid="uid://dclsavpljnb8a" path="res://Assets/Music/Day - No, I'm Not a Human OST.mp3" id="17_day_ost"]
 [ext_resource type="PackedScene" uid="uid://bqvjl1sdnarjm" path="res://Scenes/Game/CubileteAndDice.tscn" id="17_mymud"]
-[ext_resource type="PackedScene" uid="uid://ce6v2ulh0yjlk" path="res://Assets/PlayingSet/PerPlayer/chair.glb" id="18_bpy1e"]
 [ext_resource type="Script" uid="uid://cftkl2vc21msg" path="res://Scripts/Environment/MusicZone.cs" id="18_music_zone"]
 [ext_resource type="PackedScene" uid="uid://iw8e0xxwr7aq" path="res://Assets/Environment/Doors/left_door_pizzeria.glb" id="19_c1ier"]
 [ext_resource type="PackedScene" uid="uid://bkfh86n8876s5" path="res://Assets/Environment/Doors/right_door_pizzeria.glb" id="20_gyaec"]
 [ext_resource type="Script" uid="uid://b15eo4jowk2p3" path="res://Scripts/Environment/Mirror.cs" id="21_mirror"]
 [ext_resource type="PackedScene" uid="uid://dgv6wbfejnsf6" path="res://Scenes/UI/ChatUI.tscn" id="22_chat_ui"]
 [ext_resource type="AudioStream" uid="uid://bc3dpjpyfbu0" path="res://Assets/Sound FX/light_flicker.wav" id="23_oo3wg"]
-[ext_resource type="PackedScene" uid="uid://cx6y1r8v7k8j2" path="res://Scenes/Game/Cigarette.tscn" id="25_wmecs"]
-[ext_resource type="PackedScene" uid="uid://c1o0e0sm5icp" path="res://Assets/PlayingSet/PerPlayer/axe.glb" id="26_xot12"]
 [ext_resource type="PackedScene" uid="uid://b035w31kcbj6f" path="res://Assets/Pizzeria/recepcionist_bell.glb" id="27_4sso6"]
 [ext_resource type="Script" uid="uid://bmkswcfkw2bfr" path="res://Scripts/Interaction/BellController.cs" id="28_bell_script"]
 [ext_resource type="AudioStream" uid="uid://bapkmgr80xnml" path="res://Assets/Sound FX/receptionist_bell.wav" id="29_bell_sound"]
 [ext_resource type="Script" uid="uid://bkaid1pe6sdan" path="res://Scripts/Interaction/FocusController.cs" id="30_focus_ctrl"]
 [ext_resource type="PackedScene" uid="uid://bv4l08l3oby01" path="res://Scenes/Pizzeria/CharacterSelector.tscn" id="32_cotnl"]
-[ext_resource type="Script" uid="uid://bmboldbjexyxg" path="res://Scripts/Interaction/Chair.cs" id="33_chair_script"]
 [ext_resource type="PackedScene" uid="uid://ikqyfcjnbajd" path="res://Scenes/Pizzeria/SignInClipboard.tscn" id="33_signin_scene"]
 [ext_resource type="PackedScene" uid="uid://p2bo4u4lncli" path="res://Scenes/Pizzeria/RegistrationClipboard.tscn" id="34_registration_scene"]
 [ext_resource type="PackedScene" uid="uid://cjh8v5m3bxn4k" path="res://Scenes/Pizzeria/ConnectedPlayersBoard.tscn" id="35_d0jji"]
@@ -45,11 +38,10 @@
 [ext_resource type="Script" uid="uid://1ehk7tcxo3pm" path="res://Scripts/NPC/RoomNPC.cs" id="39_room_npc_script"]
 [ext_resource type="Script" uid="uid://dyddsownfiqxf" path="res://Scripts/Environment/RoomJoin.cs" id="40_room_join_script"]
 [ext_resource type="PackedScene" uid="uid://cok64jr501daj" path="res://Scenes/RoomJoiner.tscn" id="41_75tun"]
-[ext_resource type="PackedScene" uid="uid://cmrj85xoh8t1j" path="res://Assets/PlayingSet/PerPlayer/magnifying_glass.glb" id="45_usjqs"]
 [ext_resource type="PackedScene" uid="uid://b0qrw5i73q7b3" path="res://Scenes/Ophanim.tscn" id="47_uuu6x"]
-[ext_resource type="Script" path="res://Scripts/Game/TableManager.cs" id="50_tablemgr"]
-[ext_resource type="PackedScene" path="res://Scenes/Game/Chair.tscn" id="51_chair_scene"]
-[ext_resource type="PackedScene" path="res://Scenes/Game/PlayerItemSet.tscn" id="52_pitemset"]
+[ext_resource type="Script" uid="uid://bk2cbuauhf6vh" path="res://Scripts/Game/TableManager.cs" id="50_tablemgr"]
+[ext_resource type="PackedScene" uid="uid://dch41rs3n3v01" path="res://Scenes/Game/Chair.tscn" id="51_chair_scene"]
+[ext_resource type="PackedScene" uid="uid://dp1t3ms3t0v02" path="res://Scenes/Game/PlayerItemSet.tscn" id="52_pitemset"]
 
 [sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_moon"]
 panorama = ExtResource("1_qxria")
@@ -624,7 +616,6 @@ script = ExtResource("7_env_collision")
 [node name="tablero" parent="Room1/PlayingSetup" unique_id=200000001 instance=ExtResource("9_0iob3")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.453938, 0.7376139, -5.248031)
 
-
 [node name="CubileteAndDice" parent="Room1/PlayingSetup" unique_id=740891976 instance=ExtResource("17_mymud")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14.709938, 0.8132103, -5.257575)
 
@@ -783,6 +774,8 @@ ProximityRadius = 7.0
 
 [node name="Player" parent="." unique_id=1339342590 instance=ExtResource("6_y4jh7")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.16528296, -0.22474906, -0.35706663)
+SprintBobAmount = 0.1
+BobFrequency = 2.0
 
 [node name="FocusController" type="Node" parent="." unique_id=775295465]
 script = ExtResource("30_focus_ctrl")
