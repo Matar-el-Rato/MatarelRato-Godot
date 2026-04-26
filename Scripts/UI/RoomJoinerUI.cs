@@ -15,36 +15,47 @@ public partial class RoomJoinerUI : Node3D
 	[Export] public int RoomId = 1;
 
 	[Signal] public delegate void JoinRequestedEventHandler();
+	/// <summary>Fired when the player clicks the READY button inside a joined room.</summary>
+	[Signal] public delegate void ReadyRequestedEventHandler();
+	/// <summary>Fired when the player clicks CANCEL to withdraw their ready state.</summary>
+	[Signal] public delegate void UnreadyRequestedEventHandler();
 
 	private static readonly Color ColorDim = new Color(0.5f, 0.4f, 0.3f, 0.4f);
 
 	private Label3D            _statusLabel;
 	private Label3D            _joinLabel;
+	private Label3D            _readyLabel;
 	private Label3D            _playersHeader;
 	private MeshInstance3D     _leftDivider;
 	private MeshInstance3D     _rightDivider;
 	private Interactable       _joinInteractable;
+	private Interactable       _readyInteractable;
 	private readonly Label3D[] _playerSlots = new Label3D[4];
 	private readonly bool[]    _slotActive  = new bool[4];
 	private readonly Vector3[] _slotBase    = new Vector3[4];
 	private Vector3            _joinLabelBase;
-	private RoomStatus         _status      = RoomStatus.Available;
-	private Color              _statusColor = Colors.White;
+	private Vector3            _readyLabelBase;
+	private RoomStatus         _status       = RoomStatus.Available;
+	private Color              _statusColor  = Colors.White;
 	private bool               _joinHovered;
-	private bool               _joinEnabled = false;
-	private float              _panelAlpha  = 0f;
+	private bool               _joinEnabled  = false;
+	private bool               _readyVisible = false;
+	private bool               _isReady      = false;
+	private float              _panelAlpha   = 0f;
 	private readonly Random    _rng = new Random();
 
 	// ── Lifecycle ─────────────────────────────────────────────────────────────
 
 	public override void _Ready()
 	{
-		_statusLabel      = GetNodeOrNull<Label3D>("StatusLabel");
-		_joinLabel        = GetNodeOrNull<Label3D>("JoinButton/Label3D");
-		_joinInteractable = GetNodeOrNull<Interactable>("JoinButton/Interactable");
-		_playersHeader    = GetNodeOrNull<Label3D>("PlayersHeader");
-		_leftDivider      = GetNodeOrNull<MeshInstance3D>("LeftDivider");
-		_rightDivider     = GetNodeOrNull<MeshInstance3D>("RightDivider");
+		_statusLabel       = GetNodeOrNull<Label3D>("StatusLabel");
+		_joinLabel         = GetNodeOrNull<Label3D>("JoinButton/Label3D");
+		_joinInteractable  = GetNodeOrNull<Interactable>("JoinButton/Interactable");
+		_readyLabel        = GetNodeOrNull<Label3D>("ReadyButton/Label3D");
+		_readyInteractable = GetNodeOrNull<Interactable>("ReadyButton/Interactable");
+		_playersHeader     = GetNodeOrNull<Label3D>("PlayersHeader");
+		_leftDivider       = GetNodeOrNull<MeshInstance3D>("LeftDivider");
+		_rightDivider      = GetNodeOrNull<MeshInstance3D>("RightDivider");
 
 		for (int i = 0; i < _playerSlots.Length; i++)
 		{
@@ -55,6 +66,8 @@ public partial class RoomJoinerUI : Node3D
 
 		if (_joinLabel != null)
 			_joinLabelBase = _joinLabel.Position;
+		if (_readyLabel != null)
+			_readyLabelBase = _readyLabel.Position;
 
 		if (_joinInteractable != null)
 		{
@@ -62,6 +75,12 @@ public partial class RoomJoinerUI : Node3D
 			_joinInteractable.Focused    += () => _joinHovered = true;
 			_joinInteractable.Unfocused  += () => _joinHovered = false;
 			_joinInteractable.ProcessMode = ProcessModeEnum.Disabled;
+		}
+
+		if (_readyInteractable != null)
+		{
+			_readyInteractable.Interacted += OnReadyPressed;
+			_readyInteractable.ProcessMode = ProcessModeEnum.Disabled;
 		}
 
 		// Start fully hidden — FadeIn() is called by RoomJoin when NPC welcome finishes.
@@ -96,9 +115,24 @@ public partial class RoomJoinerUI : Node3D
 
 	public void SetJoined(bool joined)
 	{
-		_joinEnabled = !joined;
-		if (_joinLabel != null)
-			_joinLabel.Text = joined ? "JOINED" : "JOIN";
+		_joinEnabled  = !joined;
+		_readyVisible = joined;
+		_isReady      = false;
+		if (_joinLabel  != null) _joinLabel.Text  = joined ? "JOINED" : "JOIN";
+		if (_readyLabel != null) _readyLabel.Text = "READY";
+		if (_readyInteractable != null)
+			_readyInteractable.ProcessMode = joined ? ProcessModeEnum.Inherit : ProcessModeEnum.Disabled;
+	}
+
+	/// <summary>
+	/// Shows a countdown in the status label. Call with seconds 10→1 each tick.
+	/// The ready/cancel button stays interactive so the player can still cancel.
+	/// </summary>
+	public void SetCountdown(int seconds)
+	{
+		if (_statusLabel != null)
+			_statusLabel.Text = seconds.ToString();
+		_statusColor = new Color(1f, 0.35f, 0.1f);
 	}
 
 	public void SetPlayers(string[] playerNames)
@@ -161,6 +195,7 @@ public partial class RoomJoinerUI : Node3D
 			}
 
 			UpdateJoinLabel();
+			UpdateReadyLabel();
 			UpdatePlayerSlots();
 			ApplyPanelAlpha();
 
@@ -178,6 +213,7 @@ public partial class RoomJoinerUI : Node3D
 		if (_playersHeader != null)
 			_playersHeader.Modulate = new Color(0.95f, 0.72f, 0.45f, 0.6f * _panelAlpha);
 		ScaleAlpha(_joinLabel);
+		ScaleAlpha(_readyLabel);
 		for (int i = 0; i < _playerSlots.Length; i++)
 			ScaleAlpha(_playerSlots[i]);
 	}
@@ -231,6 +267,54 @@ public partial class RoomJoinerUI : Node3D
 		}
 	}
 
+	private void UpdateReadyLabel()
+	{
+		if (_readyLabel == null) return;
+
+		if (!_readyVisible)
+		{
+			_readyLabel.Modulate = Colors.Transparent;
+			_readyLabel.Position = _readyLabelBase;
+			return;
+		}
+
+		if (_isReady)
+		{
+			// CANCEL — cool grey-white flicker, still interactive
+			float w = 0.55f + (float)_rng.NextDouble() * 0.30f;
+			_readyLabel.Modulate = new Color(w * 0.80f, w * 0.80f, w * 0.85f, 1f);
+			if (_rng.NextDouble() < 0.20)
+			{
+				float jx = (float)(_rng.NextDouble() * 0.005 - 0.0025);
+				float jy = (float)(_rng.NextDouble() * 0.002 - 0.001);
+				_readyLabel.Position = _readyLabelBase + new Vector3(jx, jy, 0);
+			}
+			else
+			{
+				_readyLabel.Position = _readyLabelBase;
+			}
+			return;
+		}
+
+		// Hellfire flicker — same style as JOIN
+		float b = 0.45f + (float)_rng.NextDouble() * 0.55f;
+		_readyLabel.Modulate = new Color(
+			b,
+			b * (0.15f + (float)_rng.NextDouble() * 0.25f),
+			b * (float)(_rng.NextDouble() * 0.05f)
+		);
+		if (_rng.NextDouble() < 0.25)
+		{
+			float jx = (float)(_rng.NextDouble() * 0.005 - 0.0025);
+			float jy = (float)(_rng.NextDouble() * 0.002 - 0.001);
+			_readyLabel.Position = _readyLabelBase + new Vector3(jx, jy, 0);
+		}
+		else
+		{
+			_readyLabel.Position = _readyLabelBase;
+		}
+	}
+
 	private void UpdatePlayerSlots()
 	{
 		for (int i = 0; i < _playerSlots.Length; i++)
@@ -264,5 +348,23 @@ public partial class RoomJoinerUI : Node3D
 	{
 		if (!_joinEnabled || _status != RoomStatus.Available) return;
 		EmitSignal(SignalName.JoinRequested);
+	}
+
+	private void OnReadyPressed()
+	{
+		if (!_readyVisible) return;
+
+		if (!_isReady)
+		{
+			_isReady = true;
+			if (_readyLabel != null) _readyLabel.Text = "CANCEL";
+			EmitSignal(SignalName.ReadyRequested);
+		}
+		else
+		{
+			_isReady = false;
+			if (_readyLabel != null) _readyLabel.Text = "READY";
+			EmitSignal(SignalName.UnreadyRequested);
+		}
 	}
 }

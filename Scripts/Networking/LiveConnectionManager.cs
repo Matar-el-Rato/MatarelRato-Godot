@@ -28,9 +28,13 @@ public static class LiveConnectionManager
 	private const byte ReqSendChat    = 6;
 	private const byte ReqJoinRoom    = 5;
 	private const byte ReqLeaveRoom   = 8;
+	private const byte ReqReady       = 13;
+	private const byte ReqUnready     = 16;
 	private const byte MsgUserList    = 10;
 	private const byte MsgChat        = 11;
 	private const byte MsgRoomState   = 12;
+	private const byte MsgCountdown   = 14;
+	private const byte MsgGameStart   = 15;
 	private const int  MaxUsername    = 12;
 	private const int  MaxClients     = 64;
 	private const int  MaxChatMessage = 100;
@@ -67,6 +71,25 @@ public static class LiveConnectionManager
 	/// Subscribers MUST NOT touch Godot nodes directly.
 	/// </summary>
 	public static event Action<int, string[]> OnRoomStateUpdated;
+
+	// ── Countdown / game-start state ──────────────────────────────────────────
+	// Written by the background listener thread; read by the Godot main thread
+	// in _Process via polling. int/bool reads and writes are atomic on x64.
+	private static volatile int  _countdownRoom    = 0;
+	private static volatile int  _countdownSeconds = -1;
+	private static volatile int  _gameStartRoom    = 0;
+	private static volatile bool _gameStartPending = false;
+
+	/// <summary>Room id of the most recent countdown tick (0 if none received).</summary>
+	public static int  CountdownRoom    => _countdownRoom;
+	/// <summary>Seconds remaining in the most recent countdown tick (-1 if no countdown).</summary>
+	public static int  CountdownSeconds => _countdownSeconds;
+	/// <summary>Room id of the pending game-start broadcast (check GameStartPending first).</summary>
+	public static int  GameStartRoom    => _gameStartRoom;
+	/// <summary>True when a MSG_GAME_START has been received and not yet consumed.</summary>
+	public static bool GameStartPending => _gameStartPending;
+	/// <summary>Consume the pending game-start flag. Call from the main thread.</summary>
+	public static void ClearGameStart() => _gameStartPending = false;
 
 	/// <summary>Last player list received from the server.</summary>
 	public static List<string> LastKnownPlayers { get; private set; } = new();
@@ -224,6 +247,33 @@ public static class LiveConnectionManager
 		catch (Exception ex) { GD.PrintErr($"[LCM] SendLeaveRoom failed: {ex.Message}"); }
 	}
 
+	/// <summary>
+	/// Sends REQ_READY on the live connection. The server checks if all players
+	/// in the sender's room are ready and starts a 10-second countdown if so.
+	/// </summary>
+	public static void SendReady()
+	{
+		NetworkStream stream;
+		lock (_lock) { stream = _stream; }
+		if (stream == null) return;
+
+		var packet = new byte[] { ReqReady };
+		try { stream.Write(packet, 0, packet.Length); }
+		catch (Exception ex) { GD.PrintErr($"[LCM] SendReady failed: {ex.Message}"); }
+	}
+
+	/// <summary>Sends REQ_UNREADY on the live connection to cancel a previous ready state.</summary>
+	public static void SendUnready()
+	{
+		NetworkStream stream;
+		lock (_lock) { stream = _stream; }
+		if (stream == null) return;
+
+		var packet = new byte[] { ReqUnready };
+		try { stream.Write(packet, 0, packet.Length); }
+		catch (Exception ex) { GD.PrintErr($"[LCM] SendUnready failed: {ex.Message}"); }
+	}
+
 	// ── Listener thread ───────────────────────────────────────────────────────
 
 	/// <summary>
@@ -319,6 +369,22 @@ public static class LiveConnectionManager
 					}
 
 					OnRoomStateUpdated?.Invoke(roomId, players);
+				}
+				else if (msgType == MsgCountdown)
+				{
+					// Payload: room_id(1B) + seconds(1B)
+					var cntBuf = new byte[2];
+					if (!ReadExact(stream, cntBuf, 2)) break;
+					_countdownRoom    = cntBuf[0];
+					_countdownSeconds = cntBuf[1];
+				}
+				else if (msgType == MsgGameStart)
+				{
+					// Payload: room_id(1B)
+					var gsBuf = new byte[1];
+					if (!ReadExact(stream, gsBuf, 1)) break;
+					_gameStartRoom    = gsBuf[0];
+					_gameStartPending = true;
 				}
 			}
 		}

@@ -44,6 +44,8 @@ public partial class Interactable : Node3D, IInteractable
 
 	[ExportGroup("Automation")]
 	/// <summary>When true, trimesh collision is generated for every MeshInstance3D in the parent hierarchy.</summary>
+	/// <summary>Color used to tint the prompt text when this interactable is focused.</summary>
+	[Export] public Color    PromptColor                  = Colors.White;
 	[Export] public bool     AutoGenerateCollision        = true;
 	[Export] public bool     HandleHighlight              = true;
 	[Export] public NodePath HighlightTargetMesh;

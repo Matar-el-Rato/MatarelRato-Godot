@@ -53,7 +53,7 @@ HandleHighlight = false
 shape = SubResource("BoxShape3D_join")
 
 [node name="StatusLabel" type="Label3D" parent="." unique_id=1694532370]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.589, 0, 0.001)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.589, 0.15, 0.001)
 pixel_size = 0.002
 text = "AVAILABLE"
 font = ExtResource("3_font")
@@ -104,3 +104,27 @@ text = "---"
 font = ExtResource("3_font")
 font_size = 60
 outline_size = 0
+
+[node name="ReadyButton" type="Node3D" parent="." unique_id=2312248823]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.589, -0.15, 0)
+
+[node name="Label3D" type="Label3D" parent="ReadyButton" unique_id=2362097715]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.001)
+pixel_size = 0.002
+modulate = Color(0, 0, 0, 0)
+text = "READY"
+font = ExtResource("3_font")
+font_size = 96
+outline_size = 0
+
+[node name="Interactable" type="Node3D" parent="ReadyButton" unique_id=2395665483]
+script = ExtResource("2_interactable_script")
+PromptText = "Ready"
+UseLeftClick = true
+AutoGenerateCollision = false
+HandleHighlight = false
+
+[node name="Collision" type="StaticBody3D" parent="ReadyButton/Interactable" unique_id=2441228029]
+
+[node name="Shape" type="CollisionShape3D" parent="ReadyButton/Interactable/Collision" unique_id=2449376760]
+shape = SubResource("BoxShape3D_join")

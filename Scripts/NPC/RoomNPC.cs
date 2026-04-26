@@ -56,6 +56,7 @@ public partial class RoomNPC : CharacterBody3D
 	private DialogBubble        _dialogBubble;
 	private Interactable        _interactable;
 	private AudioStreamPlayer3D _burnAudio;
+	private AudioStreamPlayer3D _stoneScrapeAudio;
 	private readonly Random     _rng = new Random();
 	private readonly List<(Light3D light, Color originalColor)> _moodLights = new();
 
@@ -68,6 +69,8 @@ public partial class RoomNPC : CharacterBody3D
 
 	/// <summary>Fired once when the first-entry welcome sequence fully finishes.</summary>
 	public event Action WelcomeCompleted;
+	/// <summary>Fired when the apparel panels finish sliding open.</summary>
+	public event Action ApparelOpened;
 
 	// ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -76,6 +79,14 @@ public partial class RoomNPC : CharacterBody3D
 		_animPlayer   = GetNodeOrNull<AnimationPlayer>("OrientationFix/pigga/AnimationPlayer");
 		if (_animPlayer == null) _animPlayer = FindAnimationPlayer(this);
 		_burnAudio    = GetNodeOrNull<AudioStreamPlayer3D>("BurnAudio");
+
+		var stoneScrapeStream = ResourceLoader.Load<AudioStream>("res://Assets/Sound FX/stone_scrape.wav");
+		if (stoneScrapeStream != null)
+		{
+			_stoneScrapeAudio        = new AudioStreamPlayer3D();
+			_stoneScrapeAudio.Stream = stoneScrapeStream;
+			AddChild(_stoneScrapeAudio);
+		}
 		_dialogBubble = GetNodeOrNull<DialogBubble>("DialogBubble");
 		_interactable = GetNodeOrNull<Interactable>("Interactable");
 
@@ -238,25 +249,26 @@ public partial class RoomNPC : CharacterBody3D
 		await ToSignal(GetTree().CreateTimer(0.5f), SceneTreeTimer.SignalName.Timeout);
 		if (!IsInsideTree()) return;
 
-		{
-			var apparelTween = CreateTween();
-			apparelTween.SetParallel(true);
-			if (LeftApparel != null)
-				apparelTween.TweenProperty(LeftApparel,  "position:z", LeftApparel.Position.Z  + 1.5f, 1.0f)
-							.SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.InOut);
-			if (RightApparel != null)
-				apparelTween.TweenProperty(RightApparel, "position:z", RightApparel.Position.Z - 1.5f, 1.0f)
-							.SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.InOut);
-			// Lights shift to moody orange in sync with apparel.
-			foreach (var (light, _) in _moodLights)
-				if (IsInstanceValid(light))
-					apparelTween.TweenProperty(light, "light_color", MoodyColor, 1.2f)
-								.SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
-			// Fire and don't await — everything slides while sequence continues.
-		}
+		_stoneScrapeAudio?.Play();
 
-		// 5. Wait 1.5s after apparel starts, then return rotation + FOV together.
-		await ToSignal(GetTree().CreateTimer(1.5f), SceneTreeTimer.SignalName.Timeout);
+		var apparelTween = CreateTween();
+		apparelTween.SetParallel(true);
+		if (LeftApparel != null)
+			apparelTween.TweenProperty(LeftApparel,  "position:z", LeftApparel.Position.Z  + 1.5f, 1.0f)
+						.SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.InOut);
+		if (RightApparel != null)
+			apparelTween.TweenProperty(RightApparel, "position:z", RightApparel.Position.Z - 1.5f, 1.0f)
+						.SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.InOut);
+		foreach (var (light, _) in _moodLights)
+			if (IsInstanceValid(light))
+				apparelTween.TweenProperty(light, "light_color", MoodyColor, 1.2f)
+							.SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
+		apparelTween.Finished += () => ApparelOpened?.Invoke();
+
+		// 5. Wait for apparel to finish, then for PlayingSetup to fully rise, then return camera.
+		await ToSignal(apparelTween, Tween.SignalName.Finished);
+		if (!IsInsideTree()) return;
+		await ToSignal(GetTree().CreateTimer(1.2f), SceneTreeTimer.SignalName.Timeout);
 		if (!IsInsideTree()) return;
 
 		{

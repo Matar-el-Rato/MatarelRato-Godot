@@ -39,6 +39,16 @@ public partial class TableManager : Node3D
     private static readonly float[] ChairRotationsY  = { 0f, 180f,  -90f, +90f };
     private static readonly float[] ItemSetRotationsY = { 90f, -90f, 180f,  0f };
 
+    private static readonly Color[] SlotColors = new[]
+    {
+        new Color(0.2f, 0.5f,  1f),    // slot 0: blue
+        new Color(0.2f, 0.85f, 0.2f),  // slot 1: green
+        new Color(1f,   0.85f, 0f),    // slot 2: yellow
+        new Color(1f,   0.15f, 0.15f), // slot 3: red
+    };
+
+    private static readonly string[] SlotColorNames = { "BLUE", "GREEN", "YELLOW", "RED" };
+
     private static readonly int[][] SlotOrders = new[]
     {
         new[] { 0, 1 },          // 2 players
@@ -69,6 +79,8 @@ public partial class TableManager : Node3D
         chair.Position        = ChairPositions[slot];
         chair.RotationDegrees = new Vector3(0f, ChairRotationsY[slot], 0f);
         AddChild(chair);
+        if (chair is Chair chairScript)
+            chairScript.SetSlotColor(SlotColors[slot], SlotColorNames[slot]);
     }
 
     private void SpawnItemSet(int slot)

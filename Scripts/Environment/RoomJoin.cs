@@ -31,6 +31,8 @@ public partial class RoomJoin : Node3D
 	/// <summary>Apparel props that slide open on welcome and slide back on room exit.</summary>
 	[Export] public Node3D          LeftApparel;
 	[Export] public Node3D          RightApparel;
+	/// <summary>The playing table setup — starts hidden below floor, rises when apparel opens.</summary>
+	[Export] public Node3D          PlayingSetup;
 	/// <summary>Which room this manager owns (1-3). Must match the RoomJoinerUI.RoomId.</summary>
 	[Export] public int             RoomId       = 1;
 	/// <summary>The RoomJoinerUI panel inside this room. Auto-found by RoomId if left empty.</summary>
@@ -47,11 +49,15 @@ public partial class RoomJoin : Node3D
 	private readonly List<(Light3D light, float originalEnergy)> _lights = new();
 	private bool  _playerInside        = false;
 	private AudioStreamPlayer _flickerAudio;
+	private AudioStreamPlayer _stoneScrapeAudio;
 	private float _leftApparelBaseZ;
 	private float _rightApparelBaseZ;
+	private float _playingSetupBaseY;
+	private const float PlayingSetupHideOffset = 1.2f;
 	private int      _transitionGrace     = 0;
 	private bool     _inRoomOfficially    = false;
 	private string[] _lastSeenPlayers     = null;
+	private int      _lastCountdownSecs   = -1;
 
 	// ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -68,6 +74,14 @@ public partial class RoomJoin : Node3D
 			AddChild(_flickerAudio);
 		}
 
+		var stoneScrapeStream = ResourceLoader.Load<AudioStream>("res://Assets/Sound FX/stone_scrape.wav");
+		if (stoneScrapeStream != null)
+		{
+			_stoneScrapeAudio        = new AudioStreamPlayer();
+			_stoneScrapeAudio.Stream = stoneScrapeStream;
+			AddChild(_stoneScrapeAudio);
+		}
+
 		if (LeftApparel == null)
 			LeftApparel  = GetTree().Root.FindChild("left_apparel",  true, false) as Node3D;
 		if (RightApparel == null)
@@ -75,6 +89,15 @@ public partial class RoomJoin : Node3D
 
 		if (LeftApparel  != null) _leftApparelBaseZ  = LeftApparel.Position.Z;
 		if (RightApparel != null) _rightApparelBaseZ = RightApparel.Position.Z;
+
+		if (PlayingSetup == null)
+			PlayingSetup = GetParent()?.GetNodeOrNull<Node3D>("PlayingSetup")
+						?? GetTree().Root.FindChild("PlayingSetup", true, false) as Node3D;
+		if (PlayingSetup != null)
+		{
+			_playingSetupBaseY = PlayingSetup.Position.Y;
+			PlayingSetup.Position = PlayingSetup.Position with { Y = _playingSetupBaseY - PlayingSetupHideOffset };
+		}
 
 		if (LightingNode != null)
 		{
@@ -100,12 +123,17 @@ public partial class RoomJoin : Node3D
 
 		if (RoomJoinerUi != null)
 		{
-			RoomJoinerUi.JoinRequested += OnJoinRequested;
+			RoomJoinerUi.JoinRequested    += OnJoinRequested;
+			RoomJoinerUi.ReadyRequested   += OnReadyRequested;
+			RoomJoinerUi.UnreadyRequested += OnUnreadyRequested;
 			RoomJoinerUi.SetJoinEnabled(false);
 		}
 
 		if (RoomNpc != null)
+		{
 			RoomNpc.WelcomeCompleted += OnNpcWelcomeCompleted;
+			RoomNpc.ApparelOpened   += OnApparelOpened;
+		}
 
 		if (_leftDoor  != null) _leftDoor.ExitRoomRequested  += OnExitRequested;
 		if (_rightDoor != null) _rightDoor.ExitRoomRequested += OnExitRequested;
@@ -121,7 +149,9 @@ public partial class RoomJoin : Node3D
 			RoomJoinerUi = FindRoomJoinerUI(GetTree().Root, RoomId);
 			if (RoomJoinerUi != null)
 			{
-				RoomJoinerUi.JoinRequested += OnJoinRequested;
+				RoomJoinerUi.JoinRequested    += OnJoinRequested;
+				RoomJoinerUi.ReadyRequested   += OnReadyRequested;
+				RoomJoinerUi.UnreadyRequested += OnUnreadyRequested;
 				RoomJoinerUi.SetJoinEnabled(false);
 			}
 		}
@@ -133,6 +163,27 @@ public partial class RoomJoin : Node3D
 		{
 			_lastSeenPlayers = current;
 			ApplyRoomUpdate(RoomId, current ?? System.Array.Empty<string>());
+		}
+
+		// Poll countdown ticks for our room.
+		if (_inRoomOfficially && LiveConnectionManager.CountdownRoom == RoomId)
+		{
+			int secs = LiveConnectionManager.CountdownSeconds;
+			if (secs >= 0 && secs != _lastCountdownSecs)
+			{
+				_lastCountdownSecs = secs;
+				RoomJoinerUi?.SetCountdown(secs);
+			}
+		}
+
+		// Poll game start for our room.
+		if (_inRoomOfficially
+			&& LiveConnectionManager.GameStartPending
+			&& LiveConnectionManager.GameStartRoom == RoomId)
+		{
+			LiveConnectionManager.ClearGameStart();
+			_lastCountdownSecs = -1;
+			OnGameStart();
 		}
 
 		if (Player == null) return;
@@ -244,10 +295,37 @@ public partial class RoomJoin : Node3D
 		RoomJoinerUi?.FadeIn();
 	}
 
+	private void OnApparelOpened()
+	{
+		if (PlayingSetup == null) return;
+		_stoneScrapeAudio?.Play();
+		var tween = CreateTween();
+		tween.TweenProperty(PlayingSetup, "position:y", _playingSetupBaseY, 1.2f)
+			 .SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.Out);
+	}
+
 	private void OnJoinRequested()
 	{
 		if (!AuthManager.IsLoggedIn || !LiveConnectionManager.IsConnected) return;
 		LiveConnectionManager.SendJoinRoom(RoomId);
+	}
+
+	private void OnReadyRequested()
+	{
+		if (!_inRoomOfficially || !LiveConnectionManager.IsConnected) return;
+		LiveConnectionManager.SendReady();
+	}
+
+	private void OnUnreadyRequested()
+	{
+		if (!_inRoomOfficially || !LiveConnectionManager.IsConnected) return;
+		LiveConnectionManager.SendUnready();
+	}
+
+	private void OnGameStart()
+	{
+		RoomJoinerUi?.SetStatus(RoomJoinerUI.RoomStatus.InGame);
+		GD.Print($"[RoomJoin] Room {RoomId}: game starting!");
 	}
 
 	private void OnExitRequested()
@@ -271,7 +349,7 @@ public partial class RoomJoin : Node3D
 
 	private void ResetApparel()
 	{
-		if (LeftApparel == null && RightApparel == null) return;
+		if (LeftApparel == null && RightApparel == null && PlayingSetup == null) return;
 		var tween = CreateTween();
 		tween.SetParallel(true);
 		if (LeftApparel != null)
@@ -279,6 +357,9 @@ public partial class RoomJoin : Node3D
 				 .SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.InOut);
 		if (RightApparel != null)
 			tween.TweenProperty(RightApparel, "position:z", _rightApparelBaseZ, 1.0f)
+				 .SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.InOut);
+		if (PlayingSetup != null)
+			tween.TweenProperty(PlayingSetup, "position:y", _playingSetupBaseY - PlayingSetupHideOffset, 1.0f)
 				 .SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.InOut);
 	}
 

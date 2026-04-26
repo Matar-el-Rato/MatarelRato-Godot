@@ -176,7 +176,10 @@ public partial class Interactor : Node3D
 		if (visible && _currentInteractable is Interactable iNode)
 		{
 			if (_textLabel != null)
-				_textLabel.Text = iNode.PromptText;
+			{
+				_textLabel.Text     = iNode.PromptText;
+				_textLabel.Modulate = iNode.PromptColor;
+			}
 
 			if (_keyLabel != null)
 			{
@@ -205,6 +208,9 @@ public partial class Interactor : Node3D
 		}
 		else
 		{
+			if (_textLabel != null)
+				_textLabel.Modulate = Colors.White;
+
 			_promptTween.SetParallel(true);
 			_promptTween.TweenProperty(_promptLabel, "modulate:a", 0.0f, 0.1f)
 				.SetTrans(Tween.TransitionType.Quad)

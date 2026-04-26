@@ -50,6 +50,20 @@ public partial class Chair : Node3D
 		}
 	}
 
+	// ── Public API ───────────────────────────────────────────────────────────
+
+	/// <summary>
+	/// Sets the chair's highlight and prompt colors for seat-selection.
+	/// Call after AddChild so _interactable is resolved.
+	/// </summary>
+	public void SetSlotColor(Color color, string colorName)
+	{
+		if (_interactable == null) return;
+		_interactable.HighlightColor = color;
+		_interactable.PromptColor    = color;
+		_interactable.PromptText     = $"Pick \"{colorName}\"";
+	}
+
 	// ── Handler ───────────────────────────────────────────────────────────────
 
 	private void OnInteracted()
