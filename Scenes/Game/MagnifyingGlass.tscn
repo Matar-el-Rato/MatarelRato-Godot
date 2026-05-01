@@ -1,0 +1,18 @@
+[gd_scene format=3 uid="uid://dr4s6xq8k3n53"]
+
+[ext_resource type="Script" uid="uid://hw6m4qs2n3y97" path="res://Scripts/Game/MagnifyingGlass.cs" id="1_script"]
+[ext_resource type="PackedScene" uid="uid://cmrj85xoh8t1j" path="res://Assets/PlayingSet/PerPlayer/magnifying_glass.glb" id="2_model"]
+[ext_resource type="Script" uid="uid://bk7ngt4ktf6i6" path="res://Scripts/Interaction/Interactable.cs" id="3_interactable"]
+
+[node name="MagnifyingGlass" type="Node3D"]
+script = ExtResource("1_script")
+InteractablePath = NodePath("Interactable")
+
+[node name="mag_model" parent="." instance=ExtResource("2_model")]
+
+[node name="Interactable" type="Node3D" parent="."]
+script = ExtResource("3_interactable")
+PromptText = "Inspect"
+UseLeftClick = true
+HighlightTargetMesh = NodePath("../mag_model")
+UseShellHighlight = true

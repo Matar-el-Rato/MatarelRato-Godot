@@ -67,12 +67,12 @@ public partial class TableManager : Node3D
         playerCount = Mathf.Clamp(playerCount, 2, 4);
         foreach (int slot in SlotOrders[playerCount - 2])
         {
-            SpawnChair(slot);
-            SpawnItemSet(slot);
+            var itemSet = SpawnItemSet(slot);
+            SpawnChair(slot, itemSet);
         }
     }
 
-    private void SpawnChair(int slot)
+    private void SpawnChair(int slot, PlayerItemSet itemSet)
     {
         if (ChairScene == null) return;
         var chair = ChairScene.Instantiate<Node3D>();
@@ -80,15 +80,24 @@ public partial class TableManager : Node3D
         chair.RotationDegrees = new Vector3(0f, ChairRotationsY[slot], 0f);
         AddChild(chair);
         if (chair is Chair chairScript)
+        {
             chairScript.SetSlotColor(SlotColors[slot], SlotColorNames[slot]);
+            chairScript.LinkItemSet(itemSet);
+        }
     }
 
-    private void SpawnItemSet(int slot)
+    private PlayerItemSet SpawnItemSet(int slot)
     {
-        if (PlayerItemSetScene == null) return;
+        if (PlayerItemSetScene == null) return null;
         var set = PlayerItemSetScene.Instantiate<Node3D>();
         set.Position        = BoardCenter;
         set.RotationDegrees = new Vector3(0f, ItemSetRotationsY[slot], 0f);
         AddChild(set);
+
+        var itemSetScript = set as PlayerItemSet;
+        if (itemSetScript != null)
+            itemSetScript.SlotIndex = slot;
+
+        return itemSetScript;
     }
 }

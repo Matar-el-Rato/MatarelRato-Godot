@@ -434,10 +434,11 @@ spot_angle = 44.501743
 environment = SubResource("Environment_night")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="Environment" unique_id=1173441071]
-transform = Transform3D(-0.8660253, -0.4330129, 0.2500001, 0, 0.49999994, 0.86602545, -0.50000024, 0.74999994, -0.43301257, 0, 9.537342, 15.069515)
+transform = Transform3D(-0.8660253, -0.43301287, 0.2500001, 0.24432595, 0.06975067, 0.9671813, -0.43623975, 0.8986851, 0.045390427, 0, 9.537342, 15.069515)
 light_color = Color(0.690196, 0.768627, 0.870588, 1)
-light_energy = 0.5
+light_energy = 0.425
 light_volumetric_fog_energy = 5.0
+light_angular_distance = 4.3
 shadow_enabled = true
 shadow_bias = 0.793
 shadow_blur = 2.485

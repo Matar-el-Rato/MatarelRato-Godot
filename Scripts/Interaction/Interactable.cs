@@ -26,6 +26,12 @@ public partial class Interactable : Node3D, IInteractable
 
 	// ── Core settings ─────────────────────────────────────────────────────────
 
+	/// <summary>
+	/// When false, highlights and interactions are fully suppressed.
+	/// Set by <see cref="PlayerItemSet"/> to gate items to the owning player only.
+	/// </summary>
+	public bool Enabled { get; set; } = true;
+
 	[Export] public string PromptText        = "Interact";
 	[Export] public string InteractionAction = "interact";
 	/// <summary>When true, the interactable responds to left-click instead of (or in addition to) the key.</summary>
@@ -283,11 +289,16 @@ public partial class Interactable : Node3D, IInteractable
 	}
 
 	/// <summary>Fires the <see cref="Interacted"/> signal.</summary>
-	public void Interact() => EmitSignal(SignalName.Interacted);
+	public void Interact()
+	{
+		if (!Enabled) return;
+		EmitSignal(SignalName.Interacted);
+	}
 
 	/// <summary>Fires <see cref="Focused"/> and enables the highlight effect.</summary>
 	public void OnFocus()
 	{
+		if (!Enabled) return;
 		EmitSignal(SignalName.Focused);
 		ApplyHighlight(true);
 	}

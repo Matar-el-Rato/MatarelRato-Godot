@@ -144,6 +144,10 @@ public partial class Interactor : Node3D
 					current = current.GetParent();
 			}
 
+			// Treat disabled interactables as if nothing was hit (owned by another player).
+			if (interactable is Interactable iDisabled && !iDisabled.Enabled)
+				interactable = null;
+
 			if (interactable != _currentInteractable)
 			{
 				_currentInteractable?.OnBlur();

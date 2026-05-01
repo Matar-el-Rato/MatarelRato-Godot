@@ -1,0 +1,18 @@
+[gd_scene format=3 uid="uid://cn7r3vp5h2w42"]
+
+[ext_resource type="Script" uid="uid://gv7l5pr3m2x86" path="res://Scripts/Game/FireAxe.cs" id="1_script"]
+[ext_resource type="PackedScene" uid="uid://c1o0e0sm5icp" path="res://Assets/PlayingSet/PerPlayer/axe.glb" id="2_model"]
+[ext_resource type="Script" uid="uid://bk7ngt4ktf6i6" path="res://Scripts/Interaction/Interactable.cs" id="3_interactable"]
+
+[node name="FireAxe" type="Node3D"]
+script = ExtResource("1_script")
+InteractablePath = NodePath("Interactable")
+
+[node name="axe_model" parent="." instance=ExtResource("2_model")]
+
+[node name="Interactable" type="Node3D" parent="."]
+script = ExtResource("3_interactable")
+PromptText = "Use Fire Axe"
+UseLeftClick = true
+HighlightTargetMesh = NodePath("../axe_model")
+UseShellHighlight = true

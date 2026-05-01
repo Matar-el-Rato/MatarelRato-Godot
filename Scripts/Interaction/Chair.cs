@@ -18,7 +18,8 @@ public partial class Chair : Node3D
 	/// <summary>Camera field-of-view while the player is seated.</summary>
 	[Export] public float   SitFOV    = 110f;
 
-	private Interactable _interactable;
+	private Interactable  _interactable;
+	private PlayerItemSet _linkedItemSet;
 
 	// ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -53,6 +54,13 @@ public partial class Chair : Node3D
 	// ── Public API ───────────────────────────────────────────────────────────
 
 	/// <summary>
+	/// Links the item set that belongs to this chair's slot.
+	/// Called by TableManager after spawning. When the player sits,
+	/// the linked set is enabled for interaction.
+	/// </summary>
+	public void LinkItemSet(PlayerItemSet itemSet) => _linkedItemSet = itemSet;
+
+	/// <summary>
 	/// Sets the chair's highlight and prompt colors for seat-selection.
 	/// Call after AddChild so _interactable is resolved.
 	/// </summary>
@@ -74,7 +82,10 @@ public partial class Chair : Node3D
 		if (player == null)
 			player = FindPlayerRecursive(GetTree().Root);
 
-		player?.Sit(this);
+		if (player == null) return;
+
+		player.Sit(this);
+		_linkedItemSet?.SetOwned(true);
 	}
 
 	// ── Helpers ───────────────────────────────────────────────────────────────

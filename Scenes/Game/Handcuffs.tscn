@@ -1,0 +1,19 @@
+[gd_scene format=3 uid="uid://bq8m2kn4j9x01"]
+
+[ext_resource type="Script" uid="uid://fu8k6nq4h1w95" path="res://Scripts/Game/Handcuffs.cs" id="1_script"]
+[ext_resource type="PackedScene" uid="uid://cw2b6orr08dac" path="res://Assets/PlayingSet/PerPlayer/Handcuffs.glb" id="2_model"]
+[ext_resource type="Script" uid="uid://bk7ngt4ktf6i6" path="res://Scripts/Interaction/Interactable.cs" id="3_interactable"]
+
+[node name="Handcuffs" type="Node3D"]
+script = ExtResource("1_script")
+HandRotation = Vector3(0, 1.5708, 0)
+InteractablePath = NodePath("Interactable")
+
+[node name="Handcuffs_model" parent="." instance=ExtResource("2_model")]
+
+[node name="Interactable" type="Node3D" parent="."]
+script = ExtResource("3_interactable")
+PromptText = "Use Handcuffs"
+UseLeftClick = true
+HighlightTargetMesh = NodePath("../Handcuffs_model")
+UseShellHighlight = true
