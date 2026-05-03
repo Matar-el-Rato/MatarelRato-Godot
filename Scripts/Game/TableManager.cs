@@ -1,4 +1,6 @@
 using Godot;
+using System;
+using System.Text.Json;
 
 /// <summary>
 /// Attached to PlayingSetup. Instantiates chairs and per-player item sets
@@ -24,6 +26,13 @@ public partial class TableManager : Node3D
 {
     [Export] public PackedScene ChairScene;
     [Export] public PackedScene PlayerItemSetScene;
+
+    // Color key (lowercase) → spawned chair/token, for network event lookups.
+    private readonly System.Collections.Generic.Dictionary<string, Chair>     _chairsByColor     = new();
+    private readonly System.Collections.Generic.Dictionary<string, SeatToken> _seatTokensByColor = new();
+
+    // Color the local player chose this match ("" = not chosen yet).
+    private string _localChosenColor = "";
 
     // Tablero centre in PlayingSetup local space (from original tablero node transform).
     private static readonly Vector3 BoardCenter = new Vector3(-15.453938f, 0.7376139f, -5.248031f);
@@ -51,14 +60,92 @@ public partial class TableManager : Node3D
 
     private static readonly int[][] SlotOrders = new[]
     {
-        new[] { 0, 1 },          // 2 players
-        new[] { 0, 1, 2 },       // 3 players
-        new[] { 0, 1, 2, 3 },    // 4 players
+        new[] { 3, 2 },          // 2 players: RED, YELLOW
+        new[] { 3, 2, 1 },       // 3 players: RED, YELLOW, GREEN
+        new[] { 3, 2, 1, 0 },    // 4 players: RED, YELLOW, GREEN, BLUE
     };
 
     public override void _Ready()
     {
-        Setup(4); // placeholder; will be replaced by server-driven call
+        GD.Print($"[TM] _Ready (instance {GetInstanceId()})");
+    }
+
+    public void StartGame(int playerCount)
+    {
+        GD.Print($"[TM] StartGame playerCount={playerCount}");
+        Setup(playerCount);
+        GD.Print($"[TM] Setup done, chairs in dict: {_chairsByColor.Count} ({string.Join(", ", _chairsByColor.Keys)})");
+    }
+
+    public void ResetGame()
+    {
+        Chair.ResetLocalChoice();
+        _localChosenColor = "";
+        foreach (var child in GetChildren())
+            if (child is Chair || child is PlayerItemSet || child is SeatToken)
+                child.QueueFree();
+        _chairsByColor.Clear();
+        _seatTokensByColor.Clear();
+    }
+
+    public override void _Process(double delta)
+    {
+        while (LiveConnectionManager.PendingGameActions.TryDequeue(out var json))
+            HandleGameAction(json);
+    }
+
+    private void HandleGameAction(string json)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            var root      = doc.RootElement;
+            if (!root.TryGetProperty("action", out var actionEl)) return;
+            string action = actionEl.GetString();
+
+            if (action == "chair_taken")
+            {
+                string color    = root.GetProperty("color").GetString();
+                string username = root.TryGetProperty("username", out var unEl) ? unEl.GetString() : "?";
+                int    skinId   = root.TryGetProperty("skin_id",  out var skEl) ? skEl.GetInt32()  : 101;
+
+                if (_chairsByColor.TryGetValue(color, out var chair))
+                {
+                    if (color == Chair.LocalChosenKey)
+                        _localChosenColor = color;
+
+                    if (color != _localChosenColor)
+                    {
+                        chair.SetTaken();
+                        SpawnSeatToken(chair, color, username, skinId);
+                    }
+                }
+                else
+                {
+                    GD.PrintErr($"[TM] chair_taken: color '{color}' not in dict. Keys: {string.Join(", ", _chairsByColor.Keys)}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            GD.PrintErr($"[TM] HandleGameAction exception: {ex.Message}");
+        }
+    }
+
+    private void SpawnSeatToken(Chair chair, string color, string username, int skinId)
+    {
+        if (_seatTokensByColor.TryGetValue(color, out var old) && IsInstanceValid(old))
+            old.QueueFree();
+
+        var token = new SeatToken();
+        AddChild(token);
+        // Token is at the chair's world origin with chair's rotation.
+        // The sitting offset is applied internally by SeatToken using the CharacterEntry.
+        token.GlobalPosition = chair.GlobalPosition;
+        token.GlobalRotation = chair.GlobalRotation;
+        token.SetPlayerInfo(username, color, skinId, chair);
+        token.Appear();
+        _seatTokensByColor[color] = token;
     }
 
     /// <summary>Spawn chairs and item sets for the given number of players (2–4).</summary>
@@ -83,6 +170,8 @@ public partial class TableManager : Node3D
         {
             chairScript.SetSlotColor(SlotColors[slot], SlotColorNames[slot]);
             chairScript.LinkItemSet(itemSet);
+            _chairsByColor[SlotColorNames[slot].ToLower()] = chairScript;
+            chairScript.Appear();
         }
     }
 

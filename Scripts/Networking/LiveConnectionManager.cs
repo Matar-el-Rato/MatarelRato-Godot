@@ -15,6 +15,7 @@
 // ═══════════════════════════════════════════════════
 using Godot;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
@@ -23,23 +24,26 @@ using System.Threading;
 
 public static class LiveConnectionManager
 {
-	private const byte ReqConnectLive = 9;
-	private const byte ReqLogout      = 4;
-	private const byte ReqSendChat    = 6;
-	private const byte ReqJoinRoom    = 5;
-	private const byte ReqLeaveRoom   = 8;
-	private const byte ReqReady       = 13;
-	private const byte ReqUnready     = 16;
-	private const byte MsgUserList    = 10;
-	private const byte MsgChat        = 11;
-	private const byte MsgRoomState   = 12;
-	private const byte MsgCountdown   = 14;
-	private const byte MsgGameStart   = 15;
-	private const int  MaxUsername    = 12;
-	private const int  MaxClients     = 64;
-	private const int  MaxChatMessage = 100;
-	private const int  MaxRoomPlayers = 4;
-	private const int  NumRooms       = 3;
+	private const byte ReqConnectLive  = 9;
+	private const byte ReqLogout       = 4;
+	private const byte ReqSendChat     = 6;
+	private const byte ReqJoinRoom     = 5;
+	private const byte ReqLeaveRoom    = 8;
+	private const byte ReqReady        = 13;
+	private const byte ReqUnready      = 16;
+	private const byte ReqGameAction   = 7;
+	private const byte MsgUserList     = 10;
+	private const byte MsgChat         = 11;
+	private const byte MsgRoomState    = 12;
+	private const byte MsgCountdown    = 14;
+	private const byte MsgGameStart    = 15;
+	private const byte MsgGameAction   = 17;
+	private const int  MaxUsername     = 12;
+	private const int  MaxClients      = 64;
+	private const int  MaxChatMessage  = 100;
+	private const int  MaxRoomPlayers  = 4;
+	private const int  NumRooms        = 3;
+	private const int  MaxGameAction   = 512;
 
 	// ── Shared state ──────────────────────────────────────────────────────────
 	//
@@ -58,12 +62,29 @@ public static class LiveConnectionManager
 	private static NetworkStream   _stream;
 	private static Thread          _listenerThread;
 	private static string          _localUsername = "";
+	private static int             _localUserId   = 0;
+
+	/// <summary>The user_id of the locally logged-in player.</summary>
+	public static int LocalUserId => _localUserId;
 
 	/// <summary>Fired on the background thread when the server pushes an updated user list.</summary>
 	public static event Action<List<string>> OnUserListUpdated;
 
 	/// <summary>Fired on the background thread when the server broadcasts a chat message.</summary>
 	public static event Action<string, string> OnChatMessageReceived;
+
+	/// <summary>
+	/// Fired on the background thread when a MSG_GAME_ACTION push arrives.
+	/// The string argument is the raw JSON payload.
+	/// Subscribers MUST NOT touch Godot nodes directly.
+	/// </summary>
+	public static event Action<string> OnGameActionReceived;
+
+	/// <summary>
+	/// Thread-safe queue of incoming MSG_GAME_ACTION JSON strings.
+	/// Poll and drain this in a Godot _Process() to avoid subscription lifecycle issues.
+	/// </summary>
+	public static readonly ConcurrentQueue<string> PendingGameActions = new();
 
 	/// <summary>
 	/// Fired on the background thread when a room's player list changes.
@@ -75,19 +96,25 @@ public static class LiveConnectionManager
 	// ── Countdown / game-start state ──────────────────────────────────────────
 	// Written by the background listener thread; read by the Godot main thread
 	// in _Process via polling. int/bool reads and writes are atomic on x64.
-	private static volatile int  _countdownRoom    = 0;
-	private static volatile int  _countdownSeconds = -1;
-	private static volatile int  _gameStartRoom    = 0;
-	private static volatile bool _gameStartPending = false;
+	private static volatile int  _countdownRoom     = 0;
+	private static volatile int  _countdownSeconds  = -1;
+	private static volatile int  _gameStartRoom     = 0;
+	private static volatile bool _gameStartPending  = false;
+	private static volatile int  _currentMatchId    = 0;
+	private static volatile int  _currentPlayerCount = 0;
 
 	/// <summary>Room id of the most recent countdown tick (0 if none received).</summary>
-	public static int  CountdownRoom    => _countdownRoom;
+	public static int  CountdownRoom     => _countdownRoom;
 	/// <summary>Seconds remaining in the most recent countdown tick (-1 if no countdown).</summary>
-	public static int  CountdownSeconds => _countdownSeconds;
+	public static int  CountdownSeconds  => _countdownSeconds;
 	/// <summary>Room id of the pending game-start broadcast (check GameStartPending first).</summary>
-	public static int  GameStartRoom    => _gameStartRoom;
+	public static int  GameStartRoom     => _gameStartRoom;
 	/// <summary>True when a MSG_GAME_START has been received and not yet consumed.</summary>
-	public static bool GameStartPending => _gameStartPending;
+	public static bool GameStartPending  => _gameStartPending;
+	/// <summary>match_id of the current active match (set on MSG_GAME_START).</summary>
+	public static int  CurrentMatchId    => _currentMatchId;
+	/// <summary>Number of players in the current match (set on MSG_GAME_START).</summary>
+	public static int  CurrentPlayerCount => _currentPlayerCount;
 	/// <summary>Consume the pending game-start flag. Call from the main thread.</summary>
 	public static void ClearGameStart() => _gameStartPending = false;
 
@@ -112,6 +139,7 @@ public static class LiveConnectionManager
 	public static void Connect(string host, int port, string username, int userId)
 	{
 		_localUsername = username;
+		_localUserId   = userId;
 		CurrentRoomId  = 0;
 		for (int i = 0; i <= NumRooms; i++) RoomPlayers[i] = System.Array.Empty<string>();
 
@@ -274,6 +302,34 @@ public static class LiveConnectionManager
 		catch (Exception ex) { GD.PrintErr($"[LCM] SendUnready failed: {ex.Message}"); }
 	}
 
+	/// <summary>
+	/// Sends a REQ_GAME_ACTION packet on the live connection.
+	/// Format: [type 1B][match_id 4B BE][user_id 4B BE][json_len 2B BE][json payload].
+	/// </summary>
+	public static void SendGameAction(int matchId, int userId, string json)
+	{
+		NetworkStream stream;
+		lock (_lock) { stream = _stream; }
+		if (stream == null) return;
+
+		var jsonBytes = System.Text.Encoding.UTF8.GetBytes(json);
+		if (jsonBytes.Length > MaxGameAction) return;
+
+		var packet = new byte[1 + 4 + 4 + 2 + jsonBytes.Length];
+		packet[0] = ReqGameAction;
+
+		var beMid = BitConverter.GetBytes(IPAddress.HostToNetworkOrder(matchId));
+		var beUid = BitConverter.GetBytes(IPAddress.HostToNetworkOrder(userId));
+		var beLen = BitConverter.GetBytes(IPAddress.HostToNetworkOrder((short)jsonBytes.Length));
+		Array.Copy(beMid,      0, packet, 1,  4);
+		Array.Copy(beUid,      0, packet, 5,  4);
+		Array.Copy(beLen,      0, packet, 9,  2);
+		Array.Copy(jsonBytes,  0, packet, 11, jsonBytes.Length);
+
+		try { stream.Write(packet, 0, packet.Length); }
+		catch (Exception ex) { GD.PrintErr($"[LCM] SendGameAction failed: {ex.Message}"); }
+	}
+
 	// ── Listener thread ───────────────────────────────────────────────────────
 
 	/// <summary>
@@ -300,6 +356,7 @@ public static class LiveConnectionManager
 				// Read 1-byte message type.
 				if (!ReadExact(stream, typeBuf, 1)) break;
 				byte msgType = typeBuf[0];
+				GD.Print($"[LCM] recv type={msgType}");
 
 				if (msgType == MsgUserList)
 				{
@@ -380,11 +437,38 @@ public static class LiveConnectionManager
 				}
 				else if (msgType == MsgGameStart)
 				{
-					// Payload: room_id(1B)
-					var gsBuf = new byte[1];
-					if (!ReadExact(stream, gsBuf, 1)) break;
-					_gameStartRoom    = gsBuf[0];
-					_gameStartPending = true;
+					// Payload: match_id(4B BE) + player_count(1B) = 5 bytes
+					var gsBuf = new byte[5];
+					if (!ReadExact(stream, gsBuf, 5)) break;
+					_currentMatchId      = IPAddress.NetworkToHostOrder(BitConverter.ToInt32(gsBuf, 0));
+					_currentPlayerCount  = gsBuf[4];
+					_gameStartRoom       = CurrentRoomId; // room is already known from MSG_ROOM_STATE
+					_gameStartPending    = true;
+				}
+				else if (msgType == MsgGameAction)
+				{
+					// Payload: json_len(2B BE) + json
+					var lenBuf = new byte[2];
+					if (!ReadExact(stream, lenBuf, 2)) break;
+					int jsonLen = (int)(ushort)IPAddress.NetworkToHostOrder(BitConverter.ToInt16(lenBuf, 0));
+					GD.Print($"[LCM] MsgGameAction jsonLen={jsonLen}");
+					if (jsonLen <= 0 || jsonLen > MaxGameAction)
+					{
+						GD.PrintErr($"[LCM] MsgGameAction bad jsonLen={jsonLen}, dropping");
+						break;
+					}
+
+					var jsonBuf = new byte[jsonLen];
+					if (!ReadExact(stream, jsonBuf, jsonLen)) break;
+					string json = System.Text.Encoding.UTF8.GetString(jsonBuf, 0, jsonLen);
+					GD.Print($"[LCM] MsgGameAction firing event: {json}");
+					PendingGameActions.Enqueue(json);
+					OnGameActionReceived?.Invoke(json);
+				}
+				else
+				{
+					GD.PrintErr($"[LCM] Unknown msgType={msgType} — stream may be misaligned, stopping listener");
+					break;
 				}
 			}
 		}

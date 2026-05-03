@@ -41,7 +41,9 @@ public partial class CubileteController : Node3D
 	private Node3D        _playerCamera;
 
 	// Saved on _Ready so the cup can return after a throw.
-	private Transform3D _originalTransform;
+	// Stored as LOCAL transform so the reset target is correct even after the
+	// parent (PlayingSetup) has been tweened to its final table height.
+	private Transform3D _originalLocalTransform;
 
 	// ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -62,8 +64,8 @@ public partial class CubileteController : Node3D
 			_dice[i].BodyEntered += (body) => OnDiceCollision(diceIndex, body);
 		}
 
-		_interactable.Interacted += OnInteracted;
-		_originalTransform        = GlobalTransform;
+		_interactable.Interacted    += OnInteracted;
+		_originalLocalTransform      = Transform; // local to immediate parent
 
 		CallDeferred(MethodName.FindPlayerCamera);
 	}
@@ -302,12 +304,17 @@ public partial class CubileteController : Node3D
 		_currentState         = State.Resetting;
 		_cubileteMesh.Visible = true;
 
+		// Recompute world target from the parent's CURRENT global transform so the
+		// cubilete returns to the table surface even after PlayingSetup has risen.
+		var parentGlobal   = GetParent<Node3D>().GlobalTransform;
+		var resetTransform = parentGlobal * _originalLocalTransform;
+
 		var tween = CreateTween();
 		tween.SetParallel(true);
 		tween.SetTrans(Tween.TransitionType.Cubic);
 		tween.SetEase(Tween.EaseType.Out);
 
-		tween.TweenProperty(this, "global_transform", _originalTransform, 1.2f);
+		tween.TweenProperty(this, "global_transform", resetTransform, 1.2f);
 
 		for (int i = 0; i < _dice.Length; i++)
 		{
@@ -316,9 +323,9 @@ public partial class CubileteController : Node3D
 			die.Visible  = true;
 			// Stack dice slightly above each other to avoid z-fighting on reset.
 			tween.TweenProperty(die, "global_position",
-				_originalTransform.Origin + new Vector3(0, 0.02f + (0.02f * i), 0), 1.2f);
+				resetTransform.Origin + new Vector3(0, 0.02f + (0.02f * i), 0), 1.2f);
 			tween.TweenProperty(die, "quaternion",
-				new Quaternion(_originalTransform.Basis), 1.2f);
+				new Quaternion(resetTransform.Basis), 1.2f);
 		}
 
 		tween.Finished += () => {

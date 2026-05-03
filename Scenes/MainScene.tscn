@@ -19,6 +19,7 @@
 [ext_resource type="Script" uid="uid://cftkl2vc21msg" path="res://Scripts/Environment/MusicZone.cs" id="18_music_zone"]
 [ext_resource type="PackedScene" uid="uid://iw8e0xxwr7aq" path="res://Assets/Environment/Doors/left_door_pizzeria.glb" id="19_c1ier"]
 [ext_resource type="PackedScene" uid="uid://bkfh86n8876s5" path="res://Assets/Environment/Doors/right_door_pizzeria.glb" id="20_gyaec"]
+[ext_resource type="PackedScene" uid="uid://cnsppcvbeegsj" path="res://Scenes/Game/SeatToken.tscn" id="21_jkhus"]
 [ext_resource type="Script" uid="uid://b15eo4jowk2p3" path="res://Scripts/Environment/Mirror.cs" id="21_mirror"]
 [ext_resource type="PackedScene" uid="uid://dgv6wbfejnsf6" path="res://Scenes/UI/ChatUI.tscn" id="22_chat_ui"]
 [ext_resource type="AudioStream" uid="uid://bc3dpjpyfbu0" path="res://Assets/Sound FX/light_flicker.wav" id="23_oo3wg"]
@@ -612,6 +613,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.1901207, 0, -0.09963226)
 script = ExtResource("50_tablemgr")
 ChairScene = ExtResource("51_chair_scene")
 PlayerItemSetScene = ExtResource("52_pitemset")
+SeatTokenScene = ExtResource("21_jkhus")
 
 [node name="mesa_poker" parent="Room1/PlayingSetup" unique_id=474140406 instance=ExtResource("8_f140w")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.457277, 0.43543047, -5.255393)

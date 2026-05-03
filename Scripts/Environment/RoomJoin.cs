@@ -50,6 +50,7 @@ public partial class RoomJoin : Node3D
 	private bool  _playerInside        = false;
 	private AudioStreamPlayer _flickerAudio;
 	private AudioStreamPlayer _stoneScrapeAudio;
+	private AudioStreamPlayer _countdownClackAudio;
 	private float _leftApparelBaseZ;
 	private float _rightApparelBaseZ;
 	private float _playingSetupBaseY;
@@ -80,6 +81,14 @@ public partial class RoomJoin : Node3D
 			_stoneScrapeAudio        = new AudioStreamPlayer();
 			_stoneScrapeAudio.Stream = stoneScrapeStream;
 			AddChild(_stoneScrapeAudio);
+		}
+
+		var clackStream = ResourceLoader.Load<AudioStream>("res://Assets/Sound FX/revolver_clack.wav");
+		if (clackStream != null)
+		{
+			_countdownClackAudio        = new AudioStreamPlayer();
+			_countdownClackAudio.Stream = clackStream;
+			AddChild(_countdownClackAudio);
 		}
 
 		if (LeftApparel == null)
@@ -173,6 +182,7 @@ public partial class RoomJoin : Node3D
 			{
 				_lastCountdownSecs = secs;
 				RoomJoinerUi?.SetCountdown(secs);
+				PlayCountdownClack(secs);
 			}
 		}
 
@@ -251,6 +261,7 @@ public partial class RoomJoin : Node3D
 		RoomJoinerUi?.FadeOut();
 		CloseDoorAfterDelay();
 		ResetApparel();
+		(PlayingSetup as TableManager)?.ResetGame();
 		RoomNpc?.ResetWelcome();
 	}
 
@@ -325,6 +336,9 @@ public partial class RoomJoin : Node3D
 	private void OnGameStart()
 	{
 		RoomJoinerUi?.SetStatus(RoomJoinerUI.RoomStatus.InGame);
+		RoomJoinerUi?.FadeOut();
+		ChatManager.AddLog("[color=#c04040]> Game started! Choose your chair.[/color]");
+		(PlayingSetup as TableManager)?.StartGame(LiveConnectionManager.CurrentPlayerCount);
 		GD.Print($"[RoomJoin] Room {RoomId}: game starting!");
 	}
 
@@ -428,6 +442,15 @@ public partial class RoomJoin : Node3D
 	}
 
 	// ── Helpers ───────────────────────────────────────────────────────────────
+
+	private void PlayCountdownClack(int secs)
+	{
+		if (_countdownClackAudio == null) return;
+		// Volume rises from -14 dB at secs=10 to 0 dB at secs=1 (linear interpolation).
+		float t = Mathf.Clamp(1f - (secs - 1f) / 9f, 0f, 1f);
+		_countdownClackAudio.VolumeDb = Mathf.Lerp(-14f, 0f, t);
+		_countdownClackAudio.Play();
+	}
 
 	private static RoomJoinerUI FindRoomJoinerUI(Node root, int targetRoomId)
 	{

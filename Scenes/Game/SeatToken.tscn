@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://cnsppcvbeegsj"]
+
+[ext_resource type="Script" uid="uid://dnj6ysys56osf" path="res://Scripts/Game/SeatToken.cs" id="1_script"]
+
+[node name="SeatToken" type="Node3D"]
+script = ExtResource("1_script")
