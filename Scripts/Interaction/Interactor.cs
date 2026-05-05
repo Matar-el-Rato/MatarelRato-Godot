@@ -35,6 +35,12 @@ public partial class Interactor : Node3D
 	// Tracks whether left-mouse was held last frame to detect fresh presses.
 	private bool _isLeftClickHeld = false;
 
+	// ── Tooltip ───────────────────────────────────────────────────────────────
+	private const float        TooltipDelay   = 0.5f;
+	private float              _hoverTimer    = 0f;
+	private bool               _tooltipShown  = false;
+	private ItemTooltipBubble  _activeTooltip;
+
 	// ── Lifecycle ─────────────────────────────────────────────────────────────
 
 	public override void _Ready()
@@ -73,6 +79,7 @@ public partial class Interactor : Node3D
 				_currentInteractable = null;
 				UpdatePrompt(false);
 			}
+			ResetTooltip();
 			return;
 		}
 
@@ -98,12 +105,24 @@ public partial class Interactor : Node3D
 			}
 
 			if (wantsToInteract)
+			{
 				iNode.Interact();
+				HideTooltip();
+				_hoverTimer = 0f;
+			}
 		}
 		else
 		{
 			// Keep held-state in sync even when no interactable is targeted.
 			_isLeftClickHeld = Input.IsMouseButtonPressed(MouseButton.Left);
+		}
+
+		// Tooltip: accumulate hover time on the current target.
+		if (_currentInteractable is Interactable hovNode && !string.IsNullOrEmpty(hovNode.TooltipText))
+		{
+			_hoverTimer += (float)delta;
+			if (_hoverTimer >= TooltipDelay && !_tooltipShown)
+				ShowTooltip(hovNode);
 		}
 	}
 
@@ -154,6 +173,7 @@ public partial class Interactor : Node3D
 				_currentInteractable = interactable;
 				_currentInteractable?.OnFocus();
 				UpdatePrompt(_currentInteractable != null);
+				ResetTooltip();
 			}
 		}
 		else if (_currentInteractable != null)
@@ -161,7 +181,41 @@ public partial class Interactor : Node3D
 			_currentInteractable.OnBlur();
 			_currentInteractable = null;
 			UpdatePrompt(false);
+			ResetTooltip();
 		}
+	}
+
+	// ── Tooltip ───────────────────────────────────────────────────────────────
+
+	private void ShowTooltip(Interactable interactable)
+	{
+		if (_tooltipShown) return;
+		_tooltipShown = true;
+
+		var bubble = new ItemTooltipBubble();
+		bubble.Text = interactable.TooltipText;
+		interactable.AddChild(bubble);
+
+		// Detach from parent transform so the bubble stays in world space
+		// and isn't occluded by the item's own geometry.
+		bubble.TopLevel       = true;
+		bubble.GlobalPosition = interactable.GlobalPosition + Vector3.Up * 0.28f;
+
+		_activeTooltip = bubble;
+	}
+
+	private void HideTooltip()
+	{
+		if (!_tooltipShown) return;
+		_tooltipShown = false;
+		_activeTooltip?.DismissAndFree();
+		_activeTooltip = null;
+	}
+
+	private void ResetTooltip()
+	{
+		_hoverTimer = 0f;
+		HideTooltip();
 	}
 
 	// ── HUD prompt ────────────────────────────────────────────────────────────

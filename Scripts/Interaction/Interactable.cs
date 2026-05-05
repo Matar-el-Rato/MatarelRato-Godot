@@ -34,6 +34,8 @@ public partial class Interactable : Node3D, IInteractable
 
 	[Export] public string PromptText        = "Interact";
 	[Export] public string InteractionAction = "interact";
+	/// <summary>Shown in the tooltip bubble after hovering for 0.5 s. Leave empty to suppress.</summary>
+	[Export] public string TooltipText      = "";
 	/// <summary>When true, the interactable responds to left-click instead of (or in addition to) the key.</summary>
 	[Export] public bool   UseLeftClick      = false;
 

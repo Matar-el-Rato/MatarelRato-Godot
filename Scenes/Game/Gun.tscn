@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://bgv6wbfejnsf6"]
 
 [ext_resource type="Script" uid="uid://gwg0ihe4ljk" path="res://Scripts/Game/Gun.cs" id="1_gun_script"]
+[ext_resource type="AudioStream" uid="uid://cctqrg8a215ao" path="res://Assets/Sound FX/gun_dry_fire.wav" id="2_dwjyx"]
 [ext_resource type="PackedScene" uid="uid://c64l1qo4yw77e" path="res://Assets/PlayingSet/PerPlayer/makarov.glb" id="2_makarov_model"]
 [ext_resource type="Script" uid="uid://bk7ngt4ktf6i6" path="res://Scripts/Interaction/Interactable.cs" id="3_interactable_script"]
 [ext_resource type="AudioStream" uid="uid://vfw8frgy6utn" path="res://Assets/Sound FX/gunshot_and_casing.wav" id="4_gunshot_sound"]
@@ -12,12 +13,14 @@ HandRotation = Vector3(0, 3.14159, 0)
 InteractablePath = NodePath("Interactable")
 MuzzleFlashPath = NodePath("MuzzleFlashVFX")
 AudioPlayerPath = NodePath("AudioStreamPlayer3D")
+MisfireClickSound = ExtResource("2_dwjyx")
 
 [node name="makarov" parent="." unique_id=1909773004 instance=ExtResource("2_makarov_model")]
 
 [node name="Interactable" type="Node3D" parent="." unique_id=540061889]
 script = ExtResource("3_interactable_script")
 PromptText = "Pick up Makarov"
+TooltipText = "A loaded Makarov pistol. Fire it at another player — or yourself. One chamber may be live."
 UseLeftClick = true
 HighlightTargetMesh = NodePath("../makarov")
 UseShellHighlight = true

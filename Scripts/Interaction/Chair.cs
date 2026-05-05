@@ -20,7 +20,9 @@ public partial class Chair : Node3D
 
 	private Interactable  _interactable;
 	private PlayerItemSet _linkedItemSet;
-	private string        _colorKey = "";
+	private string        _colorKey  = "";
+	private string        _colorName = "";
+	private Color         _slotColor;
 
 	// Color key of the chair the local player chose ("" = not chosen yet).
 	// Once set, only interactions with THIS chair are allowed (to re-sit after standing).
@@ -76,10 +78,24 @@ public partial class Chair : Node3D
 	public void SetSlotColor(Color color, string colorName)
 	{
 		if (_interactable == null) return;
+		_slotColor = color;
+		_colorName = colorName;
 		_interactable.HighlightColor = color;
 		_interactable.PromptColor    = color;
 		_interactable.PromptText     = $"Pick \"{colorName}\"";
 		_colorKey = colorName.ToLower();
+	}
+
+	/// <summary>
+	/// Re-opens this chair for selection after its previous occupant left.
+	/// </summary>
+	public void SetVacated()
+	{
+		if (_interactable == null) return;
+		_interactable.Enabled        = true;
+		_interactable.HighlightColor = _slotColor;
+		_interactable.PromptColor    = _slotColor;
+		_interactable.PromptText     = string.IsNullOrEmpty(_colorName) ? "Sit" : $"Pick \"{_colorName}\"";
 	}
 
 	/// <summary>

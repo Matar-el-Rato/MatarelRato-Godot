@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://dp1t3ms3t0v02"]
 
-[ext_resource type="Script" uid="uid://et9j7ms3f2v84" path="res://Scripts/Game/PlayerItemSet.cs" id="0_script"]
+[ext_resource type="Script" uid="uid://cjnjn5s178jyl" path="res://Scripts/Game/PlayerItemSet.cs" id="0_script"]
 [ext_resource type="PackedScene" uid="uid://cx6y1r8v7k8j2" path="res://Scenes/Game/Cigarette.tscn" id="1_cig"]
 [ext_resource type="PackedScene" uid="uid://bgv6wbfejnsf6" path="res://Scenes/Game/Gun.tscn" id="2_gun"]
 [ext_resource type="PackedScene" uid="uid://cn7r3vp5h2w42" path="res://Scenes/Game/FireAxe.tscn" id="3_axe"]

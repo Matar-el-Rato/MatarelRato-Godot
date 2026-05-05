@@ -26,10 +26,15 @@ public partial class TableManager : Node3D
 {
     [Export] public PackedScene ChairScene;
     [Export] public PackedScene PlayerItemSetScene;
+    [Export] public Ophanim     OphanimNode;
 
     // Color key (lowercase) → spawned chair/token, for network event lookups.
     private readonly System.Collections.Generic.Dictionary<string, Chair>     _chairsByColor     = new();
     private readonly System.Collections.Generic.Dictionary<string, SeatToken> _seatTokensByColor = new();
+    private readonly System.Collections.Generic.Dictionary<int, string>       _colorByUserId     = new();
+    private readonly System.Collections.Generic.Dictionary<int, string>       _usernameByUserId  = new();
+
+    private int _takenChairCount = 0;
 
     // Color the local player chose this match ("" = not chosen yet).
     private string _localChosenColor = "";
@@ -86,6 +91,9 @@ public partial class TableManager : Node3D
                 child.QueueFree();
         _chairsByColor.Clear();
         _seatTokensByColor.Clear();
+        _colorByUserId.Clear();
+        _usernameByUserId.Clear();
+        _takenChairCount = 0;
     }
 
     public override void _Process(double delta)
@@ -108,6 +116,13 @@ public partial class TableManager : Node3D
                 string color    = root.GetProperty("color").GetString();
                 string username = root.TryGetProperty("username", out var unEl) ? unEl.GetString() : "?";
                 int    skinId   = root.TryGetProperty("skin_id",  out var skEl) ? skEl.GetInt32()  : 101;
+                int    userId   = root.TryGetProperty("user_id",  out var uidEl) ? uidEl.GetInt32() : -1;
+
+                if (userId >= 0)
+                {
+                    _colorByUserId[userId]    = color;
+                    _usernameByUserId[userId] = username;
+                }
 
                 if (_chairsByColor.TryGetValue(color, out var chair))
                 {
@@ -123,6 +138,63 @@ public partial class TableManager : Node3D
                 else
                 {
                     GD.PrintErr($"[TM] chair_taken: color '{color}' not in dict. Keys: {string.Join(", ", _chairsByColor.Keys)}");
+                }
+
+                // Client-side fallback: trigger Ophanim when all chairs are filled.
+                // _hasActivated guard prevents a double-trigger if server also sends chairs_locked.
+                _takenChairCount++;
+                if (_takenChairCount >= _chairsByColor.Count && _chairsByColor.Count > 0)
+                {
+                    var redPos = _chairsByColor.TryGetValue("red", out var rc) ? rc.GlobalPosition : Vector3.Zero;
+                    OphanimNode?.DescendAndActivate(redPos);
+                }
+            }
+            else if (action == "chair_vacated")
+            {
+                string color  = root.GetProperty("color").GetString();
+                int    userId = root.TryGetProperty("user_id", out var uvEl) ? uvEl.GetInt32() : -1;
+
+                if (_seatTokensByColor.TryGetValue(color, out var token) && IsInstanceValid(token))
+                {
+                    token.QueueFree();
+                    _seatTokensByColor.Remove(color);
+                }
+
+                if (_chairsByColor.TryGetValue(color, out var vacatedChair))
+                    vacatedChair.SetVacated();
+
+                if (userId >= 0)
+                {
+                    _colorByUserId.Remove(userId);
+                    _usernameByUserId.Remove(userId);
+                }
+                if (_takenChairCount > 0) _takenChairCount--;
+            }
+            else if (action == "chairs_locked")
+            {
+                var redPos = _chairsByColor.TryGetValue("red", out var rc) ? rc.GlobalPosition : Vector3.Zero;
+                OphanimNode?.DescendAndActivate(redPos);
+            }
+            else if (action == "initiative_sequence")
+            {
+                if (OphanimNode != null && root.TryGetProperty("shots", out var shotsEl))
+                {
+                    int    winnerUserId = root.TryGetProperty("winner_user_id", out var wEl) ? wEl.GetInt32() : -1;
+                    string winnerName   = _usernameByUserId.TryGetValue(winnerUserId, out var wName) ? wName : "";
+
+                    var shots = new System.Collections.Generic.List<(Vector3, string)>();
+                    foreach (var shot in shotsEl.EnumerateArray())
+                    {
+                        int    uid    = shot.TryGetProperty("user_id", out var sUid) ? sUid.GetInt32() : -1;
+                        string result = shot.TryGetProperty("result",  out var sRes) ? sRes.GetString() : "click";
+                        if (_colorByUserId.TryGetValue(uid, out var sColor) &&
+                            _chairsByColor.TryGetValue(sColor, out var sChair))
+                        {
+                            shots.Add((sChair.GlobalPosition, result));
+                        }
+                    }
+                    if (shots.Count > 0)
+                        OphanimNode.StartInitiativeSequence(shots.ToArray(), winnerName);
                 }
             }
         }

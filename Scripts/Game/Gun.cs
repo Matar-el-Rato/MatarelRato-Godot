@@ -34,11 +34,17 @@ public partial class Gun : Node3D
 	[Export] public NodePath AudioPlayerPath;
 	[Export] public NodePath MeshRootPath = "makarov";
 
+	[ExportGroup("Initiative")]
+	/// <summary>Optional click/misfire sound played by FireInitiativeShot when bang=false.</summary>
+	[Export] public AudioStream MisfireClickSound;
+	[Export] public float MisfireVolumeDb = 6f;
+
 	private Node3D              _meshRoot;
 	private AnimationPlayer     _animPlayer;
 	private Interactable        _interactable;
 	private Node3D              _muzzleFlash;
 	private AudioStreamPlayer3D _audioPlayer;
+	private AudioStreamPlayer3D _clickPlayer;
 
 	private Vector3 _originalPosition;
 	private Vector3 _originalRotation;
@@ -74,6 +80,14 @@ public partial class Gun : Node3D
 
 		if (_interactable != null)
 			_interactable.Interacted += OnInteracted;
+
+		if (MisfireClickSound != null)
+		{
+			_clickPlayer          = new AudioStreamPlayer3D();
+			_clickPlayer.Stream   = MisfireClickSound;
+			_clickPlayer.VolumeDb = MisfireVolumeDb;
+			AddChild(_clickPlayer);
+		}
 	}
 
 	// ── Per-frame ─────────────────────────────────────────────────────────────
@@ -203,6 +217,41 @@ public partial class Gun : Node3D
 		if (_muzzleFlash == null) return;
 		if (_muzzleFlash.HasMethod("play"))
 			_muzzleFlash.Call("play");
+	}
+
+	// ── Initiative API ────────────────────────────────────────────────────────
+
+	public void SetInteractionEnabled(bool enabled)
+	{
+		if (_interactable != null)
+			_interactable.Enabled = enabled;
+	}
+
+	// ── Initiative shot ───────────────────────────────────────────────────────
+
+	/// <summary>
+	/// Plays the trigger animation and, if bang, fires audio and muzzle flash.
+	/// Used by the Ophanim initiative sequence — this gun is not in a player's hand.
+	/// </summary>
+	public void FireInitiativeShot(bool bang)
+	{
+		if (_animPlayer != null && _animPlayer.HasAnimation("Animation"))
+		{
+			_animPlayer.Stop();
+			_animPlayer.SpeedScale = 2.0f;
+			_animPlayer.Play("Animation");
+		}
+
+		if (bang)
+		{
+			_audioPlayer?.Stop();
+			_audioPlayer?.Play();
+			ShowMuzzleFlash();
+		}
+		else
+		{
+			_clickPlayer?.Play();
+		}
 	}
 
 	// ── Collision helper ──────────────────────────────────────────────────────
