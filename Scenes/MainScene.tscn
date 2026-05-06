@@ -43,6 +43,7 @@
 [ext_resource type="Script" uid="uid://bk2cbuauhf6vh" path="res://Scripts/Game/TableManager.cs" id="50_tablemgr"]
 [ext_resource type="PackedScene" uid="uid://dch41rs3n3v01" path="res://Scenes/Game/Chair.tscn" id="51_chair_scene"]
 [ext_resource type="PackedScene" uid="uid://dp1t3ms3t0v02" path="res://Scenes/Game/PlayerItemSet.tscn" id="52_pitemset"]
+[ext_resource type="Script" uid="uid://dv8cr4xwhbspu" path="res://Scripts/UI/DiceHUD.cs" id="60_dicehud"]
 
 [sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_moon"]
 panorama = ExtResource("1_qxria")
@@ -780,7 +781,9 @@ ProximityRadius = 7.0
 
 [node name="Player" parent="." unique_id=1339342590 instance=ExtResource("6_y4jh7")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.16528296, -0.22474906, -0.35706663)
-SprintBobAmount = 0.1
+MovementEnabled = false
+WalkBobAmount = 0.02
+SprintBobAmount = 0.03
 SideBobAmount = 0.01
 BobFrequency = 2.0
 
@@ -793,6 +796,11 @@ script = ExtResource("30_focus_ctrl")
 layer = 11
 
 [node name="ChatUI" parent="ChatLayer" unique_id=2111111104 instance=ExtResource("22_chat_ui")]
+
+[node name="DiceHUD" type="Control" parent="ChatLayer" unique_id=2111111105]
+layout_mode = 3
+anchors_preset = 0
+script = ExtResource("60_dicehud")
 
 [node name="DitherEffect" parent="." unique_id=1599022892 instance=ExtResource("37_dither_effect")]
 

@@ -213,6 +213,8 @@ public partial class CubileteController : Node3D
 			die.ApplyTorqueImpulse(torque);
 		}
 
+		DiceHUD.AttachDice(_dice);
+
 		// Poll until all dice are sleeping or 15 seconds elapse.
 		bool allAtRest    = false;
 		int  timeoutTicks = 0;
@@ -233,7 +235,9 @@ public partial class CubileteController : Node3D
 		}
 
 		CalculateResults();
-		await Task.Delay(1000);
+		await Task.Delay(2500);
+		DiceHUD.HideResult();
+		await Task.Delay(450);
 		ResetPosition();
 	}
 
