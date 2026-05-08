@@ -20,6 +20,24 @@ public partial class DiceHUD : Control
     private static volatile bool _pendingAttach;
     private static volatile bool _pendingHide;
 
+    // For showing remote players' dice results as static face orientations.
+    private static volatile bool _pendingStaticShow;
+    private static int  _pendingStatic1;
+    private static int  _pendingStatic2;
+
+    // Maps face value 1-6 to the die rotation that puts that face pointing up (+Y).
+    // Face-axis mapping: +X=4, -X=3, +Y=2, -Y=5, +Z=6, -Z=1.
+    private static readonly Vector3[] FaceRotations = new[]
+    {
+        Vector3.Zero,                                    // 0 (unused)
+        new Vector3(-Mathf.Pi / 2f, 0f, 0f),           // 1  (-Z → +Y)
+        new Vector3(0f, 0f, 0f),                        // 2  (+Y → +Y)
+        new Vector3(0f, 0f, -Mathf.Pi / 2f),           // 3  (-X → +Y)
+        new Vector3(0f, 0f,  Mathf.Pi / 2f),           // 4  (+X → +Y)
+        new Vector3(Mathf.Pi, 0f, 0f),                  // 5  (-Y → +Y)
+        new Vector3( Mathf.Pi / 2f, 0f, 0f),           // 6  (+Z → +Y)
+    };
+
     private RigidBody3D[] _activeDice;
     private Tween         _fadeTween;
 
@@ -120,6 +138,15 @@ public partial class DiceHUD : Control
             ShowHUD();
         }
 
+        if (_pendingStaticShow)
+        {
+            _pendingStaticShow = false;
+            _activeDice        = null; // stop physics tracking
+            SetFaceValue(0, _pendingStatic1);
+            SetFaceValue(1, _pendingStatic2);
+            ShowHUD();
+        }
+
         if (_activeDice != null)
         {
             for (int i = 0; i < 2; i++)
@@ -140,12 +167,27 @@ public partial class DiceHUD : Control
         }
     }
 
+    private void SetFaceValue(int dieIndex, int value)
+    {
+        if ((uint)dieIndex >= (uint)_displayDice.Length || _displayDice[dieIndex] == null) return;
+        if (value < 1 || value > 6) return;
+        _displayDice[dieIndex].Rotation = FaceRotations[value];
+    }
+
     // ── Static API ────────────────────────────────────────────────────────────
 
     public static void AttachDice(RigidBody3D[] dice)
     {
         _pendingDice   = dice;
         _pendingAttach = true;
+    }
+
+    /// <summary>Shows the HUD with dice oriented to the given face values (no live physics tracking).</summary>
+    public static void ShowStatic(int die1, int die2)
+    {
+        _pendingStatic1    = die1;
+        _pendingStatic2    = die2;
+        _pendingStaticShow = true;
     }
 
     public static void HideResult() => _pendingHide = true;

@@ -39,6 +39,7 @@
 [ext_resource type="Script" uid="uid://dyddsownfiqxf" path="res://Scripts/Environment/RoomJoin.cs" id="40_room_join_script"]
 [ext_resource type="PackedScene" uid="uid://cok64jr501daj" path="res://Scenes/RoomJoiner.tscn" id="41_75tun"]
 [ext_resource type="PackedScene" uid="uid://bgv6wbfejnsf6" path="res://Scenes/Game/Gun.tscn" id="43_jkhus"]
+[ext_resource type="AudioStream" uid="uid://c1jheyu3w75dw" path="res://Assets/Sound FX/brimstone_ray.wav" id="45_xot12"]
 [ext_resource type="PackedScene" uid="uid://b0qrw5i73q7b3" path="res://Scenes/Ophanim.tscn" id="47_uuu6x"]
 [ext_resource type="Script" uid="uid://bk2cbuauhf6vh" path="res://Scripts/Game/TableManager.cs" id="50_tablemgr"]
 [ext_resource type="PackedScene" uid="uid://dch41rs3n3v01" path="res://Scenes/Game/Chair.tscn" id="51_chair_scene"]
@@ -810,3 +811,4 @@ RedactionRate = 0.03
 BubbleWorldScale = 2.6
 GreetingMsg3 = "THE MAKAROV WILL ROTATE. A CLICK PASSES. A SHOT DECIDES."
 InitiativeGunScene = ExtResource("43_jkhus")
+BrimstoneRaySound = ExtResource("45_xot12")

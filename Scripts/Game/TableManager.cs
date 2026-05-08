@@ -70,6 +70,21 @@ public partial class TableManager : Node3D
         new[] { 3, 2, 1, 0 },    // 4 players: RED, YELLOW, GREEN, BLUE
     };
 
+    // Clockwise turn order per user specification: yellow → green → red → blue.
+    private static readonly string[] FullClockwiseOrder = { "yellow", "green", "red", "blue" };
+
+    // Active subset of FullClockwiseOrder for the current match.
+    private readonly System.Collections.Generic.List<string> _activeTurnOrder = new();
+    private int _currentTurnIndex = 0;
+
+    // slot index → spawned PlayerItemSet, populated in SpawnItemSet.
+    private readonly System.Collections.Generic.Dictionary<int, PlayerItemSet> _itemSetsBySlot = new();
+
+    // Cubilete geometry cached at setup time.
+    private float _cubileteRadius      = 0.744f;
+    private float _cubileteHeightOff   = 0.075f;
+    private bool  _rollConnected       = false;
+
     public override void _Ready()
     {
         GD.Print($"[TM] _Ready (instance {GetInstanceId()})");
@@ -93,7 +108,11 @@ public partial class TableManager : Node3D
         _seatTokensByColor.Clear();
         _colorByUserId.Clear();
         _usernameByUserId.Clear();
-        _takenChairCount = 0;
+        _takenChairCount  = 0;
+        _activeTurnOrder.Clear();
+        _currentTurnIndex = 0;
+        _rollConnected    = false;
+        _itemSetsBySlot.Clear();
     }
 
     public override void _Process(double delta)
@@ -145,8 +164,9 @@ public partial class TableManager : Node3D
                 _takenChairCount++;
                 if (_takenChairCount >= _chairsByColor.Count && _chairsByColor.Count > 0)
                 {
-                    var redPos = _chairsByColor.TryGetValue("red", out var rc) ? rc.GlobalPosition : Vector3.Zero;
-                    OphanimNode?.DescendAndActivate(redPos);
+                    var redPos          = _chairsByColor.TryGetValue("red", out var rc) ? rc.GlobalPosition : Vector3.Zero;
+                    var boardCenterW    = GetNodeOrNull<Node3D>("tablero")?.GlobalPosition ?? ToGlobal(BoardCenter);
+                    OphanimNode?.DescendAndActivate(redPos, boardCenterW);
                 }
             }
             else if (action == "chair_vacated")
@@ -172,8 +192,9 @@ public partial class TableManager : Node3D
             }
             else if (action == "chairs_locked")
             {
-                var redPos = _chairsByColor.TryGetValue("red", out var rc) ? rc.GlobalPosition : Vector3.Zero;
-                OphanimNode?.DescendAndActivate(redPos);
+                var redPos       = _chairsByColor.TryGetValue("red", out var rc) ? rc.GlobalPosition : Vector3.Zero;
+                var boardCenterW = GetNodeOrNull<Node3D>("tablero")?.GlobalPosition ?? ToGlobal(BoardCenter);
+                OphanimNode?.DescendAndActivate(redPos, boardCenterW);
             }
             else if (action == "initiative_sequence")
             {
@@ -181,6 +202,13 @@ public partial class TableManager : Node3D
                 {
                     int    winnerUserId = root.TryGetProperty("winner_user_id", out var wEl) ? wEl.GetInt32() : -1;
                     string winnerName   = _usernameByUserId.TryGetValue(winnerUserId, out var wName) ? wName : "";
+
+                    // Record which turn slot the winner occupies.
+                    if (winnerUserId >= 0 && _colorByUserId.TryGetValue(winnerUserId, out var wColor))
+                    {
+                        int idx = _activeTurnOrder.IndexOf(wColor.ToLower());
+                        _currentTurnIndex = idx >= 0 ? idx : 0;
+                    }
 
                     var shots = new System.Collections.Generic.List<(Vector3, string)>();
                     foreach (var shot in shotsEl.EnumerateArray())
@@ -193,9 +221,67 @@ public partial class TableManager : Node3D
                             shots.Add((sChair.GlobalPosition, result));
                         }
                     }
+
+                    // Build item grant rays: one (worldPos, spawnCallback) per item per player.
+                    var itemGrants = new System.Collections.Generic.List<(Vector3, System.Action)>();
+                    if (root.TryGetProperty("item_grants", out var grantsEl))
+                    {
+                        foreach (var grant in grantsEl.EnumerateArray())
+                        {
+                            int gUid = grant.TryGetProperty("user_id", out var gUidEl) ? gUidEl.GetInt32() : -1;
+                            if (gUid < 0 || !grant.TryGetProperty("items", out var itemsEl)) continue;
+                            if (!_colorByUserId.TryGetValue(gUid, out var gColor)) continue;
+                            int slot = ColorToSlot(gColor.ToLower());
+                            if (slot < 0 || !_itemSetsBySlot.TryGetValue(slot, out var itemSet)) continue;
+
+                            foreach (var itemEl in itemsEl.EnumerateArray())
+                            {
+                                string itemName    = itemEl.GetString();
+                                Vector3 itemPos    = itemSet.GetItemWorldPosition(itemName);
+                                var capturedSet    = itemSet;
+                                var capturedName   = itemName;
+                                itemGrants.Add((itemPos, () => capturedSet.SpawnItem(capturedName)));
+                            }
+                        }
+                    }
+
                     if (shots.Count > 0)
-                        OphanimNode.StartInitiativeSequence(shots.ToArray(), winnerName);
+                        OphanimNode.StartInitiativeSequence(shots.ToArray(), winnerName,
+                            itemGrants.Count > 0 ? itemGrants.ToArray() : null);
+
+                    // Show the cubilete once the gun sequence finishes.
+                    if (!OphanimNode.IsConnected(
+                            Ophanim.SignalName.InitiativeSequenceCompleted,
+                            Callable.From(OnInitiativeSequenceCompleted)))
+                    {
+                        OphanimNode.InitiativeSequenceCompleted += OnInitiativeSequenceCompleted;
+                    }
                 }
+            }
+            else if (action == "dice_result")
+            {
+                int userId = root.TryGetProperty("user_id", out var drUid) ? drUid.GetInt32() : -1;
+                int die1   = root.TryGetProperty("die1",    out var dr1)   ? dr1.GetInt32()   : 0;
+                int die2   = root.TryGetProperty("die2",    out var dr2)   ? dr2.GetInt32()   : 0;
+                int total  = root.TryGetProperty("total",   out var drTot) ? drTot.GetInt32() : die1 + die2;
+
+                if (userId >= 0 && userId != LiveConnectionManager.LocalUserId)
+                {
+                    string who = _usernameByUserId.TryGetValue(userId, out var dName) ? dName : $"#{userId}";
+                    ChatManager.AddLog($"[color=#aaaaff][DICE][/color] {who} rolled {die1}, {die2} (Total: {total})");
+
+                    if (_activeTurnOrder.Count > 0)
+                    {
+                        _currentTurnIndex = (_currentTurnIndex + 1) % _activeTurnOrder.Count;
+                        string nextColor  = _activeTurnOrder[_currentTurnIndex];
+                        HandleRemoteRoll(die1, die2, who, nextColor);
+                    }
+                }
+            }
+            else if (action == "turn_start")
+            {
+                int userId = root.TryGetProperty("user_id", out var tsUid) ? tsUid.GetInt32() : -1;
+                GD.Print($"[TM] turn_start user_id={userId}");
             }
         }
         catch (Exception ex)
@@ -220,14 +306,57 @@ public partial class TableManager : Node3D
         _seatTokensByColor[color] = token;
     }
 
-    /// <summary>Spawn chairs and item sets for the given number of players (2–4).</summary>
+    /// <summary>Spawn chairs, item sets, and board pieces for the given number of players (2–4).</summary>
     public void Setup(int playerCount)
     {
         playerCount = Mathf.Clamp(playerCount, 2, 4);
-        foreach (int slot in SlotOrders[playerCount - 2])
+
+        // Build the active clockwise turn order from the slots in use.
+        var activeSlots = SlotOrders[playerCount - 2];
+        var activeColorSet = new System.Collections.Generic.HashSet<string>();
+        foreach (int slot in activeSlots)
+            activeColorSet.Add(SlotColorNames[slot].ToLower());
+
+        _activeTurnOrder.Clear();
+        foreach (var c in FullClockwiseOrder)
+            if (activeColorSet.Contains(c)) _activeTurnOrder.Add(c);
+
+        // Spawn chairs and item sets.
+        foreach (int slot in activeSlots)
         {
             var itemSet = SpawnItemSet(slot);
             SpawnChair(slot, itemSet);
+        }
+
+        // Deferred so child nodes' global transforms are ready.
+        Callable.From(SetupPiecesAndCubilete).CallDeferred();
+    }
+
+    private void SetupPiecesAndCubilete()
+    {
+        // Spawn pieces on the board for each active color.
+        var tableroCtrl = GetNodeOrNull<TableroController>("tablero");
+        if (tableroCtrl != null)
+            foreach (var color in _activeTurnOrder)
+                tableroCtrl.SpawnPlayer(color);
+
+        // Cache cubilete geometry and hide it initially.
+        var cubilete = GetNodeOrNull<CubileteController>("CubileteAndDice");
+        var tablero  = GetNodeOrNull<Node3D>("tablero");
+        if (cubilete != null && tablero != null)
+        {
+            var off = cubilete.GlobalPosition - tablero.GlobalPosition;
+            _cubileteRadius    = new Vector2(off.X, off.Z).Length();
+            // Cubilete._Ready already lowered Y by HiddenDepth, so restore it for the surface position.
+            _cubileteHeightOff = off.Y + cubilete.HiddenDepth;
+            GD.Print($"[TM] Cubilete radius={_cubileteRadius:F3} heightOff={_cubileteHeightOff:F3}");
+        }
+
+        // Connect roll-completed signal (once per match).
+        if (cubilete != null && !_rollConnected)
+        {
+            cubilete.RollCompleted += OnRollCompleted;
+            _rollConnected = true;
         }
     }
 
@@ -247,6 +376,78 @@ public partial class TableManager : Node3D
         }
     }
 
+    // ── Cubilete turn management ──────────────────────────────────────────────
+
+    private void OnInitiativeSequenceCompleted()
+    {
+        if (_activeTurnOrder.Count == 0) return;
+        string starterColor = _activeTurnOrder[_currentTurnIndex];
+        var pos = GetCubiletePositionForColor(starterColor);
+        GetNodeOrNull<CubileteController>("CubileteAndDice")?.AppearAt(pos);
+        GD.Print($"[TM] Cubilete appearing for starter: {starterColor} at {pos}");
+    }
+
+    private async void HandleRemoteRoll(int die1, int die2, string who, string nextColor)
+    {
+        // Fire-and-forget physics throw on the local cubilete (cosmetic; dice snap back after ~1 s).
+        GetNodeOrNull<CubileteController>("CubileteAndDice")?.PlayRemoteThrow(1.5f);
+
+        // Wait the full throw duration before showing the HUD result.
+        await ToSignal(GetTree().CreateTimer(1.0f), SceneTreeTimer.SignalName.Timeout);
+        if (!IsInsideTree()) return;
+
+        DiceHUD.ShowStatic(die1, die2);
+        await ToSignal(GetTree().CreateTimer(2.5f), SceneTreeTimer.SignalName.Timeout);
+        if (!IsInsideTree()) return;
+        DiceHUD.HideResult();
+        await ToSignal(GetTree().CreateTimer(0.45f), SceneTreeTimer.SignalName.Timeout);
+        if (!IsInsideTree()) return;
+
+        var targetPos   = GetCubiletePositionForColor(nextColor);
+        var boardCenter = GetNodeOrNull<Node3D>("tablero")?.GlobalPosition ?? GlobalPosition;
+        GetNodeOrNull<CubileteController>("CubileteAndDice")?.MoveToPlayer(targetPos, boardCenter);
+        GD.Print($"[TM] Remote roll by {who}; cubilete arcing to {nextColor}");
+    }
+
+    private void OnRollCompleted(int die1, int die2)
+    {
+        // Send result to server so it can validate and broadcast to other clients.
+        string rollJson = $"{{\"action\":\"roll_dice\",\"die1\":{die1},\"die2\":{die2}}}";
+        LiveConnectionManager.SendGameAction(
+            LiveConnectionManager.CurrentMatchId,
+            LiveConnectionManager.LocalUserId,
+            rollJson);
+
+        if (_activeTurnOrder.Count == 0) return;
+        _currentTurnIndex = (_currentTurnIndex + 1) % _activeTurnOrder.Count;
+        string nextColor  = _activeTurnOrder[_currentTurnIndex];
+        var targetPos     = GetCubiletePositionForColor(nextColor);
+        var boardCenter   = GetNodeOrNull<Node3D>("tablero")?.GlobalPosition ?? GlobalPosition;
+        GetNodeOrNull<CubileteController>("CubileteAndDice")?.MoveToPlayer(targetPos, boardCenter);
+        GD.Print($"[TM] Cubilete arcing to next player: {nextColor} at {targetPos}");
+    }
+
+    private Vector3 GetCubiletePositionForColor(string color)
+    {
+        var tablero = GetNodeOrNull<Node3D>("tablero");
+        if (tablero == null) return GlobalPosition;
+
+        var boardCenter = tablero.GlobalPosition;
+
+        if (!_chairsByColor.TryGetValue(color, out var chair))
+            return boardCenter;
+
+        var toChair = chair.GlobalPosition - boardCenter;
+        toChair.Y = 0f;
+        if (toChair.LengthSquared() < 0.001f) return boardCenter;
+        toChair = toChair.Normalized();
+
+        return new Vector3(
+            boardCenter.X + toChair.X * _cubileteRadius,
+            boardCenter.Y + _cubileteHeightOff,
+            boardCenter.Z + toChair.Z * _cubileteRadius);
+    }
+
     private PlayerItemSet SpawnItemSet(int slot)
     {
         if (PlayerItemSetScene == null) return null;
@@ -257,8 +458,18 @@ public partial class TableManager : Node3D
 
         var itemSetScript = set as PlayerItemSet;
         if (itemSetScript != null)
-            itemSetScript.SlotIndex = slot;
+        {
+            itemSetScript.SlotIndex  = slot;
+            _itemSetsBySlot[slot]    = itemSetScript;
+        }
 
         return itemSetScript;
+    }
+
+    private int ColorToSlot(string colorLower)
+    {
+        for (int i = 0; i < SlotColorNames.Length; i++)
+            if (SlotColorNames[i].ToLower() == colorLower) return i;
+        return -1;
     }
 }

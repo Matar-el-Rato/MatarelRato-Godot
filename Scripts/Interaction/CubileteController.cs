@@ -32,8 +32,20 @@ public partial class CubileteController : Node3D
 	/// <summary>World offset from the camera where dice are spawned at throw time.</summary>
 	[Export] public Vector3 ThrowOriginOffset = new Vector3(0, -0.3f, -0.5f);
 
-	private enum State { Stationary, Held, Rolling, Resetting }
-	private State _currentState = State.Stationary;
+	// ── Signals ───────────────────────────────────────────────────────────────
+	/// <summary>Emitted after dice results are displayed, carrying the face values of each die.</summary>
+	[Signal] public delegate void RollCompletedEventHandler(int die1, int die2);
+
+	[ExportGroup("Turn Arc")]
+	/// <summary>How far below the table the cup starts (hidden until the starter is chosen).</summary>
+	[Export] public float HiddenDepth = 0.175f;
+	/// <summary>Arc height above surface during the inter-player transit.</summary>
+	[Export] public float ArcBobHeight = 0.22f;
+	/// <summary>Duration of the arc transit in seconds.</summary>
+	[Export] public float ArcDuration  = 1.6f;
+
+	private enum State { Hidden, Stationary, Held, Rolling, Resetting, Moving }
+	private State _currentState = State.Hidden;
 
 	private Node3D       _cubileteMesh;
 	private RigidBody3D[] _dice;
@@ -66,6 +78,12 @@ public partial class CubileteController : Node3D
 
 		_interactable.Interacted    += OnInteracted;
 		_originalLocalTransform      = Transform; // local to immediate parent
+
+		// Start hidden below the table surface.
+		Position = new Vector3(Position.X, Position.Y - HiddenDepth, Position.Z);
+		_cubileteMesh.Visible     = false;
+		foreach (var die in _dice) die.Visible = false;
+		_interactable.ProcessMode = ProcessModeEnum.Disabled;
 
 		CallDeferred(MethodName.FindPlayerCamera);
 	}
@@ -234,26 +252,35 @@ public partial class CubileteController : Node3D
 			}
 		}
 
-		CalculateResults();
+		var (die1, die2) = CalculateResults();
 		await Task.Delay(2500);
 		DiceHUD.HideResult();
 		await Task.Delay(450);
-		ResetPosition();
+
+		// Freeze dice where they landed; release the global interaction lock.
+		foreach (var die in _dice) die.Freeze = true;
+		Interactor.IsLocked = false;
+
+		// Signal TableManager to arc the cup to the next player.
+		_currentState = State.Moving;
+		EmitSignal(SignalName.RollCompleted, die1, die2);
 	}
 
 	// ── Results ───────────────────────────────────────────────────────────────
 
 	/// <summary>
-	/// Reads each die's face-up value and posts the result to the chat log.
+	/// Reads each die's face-up value, posts the result to the chat log, and returns (die1, die2).
 	/// </summary>
-	private void CalculateResults()
+	private (int die1, int die2) CalculateResults()
 	{
-		List<int> values = new List<int>();
+		var values = new List<int>();
 		foreach (var die in _dice)
 			values.Add(GetDiceValue(die));
 
 		string resultText = $"[color=#ffaa00][DICE][/color] You rolled: {string.Join(", ", values)} (Total: {GetTotal(values)})";
 		ChatManager.AddLog(resultText);
+
+		return (values.Count > 0 ? values[0] : 0, values.Count > 1 ? values[1] : 0);
 	}
 
 	/// <summary>
@@ -295,6 +322,142 @@ public partial class CubileteController : Node3D
 		int sum = 0;
 		foreach (int v in values) sum += v;
 		return sum;
+	}
+
+	// ── Turn transitions ──────────────────────────────────────────────────────
+
+	/// <summary>
+	/// Rise the cup up from its hidden position to <paramref name="surfaceWorldPos"/>.
+	/// Called by TableManager when the starter is determined.
+	/// </summary>
+	public async void AppearAt(Vector3 surfaceWorldPos)
+	{
+		if (_currentState != State.Hidden && _currentState != State.Moving) return;
+
+		_cubileteMesh.Visible     = false;
+		_interactable.ProcessMode = ProcessModeEnum.Disabled;
+
+		// Teleport to below-surface then rise — snap flat before showing mesh.
+		GlobalPosition = new Vector3(surfaceWorldPos.X, surfaceWorldPos.Y - HiddenDepth, surfaceWorldPos.Z);
+		GlobalRotation = Vector3.Zero;
+		_cubileteMesh.Visible = true;
+
+		var tween = CreateTween()
+			.SetTrans(Tween.TransitionType.Back)
+			.SetEase(Tween.EaseType.Out);
+		tween.TweenProperty(this, "global_position", surfaceWorldPos, 0.85f);
+		await ToSignal(tween, Tween.SignalName.Finished);
+		if (!IsInsideTree()) return;
+
+		_currentState             = State.Stationary;
+		_interactable.ProcessMode = ProcessModeEnum.Inherit;
+		_interactable.PromptText  = "Grab Cubilete";
+	}
+
+	/// <summary>
+	/// Arc the cup clockwise around <paramref name="boardCenter"/> to <paramref name="targetSurfacePos"/>,
+	/// then settle and enable interaction. Dice are hidden during transit and re-parked on arrival.
+	/// </summary>
+	public async void MoveToPlayer(Vector3 targetSurfacePos, Vector3 boardCenter)
+	{
+		_currentState             = State.Moving;
+		_interactable.ProcessMode = ProcessModeEnum.Disabled;
+
+		// Hide dice during transit; snap cup flat immediately (not visible while tilted is jarring).
+		foreach (var die in _dice) { die.Freeze = true; die.Visible = false; }
+		GlobalRotation        = Vector3.Zero;
+		_cubileteMesh.Visible = true;
+
+		// ── Compute arc ───────────────────────────────────────────────────────
+		var startOffset = new Vector2(GlobalPosition.X - boardCenter.X, GlobalPosition.Z - boardCenter.Z);
+		var endOffset   = new Vector2(targetSurfacePos.X - boardCenter.X, targetSurfacePos.Z - boardCenter.Z);
+
+		float radius     = Mathf.Max(startOffset.Length(), 0.01f);
+		float startAngle = Mathf.Atan2(startOffset.Y, startOffset.X);
+		float endAngle   = Mathf.Atan2(endOffset.Y,   endOffset.X);
+
+		// Always travel clockwise (increasing angle in Godot XZ convention).
+		while (endAngle <= startAngle) endAngle += Mathf.Tau;
+
+		float surfaceY = targetSurfacePos.Y;
+		int   steps    = 24;
+
+		var arcTween = CreateTween().SetTrans(Tween.TransitionType.Linear);
+		for (int i = 1; i <= steps; i++)
+		{
+			float t     = (float)i / steps;
+			float angle = Mathf.Lerp(startAngle, endAngle, t);
+			float x     = boardCenter.X + radius * Mathf.Cos(angle);
+			float z     = boardCenter.Z + radius * Mathf.Sin(angle);
+			float y     = surfaceY + Mathf.Sin(t * Mathf.Pi) * ArcBobHeight;
+			arcTween.TweenProperty(this, "global_position", new Vector3(x, y, z), ArcDuration / steps);
+		}
+		await ToSignal(arcTween, Tween.SignalName.Finished);
+		if (!IsInsideTree()) return;
+
+		// Snap to exact target position + flatten rotation with a small bounce.
+		var settleTween = CreateTween().SetParallel()
+			.SetTrans(Tween.TransitionType.Back)
+			.SetEase(Tween.EaseType.Out);
+		settleTween.TweenProperty(this, "global_position", targetSurfacePos, 0.3f);
+		settleTween.TweenProperty(this, "global_rotation", Vector3.Zero, 0.3f);
+		await ToSignal(settleTween, Tween.SignalName.Finished);
+		if (!IsInsideTree()) return;
+
+		// Park dice inside the cup at the new position.
+		for (int i = 0; i < _dice.Length; i++)
+		{
+			_dice[i].GlobalPosition = targetSurfacePos + new Vector3(0f, 0.02f + 0.02f * i, 0f);
+			_dice[i].GlobalRotation = GlobalRotation;
+			_dice[i].LinearVelocity  = Vector3.Zero;
+			_dice[i].AngularVelocity = Vector3.Zero;
+			_dice[i].Visible         = true;
+		}
+
+		_currentState             = State.Stationary;
+		_interactable.ProcessMode = ProcessModeEnum.Inherit;
+		_interactable.PromptText  = "Grab Cubilete";
+	}
+
+	/// <summary>
+	/// Cosmetic throw for remote players: briefly launches the local dice with random impulses,
+	/// then snaps them back inside the cup after <paramref name="throwDuration"/> seconds.
+	/// Does not change state — the cup stays Stationary for the local player.
+	/// </summary>
+	public async void PlayRemoteThrow(float throwDuration = 1.0f)
+	{
+		if (_currentState == State.Hidden || _currentState == State.Moving) return;
+
+		Vector3 launchPos = GlobalPosition;
+		for (int i = 0; i < _dice.Length; i++)
+		{
+			_dice[i].Freeze          = false;
+			_dice[i].LinearVelocity  = Vector3.Zero;
+			_dice[i].AngularVelocity = Vector3.Zero;
+			_dice[i].GlobalPosition  = launchPos + new Vector3(
+				(float)GD.RandRange(-0.06f, 0.06f), 0.04f + 0.04f * i, (float)GD.RandRange(-0.06f, 0.06f));
+			_dice[i].Visible = true;
+			_dice[i].ApplyCentralImpulse(new Vector3(
+				(float)GD.RandRange(-0.5f, 0.5f),
+				(float)GD.RandRange(1.8f,  2.8f),
+				(float)GD.RandRange(-0.5f, 0.5f)) * ThrowForce);
+			_dice[i].ApplyTorqueImpulse(new Vector3(
+				(float)GD.RandRange(-1f, 1f),
+				(float)GD.RandRange(-1f, 1f),
+				(float)GD.RandRange(-1f, 1f)) * RandomRotationForce);
+		}
+
+		await ToSignal(GetTree().CreateTimer(throwDuration), SceneTreeTimer.SignalName.Timeout);
+		if (!IsInsideTree()) return;
+
+		for (int i = 0; i < _dice.Length; i++)
+		{
+			_dice[i].Freeze          = true;
+			_dice[i].LinearVelocity  = Vector3.Zero;
+			_dice[i].AngularVelocity = Vector3.Zero;
+			_dice[i].GlobalPosition  = launchPos + new Vector3(0f, 0.02f + 0.02f * i, 0f);
+			_dice[i].Visible         = false;
+		}
 	}
 
 	// ── Reset ─────────────────────────────────────────────────────────────────

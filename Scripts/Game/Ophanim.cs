@@ -49,14 +49,28 @@ public partial class Ophanim : Node3D
 
 	// ── Initiative ────────────────────────────────────────────────────────────
 	[ExportGroup("Initiative")]
-	[Export] public PackedScene InitiativeGunScene;
-	[Export] public float GunSpawnDropY      = -0.40f;
+	[Export] public PackedScene   InitiativeGunScene;
+	[Export] public float GunRestYAboveTable  = 0.45f;
 	[Export] public float GunSpawnDropTime   = 0.6f;
 	[Export] public float GunSpawnReadyDelay = 1.1f;
 	[Export] public float GunRotateTime   = 2.0f;
 	[Export] public float GunPreShotPause = 0.3f;
 	[Export] public float GunMisfirePause = 1.0f;
 	[Export] public float GunBangPause    = 2.0f;
+
+	// ── Item Grants ───────────────────────────────────────────────────────────
+	[ExportGroup("Item Grants")]
+	[Export] public AudioStream BrimstoneRaySound;
+	[Export] public float BrimstoneRayVolumeDb = -10f;
+	[Export] public float ItemRayGrowTime      = 0.35f;
+	[Export] public float ItemRayHoldTime      = 0.55f;
+	[Export] public float ItemRayShrinkTime    = 0.35f;
+	[Export] public float ItemRayRadius        = 0.018f;
+	[Export] public float ItemGrantPause       = 0.4f;
+
+	// ── Signals ───────────────────────────────────────────────────────────────
+	/// <summary>Fired after the initiative gun sequence ends and the gun despawns.</summary>
+	[Signal] public delegate void InitiativeSequenceCompletedEventHandler();
 
 	// ── Character pools ────────────────────────────────────────────────────────
 	private static readonly char[] _blockChars = { '█', '▓', '▒', '░' };
@@ -84,6 +98,7 @@ public partial class Ophanim : Node3D
 	private Vector3 _baseRotation;
 	private float   _descendYOffset;
 	private bool    _hasActivated;
+	private Vector3 _boardCenterWorld;
 
 	// ── Initiative Gun ────────────────────────────────────────────────────────
 	private Vector3 _redChairWorldPos;
@@ -91,6 +106,8 @@ public partial class Ophanim : Node3D
 	private bool  _greetingDone;
 	private (Vector3 pos, string result)[] _pendingShots;
 	private string _pendingWinnerName = "";
+
+	private (Vector3 worldPos, System.Action onSpawn)[] _pendingItemGrants;
 
 	private readonly Random _rng = new Random();
 
@@ -193,11 +210,12 @@ public partial class Ophanim : Node3D
 
 	/// <summary>Called by TableManager when chairs_locked is received. Descends
 	/// from the ceiling, enables ambient audio, then runs the greeting sequence.</summary>
-	public void DescendAndActivate(Vector3 redChairWorldPos)
+	public void DescendAndActivate(Vector3 redChairWorldPos, Vector3 boardCenterWorld)
 	{
 		if (_hasActivated) return;
-		_hasActivated    = true;
+		_hasActivated     = true;
 		_redChairWorldPos = redChairWorldPos;
+		_boardCenterWorld = boardCenterWorld;
 
 		// Sounds start NOW so they accompany the descent.
 		EnableAmbientAudio();
@@ -242,11 +260,13 @@ public partial class Ophanim : Node3D
 
 		if (_pendingShots != null)
 		{
-			var shots      = _pendingShots;
-			var winnerName = _pendingWinnerName;
+			var shots       = _pendingShots;
+			var winnerName  = _pendingWinnerName;
+			var itemGrants  = _pendingItemGrants;
 			_pendingShots      = null;
 			_pendingWinnerName = "";
-			RunInitiativeGunSequence(shots, winnerName);
+			_pendingItemGrants = null;
+			RunInitiativeGunSequence(shots, winnerName, itemGrants);
 		}
 	}
 
@@ -254,14 +274,18 @@ public partial class Ophanim : Node3D
 
 	/// <summary>Called by TableManager when initiative_sequence is received.
 	/// If the greeting is still playing the data is queued and played afterwards.</summary>
-	public void StartInitiativeSequence((Vector3 pos, string result)[] shots, string winnerName)
+	public void StartInitiativeSequence(
+		(Vector3 pos, string result)[] shots,
+		string winnerName,
+		(Vector3 worldPos, System.Action onSpawn)[] itemGrants = null)
 	{
 		if (_greetingDone)
-			RunInitiativeGunSequence(shots, winnerName);
+			RunInitiativeGunSequence(shots, winnerName, itemGrants);
 		else
 		{
 			_pendingShots      = shots;
 			_pendingWinnerName = winnerName;
+			_pendingItemGrants = itemGrants;
 		}
 	}
 
@@ -280,7 +304,7 @@ public partial class Ophanim : Node3D
 		// it sits stably in world space and global_rotation tweens work cleanly.
 		instance.TopLevel       = true;
 		instance.GlobalPosition = GlobalPosition;
-		instance.Scale          = Vector3.Zero;
+		instance.Scale          = Vector3.One * 0.001f;
 
 		// Aim at red chair immediately so the gun is already aligned during the
 		// pop-in and descent animations — no mid-air snap visible to the player.
@@ -297,18 +321,25 @@ public partial class Ophanim : Node3D
 		else
 			_initiativeGun.SetInteractionEnabled(false);
 
-		// Pop in, then descend to the operating position.
-		float dropTargetY = GlobalPosition.Y + GunSpawnDropY;
+		// Pop in at Ophanim's center, then tween to a fixed position above the table center
+		// so the resting height is never affected by Ophanim's bobbing animation.
+		var restTarget = new Vector3(
+			_boardCenterWorld.X,
+			_boardCenterWorld.Y + GunRestYAboveTable,
+			_boardCenterWorld.Z);
 		var spawnTween = CreateTween();
 		spawnTween.TweenProperty(instance, "scale", Vector3.One, 0.4f)
 				  .SetTrans(Tween.TransitionType.Back)
 				  .SetEase(Tween.EaseType.Out);
-		spawnTween.TweenProperty(instance, "global_position:y", dropTargetY, GunSpawnDropTime)
+		spawnTween.TweenProperty(instance, "global_position", restTarget, GunSpawnDropTime)
 				  .SetTrans(Tween.TransitionType.Cubic)
 				  .SetEase(Tween.EaseType.Out);
 	}
 
-	private async void RunInitiativeGunSequence((Vector3 pos, string result)[] shots, string winnerName)
+	private async void RunInitiativeGunSequence(
+		(Vector3 pos, string result)[] shots,
+		string winnerName,
+		(Vector3 worldPos, System.Action onSpawn)[] itemGrants)
 	{
 		if (_initiativeGun == null) return;
 
@@ -358,7 +389,7 @@ public partial class Ophanim : Node3D
 			}
 		}
 
-		// Despawn the gun.
+		// Despawn the gun, then hand off to item grants before signalling completion.
 		if (IsInstanceValid(_initiativeGun))
 		{
 			var despawnTween = CreateTween();
@@ -369,8 +400,114 @@ public partial class Ophanim : Node3D
 			{
 				if (IsInstanceValid(_initiativeGun)) _initiativeGun.QueueFree();
 				_initiativeGun = null;
+				RunItemGrantsSequence(itemGrants);
 			};
 		}
+		else
+		{
+			RunItemGrantsSequence(itemGrants);
+		}
+	}
+
+	// ── Item Grant Rays ───────────────────────────────────────────────────────
+
+	private async void RunItemGrantsSequence((Vector3 worldPos, System.Action onSpawn)[] grants)
+	{
+		if (grants == null || grants.Length == 0)
+		{
+			EmitSignal(SignalName.InitiativeSequenceCompleted);
+			return;
+		}
+
+		await ToSignal(GetTree().CreateTimer(0.5f), SceneTreeTimer.SignalName.Timeout);
+		if (!IsInsideTree()) return;
+
+		foreach (var (worldPos, onSpawn) in grants)
+		{
+			await ShootItemRay(worldPos, onSpawn);
+			if (!IsInsideTree()) return;
+			await ToSignal(GetTree().CreateTimer(ItemGrantPause), SceneTreeTimer.SignalName.Timeout);
+			if (!IsInsideTree()) return;
+		}
+
+		EmitSignal(SignalName.InitiativeSequenceCompleted);
+	}
+
+	private async System.Threading.Tasks.Task ShootItemRay(Vector3 targetWorldPos, System.Action onSpawn)
+	{
+		Vector3 from = GlobalPosition;
+		Vector3 to   = targetWorldPos;
+		Vector3 dir  = to - from;
+		float   dist = dir.Length();
+		if (dist < 0.01f) { onSpawn?.Invoke(); return; }
+		dir = dir.Normalized();
+
+		// Build orientation: local Y → direction of ray.
+		Vector3 refUp = Mathf.Abs(dir.Dot(Vector3.Up)) < 0.9f ? Vector3.Up : Vector3.Right;
+		Vector3 right = dir.Cross(refUp).Normalized();
+		Vector3 back  = right.Cross(dir).Normalized();
+
+		// Ray mesh — white emissive cylinder.
+		var rayNode = new MeshInstance3D { TopLevel = true };
+		GetParent().AddChild(rayNode);
+		rayNode.GlobalTransform = new Transform3D(new Basis(right, dir, back), (from + to) * 0.5f);
+
+		var cylinder = new CylinderMesh
+		{
+			Height       = dist,
+			TopRadius    = ItemRayRadius,
+			BottomRadius = ItemRayRadius,
+		};
+		var mat = new StandardMaterial3D
+		{
+			ShadingMode             = StandardMaterial3D.ShadingModeEnum.Unshaded,
+			AlbedoColor             = new Color(1f, 1f, 1f),
+			EmissionEnabled         = true,
+			Emission                = new Color(1f, 1f, 1f),
+			EmissionEnergyMultiplier = 4f,
+		};
+		rayNode.Mesh             = cylinder;
+		rayNode.MaterialOverride = mat;
+
+		// Play brimstone sound.
+		AudioStreamPlayer3D audio = null;
+		if (BrimstoneRaySound != null)
+		{
+			audio            = new AudioStreamPlayer3D { TopLevel = true };
+			audio.Stream     = BrimstoneRaySound;
+			audio.VolumeDb   = BrimstoneRayVolumeDb;
+			GetParent().AddChild(audio);
+			audio.GlobalPosition = from;
+			audio.Play();
+		}
+
+		// Grow from needle-thin to full width.
+		rayNode.Scale = new Vector3(0f, 1f, 0f);
+		var growTween = CreateTween().SetParallel()
+			.SetTrans(Tween.TransitionType.Quad)
+			.SetEase(Tween.EaseType.Out);
+		growTween.TweenProperty(rayNode, "scale:x", 1f, ItemRayGrowTime);
+		growTween.TweenProperty(rayNode, "scale:z", 1f, ItemRayGrowTime);
+		await ToSignal(growTween, Tween.SignalName.Finished);
+		if (!IsInsideTree()) { rayNode.QueueFree(); audio?.QueueFree(); return; }
+
+		// Hold.
+		await ToSignal(GetTree().CreateTimer(ItemRayHoldTime), SceneTreeTimer.SignalName.Timeout);
+		if (!IsInsideTree()) { rayNode.QueueFree(); audio?.QueueFree(); return; }
+
+		// Spawn the item.
+		onSpawn?.Invoke();
+
+		// Collapse the ray.
+		var shrinkTween = CreateTween().SetParallel()
+			.SetTrans(Tween.TransitionType.Quad)
+			.SetEase(Tween.EaseType.In);
+		shrinkTween.TweenProperty(rayNode, "scale:x", 0f, ItemRayShrinkTime);
+		shrinkTween.TweenProperty(rayNode, "scale:z", 0f, ItemRayShrinkTime);
+		await ToSignal(shrinkTween, Tween.SignalName.Finished);
+
+		rayNode.QueueFree();
+		audio?.QueueFree();
 	}
 
 	private async Task ShowWinnerAnnouncementAsync(string winnerName)
