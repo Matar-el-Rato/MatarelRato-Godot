@@ -81,7 +81,7 @@ public partial class CubileteController : Node3D
 
 		// Start hidden below the table surface.
 		Position = new Vector3(Position.X, Position.Y - HiddenDepth, Position.Z);
-		_cubileteMesh.Visible     = false;
+		SetCubileteVisible(false);
 		foreach (var die in _dice) die.Visible = false;
 		_interactable.ProcessMode = ProcessModeEnum.Disabled;
 
@@ -166,7 +166,7 @@ public partial class CubileteController : Node3D
 		Interactor.IsLocked        = true;
 
 		// Hide cup and dice until the throw — they reappear when launched.
-		_cubileteMesh.Visible = false;
+		SetCubileteVisible(false);
 		foreach (var die in _dice)
 			die.Visible = false;
 	}
@@ -233,7 +233,8 @@ public partial class CubileteController : Node3D
 
 		DiceHUD.AttachDice(_dice);
 
-		// Poll until all dice are sleeping or 15 seconds elapse.
+		// Poll until all dice are truly still (both linear AND angular velocity below
+		// threshold) or 15 s elapse.  Checking only LinearVelocity misses slow spins.
 		bool allAtRest    = false;
 		int  timeoutTicks = 0;
 		while (!allAtRest && timeoutTicks < 150)
@@ -244,7 +245,7 @@ public partial class CubileteController : Node3D
 			allAtRest = true;
 			foreach (var die in _dice)
 			{
-				if (!die.Sleeping && die.LinearVelocity.Length() > 0.01f)
+				if (die.LinearVelocity.Length() > 0.01f || die.AngularVelocity.Length() > 0.05f)
 				{
 					allAtRest = false;
 					break;
@@ -252,18 +253,24 @@ public partial class CubileteController : Node3D
 			}
 		}
 
+		// Freeze FIRST so no additional physics step can change orientation between
+		// the read and the freeze.
+		foreach (var die in _dice) die.Freeze = true;
+
+		// Now read face values from the frozen (authoritative) transforms.
 		var (die1, die2) = CalculateResults();
+
+		// Lock HUD to the frozen face values — stops live transform tracking so
+		// MoveToPlayer repositioning the dice can't corrupt the display.
+		DiceHUD.ShowStatic(die1, die2);
+		Interactor.IsLocked = false;
+		_currentState = State.Moving;
+		EmitSignal(SignalName.RollCompleted, die1, die2);
+
+		// HUD fades out in the background while the cup is already moving.
 		await Task.Delay(2500);
 		DiceHUD.HideResult();
 		await Task.Delay(450);
-
-		// Freeze dice where they landed; release the global interaction lock.
-		foreach (var die in _dice) die.Freeze = true;
-		Interactor.IsLocked = false;
-
-		// Signal TableManager to arc the cup to the next player.
-		_currentState = State.Moving;
-		EmitSignal(SignalName.RollCompleted, die1, die2);
 	}
 
 	// ── Results ───────────────────────────────────────────────────────────────
@@ -334,13 +341,13 @@ public partial class CubileteController : Node3D
 	{
 		if (_currentState != State.Hidden && _currentState != State.Moving) return;
 
-		_cubileteMesh.Visible     = false;
+		SetCubileteVisible(false);
 		_interactable.ProcessMode = ProcessModeEnum.Disabled;
 
 		// Teleport to below-surface then rise — snap flat before showing mesh.
 		GlobalPosition = new Vector3(surfaceWorldPos.X, surfaceWorldPos.Y - HiddenDepth, surfaceWorldPos.Z);
 		GlobalRotation = Vector3.Zero;
-		_cubileteMesh.Visible = true;
+		SetCubileteVisible(true);
 
 		var tween = CreateTween()
 			.SetTrans(Tween.TransitionType.Back)
@@ -365,8 +372,8 @@ public partial class CubileteController : Node3D
 
 		// Hide dice during transit; snap cup flat immediately (not visible while tilted is jarring).
 		foreach (var die in _dice) { die.Freeze = true; die.Visible = false; }
-		GlobalRotation        = Vector3.Zero;
-		_cubileteMesh.Visible = true;
+		GlobalRotation = Vector3.Zero;
+		SetCubileteVisible(true);
 
 		// ── Compute arc ───────────────────────────────────────────────────────
 		var startOffset = new Vector2(GlobalPosition.X - boardCenter.X, GlobalPosition.Z - boardCenter.Z);
@@ -460,6 +467,22 @@ public partial class CubileteController : Node3D
 		}
 	}
 
+	// ── Visibility + collision ────────────────────────────────────────────────
+
+	private void SetCubileteVisible(bool visible)
+	{
+		_cubileteMesh.Visible = visible;
+		// Sync collision layer so hidden cup doesn't block 3-D raycasts (e.g. piece clicks).
+		foreach (var child in _cubileteMesh.FindChildren("*", "", true, false))
+		{
+			if (child is CollisionObject3D co)
+			{
+				co.CollisionLayer = visible ? 1u : 0u;
+				co.CollisionMask  = visible ? 1u : 0u;
+			}
+		}
+	}
+
 	// ── Reset ─────────────────────────────────────────────────────────────────
 
 	/// <summary>
@@ -468,8 +491,8 @@ public partial class CubileteController : Node3D
 	/// </summary>
 	private void ResetPosition()
 	{
-		_currentState         = State.Resetting;
-		_cubileteMesh.Visible = true;
+		_currentState = State.Resetting;
+		SetCubileteVisible(true);
 
 		// Recompute world target from the parent's CURRENT global transform so the
 		// cubilete returns to the table surface even after PlayingSetup has risen.

@@ -265,14 +265,24 @@ public partial class Interactable : Node3D, IInteractable
 	{
 		if (node is MeshInstance3D meshInstance)
 		{
-			bool hasCollision = false;
-			foreach (Node child in meshInstance.GetChildren(true))
-			{
-				if (child is StaticBody3D) { hasCollision = true; break; }
-			}
+			// Jolt Physics rejects singular transforms (any zero-scale axis).
+			// Skip collision generation for such meshes to avoid engine errors.
+			var basis = meshInstance.GlobalTransform.Basis;
+			float minAxisLen = Mathf.Min(
+				Mathf.Min(basis.Column0.Length(), basis.Column1.Length()),
+				basis.Column2.Length());
 
-			if (!hasCollision)
-				meshInstance.CreateTrimeshCollision();
+			if (minAxisLen >= 0.001f)
+			{
+				bool hasCollision = false;
+				foreach (Node child in meshInstance.GetChildren(true))
+				{
+					if (child is StaticBody3D) { hasCollision = true; break; }
+				}
+
+				if (!hasCollision)
+					meshInstance.CreateTrimeshCollision();
+			}
 		}
 
 		foreach (Node child in node.GetChildren(true))

@@ -27,10 +27,7 @@ public partial class BoardDemo : Node
 	private void StartDemo()
 	{
 		foreach (var color in Colors)
-		{
 			_board.SpawnPlayer(color);
-			_board.ExitBase(color, 0);
-		}
 
 		var timer = new Timer { WaitTime = StepInterval, Autostart = true };
 		timer.Timeout += OnTick;
@@ -40,17 +37,28 @@ public partial class BoardDemo : Node
 	private void OnTick()
 	{
 		string color = Colors[_turn % Colors.Length];
-		int steps = _rng.RandiRange(1, 5);
+		int    steps = _rng.RandiRange(1, 5);
 
-		// If the piece entered the home corridor or finished, loop it back out
 		var piece = _board.GetPiece(color, 0);
-		if (piece != null && (piece.BoardIndex >= 100 || piece.IsFinished()))
+		if (piece == null) { _turn++; return; }
+
+		if (piece.IsInBase())
 		{
-			_board.ResetToStart(color, 0);
+			// Exit from base to start square.
+			int startSq = TableroController.StartPositions[color];
+			_board.ApplyServerMove(color, 0, -1, startSq);
+		}
+		else if (piece.IsFinished() || piece.BoardIndex >= 100)
+		{
+			// Loop back: send the piece home, it will re-exit next tick.
+			_board.ReturnToBase(color, 0);
 		}
 		else
 		{
-			_board.MovePiece(color, 0, steps);
+			int from = piece.BoardIndex;
+			int to   = ParchisLogic.Advance(color, from, steps);
+			if (to < 0) to = TableroController.GoalSquare[color];
+			_board.ApplyServerMove(color, 0, from, to);
 		}
 
 		_turn++;

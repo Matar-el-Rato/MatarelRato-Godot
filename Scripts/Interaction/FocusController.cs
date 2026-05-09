@@ -21,7 +21,7 @@ public partial class FocusController : Node
 	/// <summary>Global singleton — set in _Ready.</summary>
 	public static FocusController Instance { get; private set; }
 
-	[Export] public float    TransitionDuration = 0.6f;
+	[Export] public float    TransitionDuration = 0.3f;
 	[Export] public NodePath PlayerPath         = "/root/Main/Player";
 	[Export] public float    DefaultFOV         = 75.0f;
 

@@ -811,4 +811,5 @@ RedactionRate = 0.03
 BubbleWorldScale = 2.6
 GreetingMsg3 = "THE MAKAROV WILL ROTATE. A CLICK PASSES. A SHOT DECIDES."
 InitiativeGunScene = ExtResource("43_jkhus")
+GunRestYAboveTable = 0.4
 BrimstoneRaySound = ExtResource("45_xot12")

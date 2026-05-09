@@ -62,11 +62,11 @@ public partial class Ophanim : Node3D
 	[ExportGroup("Item Grants")]
 	[Export] public AudioStream BrimstoneRaySound;
 	[Export] public float BrimstoneRayVolumeDb = -10f;
-	[Export] public float ItemRayGrowTime      = 0.35f;
-	[Export] public float ItemRayHoldTime      = 0.55f;
-	[Export] public float ItemRayShrinkTime    = 0.35f;
+	[Export] public float ItemRayGrowTime      = 0.18f;
+	[Export] public float ItemRayHoldTime      = 0.22f;
+	[Export] public float ItemRayShrinkTime    = 0.15f;
 	[Export] public float ItemRayRadius        = 0.018f;
-	[Export] public float ItemGrantPause       = 0.4f;
+	[Export] public float ItemGrantPause       = 0.2f;
 
 	// ── Signals ───────────────────────────────────────────────────────────────
 	/// <summary>Fired after the initiative gun sequence ends and the gun despawns.</summary>
@@ -351,7 +351,6 @@ public partial class Ophanim : Node3D
 		await ToSignal(GetTree().CreateTimer(0.5f), SceneTreeTimer.SignalName.Timeout);
 		if (!IsInsideTree()) return;
 
-		bool announceDone = false;
 		foreach (var (chairWorldPos, result) in shots)
 		{
 			// Aim from the gun's own world position (TopLevel, stable in space).
@@ -384,7 +383,6 @@ public partial class Ophanim : Node3D
 			{
 				await ShowWinnerAnnouncementAsync(winnerName);
 				if (!IsInsideTree()) return;
-				announceDone = true;
 				break;
 			}
 		}
@@ -416,10 +414,11 @@ public partial class Ophanim : Node3D
 		if (grants == null || grants.Length == 0)
 		{
 			EmitSignal(SignalName.InitiativeSequenceCompleted);
+			AscendAndHide();
 			return;
 		}
 
-		await ToSignal(GetTree().CreateTimer(0.5f), SceneTreeTimer.SignalName.Timeout);
+		await ToSignal(GetTree().CreateTimer(0.25f), SceneTreeTimer.SignalName.Timeout);
 		if (!IsInsideTree()) return;
 
 		foreach (var (worldPos, onSpawn) in grants)
@@ -431,6 +430,26 @@ public partial class Ophanim : Node3D
 		}
 
 		EmitSignal(SignalName.InitiativeSequenceCompleted);
+		AscendAndHide();
+	}
+
+	private void AscendAndHide()
+	{
+		if (_interactable != null) _interactable.Enabled = false;
+		StopGarbledAudio();
+
+		var tween = CreateTween();
+		tween.TweenMethod(
+			Callable.From((float v) => _descendYOffset = v),
+			_descendYOffset, DescentHiddenOffset, DescentDuration)
+			.SetTrans(Tween.TransitionType.Cubic)
+			.SetEase(Tween.EaseType.In);
+		tween.Finished += () =>
+		{
+			_droneAudio?.Stop();
+			_wingFlapAudio?.Stop();
+			Visible = false;
+		};
 	}
 
 	private async System.Threading.Tasks.Task ShootItemRay(Vector3 targetWorldPos, System.Action onSpawn)
@@ -507,7 +526,9 @@ public partial class Ophanim : Node3D
 		await ToSignal(shrinkTween, Tween.SignalName.Finished);
 
 		rayNode.QueueFree();
-		audio?.QueueFree();
+		// Let the audio finish naturally rather than cutting it.
+		if (audio != null)
+			audio.Finished += () => { if (IsInstanceValid(audio)) audio.QueueFree(); };
 	}
 
 	private async Task ShowWinnerAnnouncementAsync(string winnerName)
