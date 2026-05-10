@@ -67,6 +67,7 @@ public partial class Ophanim : Node3D
 	[Export] public float ItemRayShrinkTime    = 0.15f;
 	[Export] public float ItemRayRadius        = 0.018f;
 	[Export] public float ItemGrantPause       = 0.2f;
+	[Export] public string LivesMessage        = "EACH PLAYER BEGINS WITH 3 LIVES. LOSE THEM ALL — ELIMINATED.";
 
 	// ── Signals ───────────────────────────────────────────────────────────────
 	/// <summary>Fired after the initiative gun sequence ends and the gun despawns.</summary>
@@ -411,23 +412,25 @@ public partial class Ophanim : Node3D
 
 	private async void RunItemGrantsSequence((Vector3 worldPos, System.Action onSpawn)[] grants)
 	{
-		if (grants == null || grants.Length == 0)
+		if (grants != null && grants.Length > 0)
 		{
-			EmitSignal(SignalName.InitiativeSequenceCompleted);
-			AscendAndHide();
-			return;
+			await ToSignal(GetTree().CreateTimer(0.25f), SceneTreeTimer.SignalName.Timeout);
+			if (!IsInsideTree()) return;
+
+			foreach (var (worldPos, onSpawn) in grants)
+			{
+				await ShootItemRay(worldPos, onSpawn);
+				if (!IsInsideTree()) return;
+				await ToSignal(GetTree().CreateTimer(ItemGrantPause), SceneTreeTimer.SignalName.Timeout);
+				if (!IsInsideTree()) return;
+			}
 		}
 
-		await ToSignal(GetTree().CreateTimer(0.25f), SceneTreeTimer.SignalName.Timeout);
+		// Explain the lives system before handing off to the game.
+		await ToSignal(GetTree().CreateTimer(0.3f), SceneTreeTimer.SignalName.Timeout);
 		if (!IsInsideTree()) return;
-
-		foreach (var (worldPos, onSpawn) in grants)
-		{
-			await ShootItemRay(worldPos, onSpawn);
-			if (!IsInsideTree()) return;
-			await ToSignal(GetTree().CreateTimer(ItemGrantPause), SceneTreeTimer.SignalName.Timeout);
-			if (!IsInsideTree()) return;
-		}
+		await RunDecodeSequenceAsync(LivesMessage, GreetingHoldDuration * 0.7f);
+		if (!IsInsideTree()) return;
 
 		EmitSignal(SignalName.InitiativeSequenceCompleted);
 		AscendAndHide();

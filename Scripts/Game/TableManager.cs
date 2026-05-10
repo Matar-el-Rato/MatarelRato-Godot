@@ -65,6 +65,11 @@ public partial class TableManager : Node3D
     private float _cubileteRadius    = 0.744f;
     private float _cubileteHeightOff = 0.075f;
     private bool  _rollConnected     = false;
+    // Track which player the cubilete is currently at so we skip redundant arcs
+    // (first turn_start after initiative, doubles extra turn).
+    private int   _cubileteAtUserId  = -1;
+    // Suppress MoveToPlayer while Ophanim's initiative sequence is still playing.
+    private bool  _initiativeInProgress = false;
 
     // ── Game board state ──────────────────────────────────────────────────────
     // positions[colorSlot][pieceIndex]; slot 0=blue 1=green 2=yellow 3=red.
@@ -111,7 +116,9 @@ public partial class TableManager : Node3D
         _usernameByUserId.Clear();
         _takenChairCount  = 0;
         _activeTurnOrder.Clear();
-        _rollConnected    = false;
+        _rollConnected       = false;
+        _cubileteAtUserId    = -1;
+        _initiativeInProgress = false;
         _itemSetsBySlot.Clear();
         foreach (var row in _boardPositions)
             Array.Clear(row, 0, row.Length);
@@ -227,6 +234,9 @@ public partial class TableManager : Node3D
 
     private void OnInitiativeSequence(JsonElement root)
     {
+        // Suppress cubilete arc during the full Ophanim sequence.
+        _initiativeInProgress = true;
+
         // Store golden squares if present.
         if (root.TryGetProperty("golden_squares", out var gsEl))
         {
@@ -271,6 +281,20 @@ public partial class TableManager : Node3D
             }
         }
 
+        // Prepend a cubilete spawn ray so it appears at the winner's spot
+        // with a brimstone beam, before the item rays fire.
+        if (winnerUserId >= 0 && _colorByUserId.TryGetValue(winnerUserId, out var winnerColor))
+        {
+            Vector3 cubPos = GetCubiletePositionForColor(winnerColor.ToLower());
+            int     wUid   = winnerUserId;
+            (Vector3, Action) cubiletGrant = (cubPos, () =>
+            {
+                GetNodeOrNull<CubileteController>("CubileteAndDice")?.AppearAt(cubPos);
+                _cubileteAtUserId = wUid;
+            });
+            itemGrants.Insert(0, cubiletGrant);
+        }
+
         if (shots.Count > 0)
             OphanimNode.StartInitiativeSequence(shots.ToArray(), winnerName,
                 itemGrants.Count > 0 ? itemGrants.ToArray() : null);
@@ -290,12 +314,17 @@ public partial class TableManager : Node3D
         _isMyTurn = (userId == LiveConnectionManager.LocalUserId);
         GD.Print($"[TM] turn_start user_id={userId} isMyTurn={_isMyTurn}");
 
-        // Move cubilete to the active player.
+        // Skip the cubilete arc if:
+        //   - Ophanim's initiative sequence is still playing (cubilete spawns via ray instead), OR
+        //   - It's the same player's turn again (doubles — cubilete is already there).
+        if (_initiativeInProgress || userId == _cubileteAtUserId) return;
+
         if (_colorByUserId.TryGetValue(userId, out var color))
         {
             var targetPos   = GetCubiletePositionForColor(color);
             var boardCenter = GetNodeOrNull<Node3D>("tablero")?.GlobalPosition ?? GlobalPosition;
             GetNodeOrNull<CubileteController>("CubileteAndDice")?.MoveToPlayer(targetPos, boardCenter);
+            _cubileteAtUserId = userId;
         }
     }
 
@@ -473,6 +502,11 @@ public partial class TableManager : Node3D
         int lives  = root.TryGetProperty("lives_remaining", out var l) ? l.GetInt32() : 0;
         string who = _usernameByUserId.TryGetValue(userId, out var n) ? n : $"#{userId}";
         GD.Print($"[TM] life_lost: {who} now has {lives} lives");
+
+        if (!_colorByUserId.TryGetValue(userId, out var color)) return;
+        int slot = ColorToSlot(color.ToLower());
+        if (slot >= 0 && _itemSetsBySlot.TryGetValue(slot, out var itemSet))
+            itemSet.SetLives(lives);
     }
 
     private void OnGameOver(JsonElement root)
@@ -600,7 +634,8 @@ public partial class TableManager : Node3D
 
     private void OnInitiativeSequenceCompleted()
     {
-        // Cubilete will appear when the first turn_start fires.
+        _initiativeInProgress = false;
+        // Cubilete is already at the winner's position from the initiative ray.
     }
 
     private void OnRollCompleted(int die1, int die2)

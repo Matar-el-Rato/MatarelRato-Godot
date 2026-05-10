@@ -345,7 +345,7 @@ public partial class TableroController : Node3D
 		// ── Destination ring (scale in last, then pulse) ──────────────────────
 		// TorusMesh lies flat in the XZ plane by default — no rotation needed.
 		int destSq  = path[^1];
-		var destPos = GetBoardWorldPosition(destSq, color) + Vector3.Up * yOff;
+		var destPos = GetBoardWorldPosition(destSq, color);
 
 		var ringMat = new StandardMaterial3D
 		{

@@ -6,7 +6,6 @@
 using Godot;
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 
 /// <summary>
 /// Manages the full cubilete (dice cup) interaction sequence:
@@ -239,7 +238,8 @@ public partial class CubileteController : Node3D
 		int  timeoutTicks = 0;
 		while (!allAtRest && timeoutTicks < 150)
 		{
-			await Task.Delay(100);
+			await ToSignal(GetTree().CreateTimer(0.1), SceneTreeTimer.SignalName.Timeout);
+			if (!IsInsideTree()) return;
 			timeoutTicks++;
 
 			allAtRest = true;
@@ -268,9 +268,10 @@ public partial class CubileteController : Node3D
 		EmitSignal(SignalName.RollCompleted, die1, die2);
 
 		// HUD fades out in the background while the cup is already moving.
-		await Task.Delay(2500);
+		await ToSignal(GetTree().CreateTimer(2.5), SceneTreeTimer.SignalName.Timeout);
+		if (!IsInsideTree()) return;
 		DiceHUD.HideResult();
-		await Task.Delay(450);
+		await ToSignal(GetTree().CreateTimer(0.45), SceneTreeTimer.SignalName.Timeout);
 	}
 
 	// ── Results ───────────────────────────────────────────────────────────────
@@ -433,7 +434,18 @@ public partial class CubileteController : Node3D
 	/// </summary>
 	public async void PlayRemoteThrow(float throwDuration = 1.0f)
 	{
-		if (_currentState == State.Hidden || _currentState == State.Moving) return;
+		if (_currentState == State.Hidden) return;
+
+		// If the cubilete is still arcing to this player's position, wait for it to settle.
+		// This happens when a remote player rolls immediately after their turn_start fires.
+		int waited = 0;
+		while (_currentState == State.Moving && waited < 25)
+		{
+			await ToSignal(GetTree().CreateTimer(0.1f), SceneTreeTimer.SignalName.Timeout);
+			if (!IsInsideTree()) return;
+			waited++;
+		}
+		if (_currentState == State.Hidden) return;
 
 		Vector3 launchPos = GlobalPosition;
 		for (int i = 0; i < _dice.Length; i++)

@@ -56,6 +56,10 @@ public partial class PlayerCameraController : CharacterBody3D
 	private bool  _isTransitioning = false;
 	public  bool  IsSitting      => _isSitting;
 	public  bool  IsTransitioning => _isTransitioning;
+
+	// Lower-left Shift-key hint shown while seated or in focus mode.
+	private Control _shiftHint;
+	private Label   _shiftHintText;
 	private Chair _currentChair;
 	private float _sittingYaw     = 0f;
 	private Vector3 _preSitPosition;
@@ -80,6 +84,8 @@ public partial class PlayerCameraController : CharacterBody3D
 		FloorConstantSpeed = true;
 		FloorStopOnSlope   = true;
 		ApplyFloorSnap();
+
+		CallDeferred(MethodName.BuildShiftHint);
 	}
 
 	/// <summary>
@@ -532,5 +538,95 @@ public void SwapCharacter(CharacterEntry entry, float duration = 0.8f)
 		};
 
 		UpdateAnimations(Vector3.Zero);
+	}
+
+	// ── Shift hint UI ─────────────────────────────────────────────────────────
+
+	public override void _Process(double delta)
+	{
+		UpdateShiftHint();
+	}
+
+	private void BuildShiftHint()
+	{
+		var ui = GetNodeOrNull<CanvasLayer>("UI");
+		if (ui == null) return;
+
+		// HBoxContainer pinned to the bottom-left corner.
+		var hbox = new HBoxContainer();
+		hbox.AnchorLeft   = 0f;  hbox.AnchorRight  = 0f;
+		hbox.AnchorTop    = 1f;  hbox.AnchorBottom = 1f;
+		hbox.OffsetLeft   = 16f;
+		hbox.OffsetTop    = -54f;   // 38 px height + 16 px bottom margin
+		hbox.OffsetRight  = 250f;
+		hbox.OffsetBottom = -16f;
+		hbox.AddThemeConstantOverride("separation", 8);
+		hbox.MouseFilter  = Control.MouseFilterEnum.Ignore;
+		hbox.Visible      = false;
+		ui.AddChild(hbox);
+		_shiftHint = hbox;
+
+		// Key icon — same style as the E key in the existing PromptContainer.
+		var keyLabel = new Label();
+		keyLabel.Text                = "Shift";
+		keyLabel.CustomMinimumSize   = new Vector2(48, 30);
+		keyLabel.HorizontalAlignment = HorizontalAlignment.Center;
+		keyLabel.VerticalAlignment   = VerticalAlignment.Center;
+		keyLabel.SizeFlagsVertical   = Control.SizeFlags.ShrinkCenter;
+
+		var style = new StyleBoxFlat();
+		style.BgColor     = new Color(0.08f, 0.08f, 0.08f, 0.85f);
+		style.BorderColor = new Color(0.6f, 0.6f, 0.6f, 0.5f);
+		style.SetBorderWidthAll(2);
+		style.SetCornerRadiusAll(4);
+		style.SetContentMarginAll(3f);
+		keyLabel.AddThemeStyleboxOverride("normal", style);
+
+		var font = GD.Load<FontFile>("res://Assets/Fonts/Jersey10-Regular.ttf");
+		if (font != null)
+		{
+			keyLabel.AddThemeFontOverride("font", font);
+			keyLabel.AddThemeFontSizeOverride("font_size", 16);
+		}
+		keyLabel.AddThemeColorOverride("font_color",         new Color(1f, 1f, 1f, 0.95f));
+		keyLabel.AddThemeColorOverride("font_outline_color", new Color(0f, 0f, 0f, 1f));
+		keyLabel.AddThemeConstantOverride("outline_size", 3);
+		hbox.AddChild(keyLabel);
+
+		// Action text label.
+		var textLabel = new Label();
+		textLabel.VerticalAlignment   = VerticalAlignment.Center;
+		textLabel.SizeFlagsVertical   = Control.SizeFlags.ShrinkCenter;
+		if (font != null)
+		{
+			textLabel.AddThemeFontOverride("font", font);
+			textLabel.AddThemeFontSizeOverride("font_size", 26);
+		}
+		textLabel.AddThemeColorOverride("font_outline_color", new Color(0f, 0f, 0f, 1f));
+		textLabel.AddThemeConstantOverride("outline_size", 4);
+		hbox.AddChild(textLabel);
+		_shiftHintText = textLabel;
+	}
+
+	private void UpdateShiftHint()
+	{
+		if (_shiftHint == null) return;
+
+		bool focused = FocusController.Instance?.IsFocused ?? false;
+
+		if (focused)
+		{
+			_shiftHint.Visible    = true;
+			_shiftHintText.Text   = "Return";
+		}
+		else if (_isSitting)
+		{
+			_shiftHint.Visible    = true;
+			_shiftHintText.Text   = "Stand Up";
+		}
+		else
+		{
+			_shiftHint.Visible = false;
+		}
 	}
 }

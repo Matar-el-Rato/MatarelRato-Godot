@@ -27,15 +27,17 @@ public partial class DiceHUD : Control
 
     // Maps face value 1-6 to the die rotation that puts that face pointing up (+Y).
     // Face-axis mapping: +X=4, -X=3, +Y=2, -Y=5, +Z=6, -Z=1.
+    // Rx(+π/2): local −Z → world +Y  → face 1 on top
+    // Rx(−π/2): local +Z → world +Y  → face 6 on top
     private static readonly Vector3[] FaceRotations = new[]
     {
         Vector3.Zero,                                    // 0 (unused)
-        new Vector3(-Mathf.Pi / 2f, 0f, 0f),           // 1  (-Z → +Y)
+        new Vector3( Mathf.Pi / 2f, 0f, 0f),           // 1  (-Z → +Y)
         new Vector3(0f, 0f, 0f),                        // 2  (+Y → +Y)
         new Vector3(0f, 0f, -Mathf.Pi / 2f),           // 3  (-X → +Y)
         new Vector3(0f, 0f,  Mathf.Pi / 2f),           // 4  (+X → +Y)
         new Vector3(Mathf.Pi, 0f, 0f),                  // 5  (-Y → +Y)
-        new Vector3( Mathf.Pi / 2f, 0f, 0f),           // 6  (+Z → +Y)
+        new Vector3(-Mathf.Pi / 2f, 0f, 0f),           // 6  (+Z → +Y)
     };
 
     private RigidBody3D[] _activeDice;

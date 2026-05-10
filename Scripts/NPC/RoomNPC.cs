@@ -217,7 +217,7 @@ public partial class RoomNPC : CharacterBody3D
 
 	private async System.Threading.Tasks.Task DoWelcomeSequence()
 	{
-		// 1. Show dialog and immediately lock camera look.
+		// 1. Show dialog and lock look.
 		_dialogBubble?.ShowDialog("Welcome.\nThe room is yours.", force: true);
 		var pcc    = Player as PlayerCameraController;
 		var camera = Player?.GetNodeOrNull<Camera3D>("Camera3D");
@@ -226,27 +226,26 @@ public partial class RoomNPC : CharacterBody3D
 		float originalRotY = Player?.Rotation.Y ?? 0f;
 		float originalFov  = camera?.Fov ?? 75f;
 
-		// 2. Hold 2 seconds on the dialog.
+		// 2. Hold 2 s on the dialog.
 		await ToSignal(GetTree().CreateTimer(2.0f), SceneTreeTimer.SignalName.Timeout);
 		if (!IsInsideTree()) return;
 
-		// 3. Snap-turn to +X and expand FOV slightly (0.6s).
+		// 3. Snap-turn to look behind and expand FOV slightly.
 		{
 			var turnTween = CreateTween();
 			turnTween.SetParallel(true);
-			turnTween.TweenInterval(0.6f); // safety — guarantees Finished fires
 			if (Player != null)
-				turnTween.TweenProperty(Player, "rotation:y", -Mathf.Pi / 2f, 0.6f)
+				turnTween.TweenProperty(Player, "rotation:y", -Mathf.Pi / 2f, 0.35f)
 						 .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
 			if (camera != null)
-				turnTween.TweenProperty(camera, "fov", originalFov + 22f, 0.6f)
+				turnTween.TweenProperty(camera, "fov", originalFov + 14f, 0.35f)
 						 .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.Out);
 			await ToSignal(turnTween, Tween.SignalName.Finished);
 			if (!IsInsideTree()) return;
 		}
 
-		// 4. Wait 0.5s, then slide apparel out (left goes +Z, right goes -Z).
-		await ToSignal(GetTree().CreateTimer(0.5f), SceneTreeTimer.SignalName.Timeout);
+		// 4. Brief pause then slide apparel and shift mood lighting.
+		await ToSignal(GetTree().CreateTimer(0.3f), SceneTreeTimer.SignalName.Timeout);
 		if (!IsInsideTree()) return;
 
 		_stoneScrapeAudio?.Play();
@@ -254,32 +253,32 @@ public partial class RoomNPC : CharacterBody3D
 		var apparelTween = CreateTween();
 		apparelTween.SetParallel(true);
 		if (LeftApparel != null)
-			apparelTween.TweenProperty(LeftApparel,  "position:z", LeftApparel.Position.Z  + 1.5f, 1.0f)
+			apparelTween.TweenProperty(LeftApparel,  "position:z", LeftApparel.Position.Z  + 1.5f, 0.6f)
 						.SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.InOut);
 		if (RightApparel != null)
-			apparelTween.TweenProperty(RightApparel, "position:z", RightApparel.Position.Z - 1.5f, 1.0f)
+			apparelTween.TweenProperty(RightApparel, "position:z", RightApparel.Position.Z - 1.5f, 0.6f)
 						.SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.InOut);
 		foreach (var (light, _) in _moodLights)
 			if (IsInstanceValid(light))
-				apparelTween.TweenProperty(light, "light_color", MoodyColor, 1.2f)
+				apparelTween.TweenProperty(light, "light_color", MoodyColor, 0.7f)
 							.SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
 		apparelTween.Finished += () => ApparelOpened?.Invoke();
 
-		// 5. Wait for apparel to finish, then for PlayingSetup to fully rise, then return camera.
 		await ToSignal(apparelTween, Tween.SignalName.Finished);
 		if (!IsInsideTree()) return;
-		await ToSignal(GetTree().CreateTimer(1.2f), SceneTreeTimer.SignalName.Timeout);
+
+		// 5. Hold briefly while the table rises, then return rotation and FOV.
+		await ToSignal(GetTree().CreateTimer(0.8f), SceneTreeTimer.SignalName.Timeout);
 		if (!IsInsideTree()) return;
 
 		{
 			var returnTween = CreateTween();
 			returnTween.SetParallel(true);
-			returnTween.TweenInterval(0.6f);
 			if (Player != null)
-				returnTween.TweenProperty(Player, "rotation:y", originalRotY, 0.6f)
+				returnTween.TweenProperty(Player, "rotation:y", originalRotY, 0.35f)
 						   .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
 			if (camera != null)
-				returnTween.TweenProperty(camera, "fov", originalFov, 0.6f)
+				returnTween.TweenProperty(camera, "fov", originalFov, 0.35f)
 						   .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
 			await ToSignal(returnTween, Tween.SignalName.Finished);
 			if (!IsInsideTree()) return;
@@ -289,7 +288,7 @@ public partial class RoomNPC : CharacterBody3D
 
 		WelcomeCompleted?.Invoke();
 
-		// 6. Play pointing animation now the player has full control back.
+		// 6. NPC pointing animation once the player has full control.
 		if (_animPlayer != null && _animPlayer.HasAnimation(TalkAnimation))
 		{
 			_animPlayer.Play(TalkAnimation, 0.3f);
