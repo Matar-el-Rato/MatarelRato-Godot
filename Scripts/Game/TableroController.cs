@@ -80,6 +80,9 @@ public partial class TableroController : Node3D
 	// Path preview nodes shown on hover.
 	private readonly List<Node> _pathPreviewNodes = new();
 
+	// Permanent golden square markers.
+	private readonly List<Node> _goldenMarkers = new();
+
 	// ── Lifecycle ─────────────────────────────────────────────────────────────
 
 	public override void _Ready() { }
@@ -392,6 +395,62 @@ public partial class TableroController : Node3D
 		foreach (var n in _pathPreviewNodes)
 			if (IsInstanceValid(n)) n.QueueFree();
 		_pathPreviewNodes.Clear();
+	}
+
+	/// <summary>Drops a permanent golden square marker on <paramref name="boardIndex"/> after a brimstone ray hit.</summary>
+	public void MarkGoldenSquare(int boardIndex)
+	{
+		var pos = GetBoardWorldPosition(boardIndex);
+
+		// Semi-transparent gold overlay — unshaded so lighting doesn't interfere.
+		var mat = new StandardMaterial3D
+		{
+			ShadingMode              = BaseMaterial3D.ShadingModeEnum.Unshaded,
+			AlbedoColor              = new Color(1f, 0.70f, 0.08f,0.30f),
+			Transparency             = BaseMaterial3D.TransparencyEnum.Alpha,
+			EmissionEnabled          = true,
+			Emission                 = new Color(1f, 0.72f, 0.1f),
+			EmissionEnergyMultiplier = 0.7f,
+			CullMode                 = BaseMaterial3D.CullModeEnum.Disabled,
+			NoDepthTest              = false,
+			RenderPriority           = 2,
+		};
+
+		// Rectangular tile — wider than deep to match parchis square proportions.
+		// Rotated (portrait):     1-7 (top-right bar), 25-41 (left bar + bottom-left), 59+ (right bar).
+		// Not rotated (landscape): 8-24 (top column + top-left), 42-58 (bottom + bottom-right).
+		bool needsRotation = (boardIndex >= 1  && boardIndex <= 7)  ||
+		                     (boardIndex >= 25 && boardIndex <= 41) ||
+		                     (boardIndex >= 59);
+
+		var marker = new MeshInstance3D
+		{
+			Mesh             = new BoxMesh { Size = new Vector3(0.128f, 0.0002f, 0.055f) },
+			MaterialOverride = mat,
+			CastShadow       = GeometryInstance3D.ShadowCastingSetting.Off,
+			Scale            = Vector3.Zero,
+		};
+		AddChild(marker);
+		marker.GlobalPosition  = pos;
+		marker.RotationDegrees = needsRotation ? new Vector3(0f, 90f, 0f) : Vector3.Zero;
+		_goldenMarkers.Add(marker);
+
+		var scaleTween = marker.CreateTween();
+		scaleTween.TweenProperty(marker, "scale", Vector3.One, 0.35f)
+			.SetTrans(Tween.TransitionType.Back)
+			.SetEase(Tween.EaseType.Out);
+		scaleTween.TweenCallback(Callable.From(() =>
+		{
+			var pulse = marker.CreateTween().SetLoops();
+			pulse.TweenMethod(
+				Callable.From((float a) => mat.AlbedoColor = new Color(1f, 0.70f, 0.08f,a)),
+				0.30f, 0.50f, 1.1f)
+				.SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
+			pulse.TweenMethod(
+				Callable.From((float a) => mat.AlbedoColor = new Color(1f, 0.70f, 0.08f,a)),
+				0.50f, 0.30f, 1.1f)
+				.SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
+		}));
 	}
 
 	// ── Utility ───────────────────────────────────────────────────────────────

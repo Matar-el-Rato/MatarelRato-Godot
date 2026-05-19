@@ -33,14 +33,12 @@ public partial class PlayerItemSet : Node3D
     {
         foreach (Node child in GetChildren())
         {
-            // Casings (shell nodes) stay visible — they always show lives.
-            bool isCasing = _casingNames.Contains(child.Name.ToString());
             if (child is Node3D node3d)
             {
                 _originalScales[child.Name] = node3d.Scale;
-                if (!isCasing) node3d.Visible = false;
+                node3d.Visible = false;
             }
-            if (!isCasing) SetChildInteractions(child, false);
+            SetChildInteractions(child, false);
         }
     }
 
@@ -108,6 +106,23 @@ public partial class PlayerItemSet : Node3D
 
         AddBurnFlash(item.GlobalPosition);
         AddEmbers(item.GlobalPosition);
+    }
+
+    /// <summary>Reveals all shell casings with a scale-in tween. Called by the brimstone ray on startup.</summary>
+    public void SpawnShells()
+    {
+        foreach (var casing in _casingNodes)
+        {
+            if (!IsInstanceValid(casing)) continue;
+            Vector3 origScale = _originalScales.TryGetValue(casing.Name, out var s) ? s : casing.Scale;
+            casing.Scale   = origScale * 0.001f;
+            casing.Visible = true;
+            casing.CreateTween()
+                .TweenProperty(casing, "scale", origScale, 0.4f)
+                .SetTrans(Tween.TransitionType.Back)
+                .SetEase(Tween.EaseType.Out);
+        }
+        AddBurnFlash(GlobalPosition);
     }
 
     /// <summary>
@@ -210,8 +225,8 @@ public partial class PlayerItemSet : Node3D
 
     private static void SetStaticBodiesEnabled(Node node, bool enabled)
     {
-        if (node is StaticBody3D sb)
-            sb.ProcessMode = enabled ? ProcessModeEnum.Inherit : ProcessModeEnum.Disabled;
+        if (node is CollisionObject3D col)
+            col.ProcessMode = enabled ? ProcessModeEnum.Inherit : ProcessModeEnum.Disabled;
         foreach (Node child in node.GetChildren(true))
             SetStaticBodiesEnabled(child, enabled);
     }

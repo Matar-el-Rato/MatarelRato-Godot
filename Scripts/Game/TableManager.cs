@@ -295,9 +295,33 @@ public partial class TableManager : Node3D
             itemGrants.Insert(0, cubiletGrant);
         }
 
+        // Build a separate list for golden square rays (Ophanim introduces them first).
+        var goldenGrants = new List<(Vector3, Action)>();
+        var tableroForGolden = GetNodeOrNull<TableroController>("tablero");
+        if (tableroForGolden != null)
+        {
+            foreach (int sq in _goldenSquares)
+            {
+                int capturedSq       = sq;
+                Vector3 sqWorldPos   = tableroForGolden.GetBoardWorldPosition(capturedSq);
+                var     capturedCtrl = tableroForGolden;
+                goldenGrants.Add((sqWorldPos, () => capturedCtrl.MarkGoldenSquare(capturedSq)));
+            }
+        }
+
+        // One ray per active player's shell set, fired just before the lives speech.
+        var shellGrants = new List<(Vector3, Action)>();
+        foreach (var itemSet in _itemSetsBySlot.Values)
+        {
+            var capturedSet = itemSet;
+            shellGrants.Add((capturedSet.GetItemWorldPosition("shell"), () => capturedSet.SpawnShells()));
+        }
+
         if (shots.Count > 0)
             OphanimNode.StartInitiativeSequence(shots.ToArray(), winnerName,
-                itemGrants.Count > 0 ? itemGrants.ToArray() : null);
+                itemGrants.Count > 0   ? itemGrants.ToArray()   : null,
+                goldenGrants.Count > 0 ? goldenGrants.ToArray() : null,
+                shellGrants.Count > 0  ? shellGrants.ToArray()  : null);
 
         if (!OphanimNode.IsConnected(Ophanim.SignalName.InitiativeSequenceCompleted,
                 Callable.From(OnInitiativeSequenceCompleted)))

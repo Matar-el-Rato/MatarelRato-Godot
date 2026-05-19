@@ -67,7 +67,9 @@ public partial class Ophanim : Node3D
 	[Export] public float ItemRayShrinkTime    = 0.15f;
 	[Export] public float ItemRayRadius        = 0.018f;
 	[Export] public float ItemGrantPause       = 0.2f;
-	[Export] public string LivesMessage        = "EACH PLAYER BEGINS WITH 3 LIVES. LOSE THEM ALL — ELIMINATED.";
+	[Export] public string LivesMessage          = "EACH PLAYER BEGINS WITH 3 LIVES. LOSE THEM ALL — ELIMINATED.";
+	[Export] public string GoldenSquaresMessage  = "FOUR SQUARES ON THIS BOARD HAVE BEEN MARKED IN GOLD.";
+	[Export] public string GoldenSquaresMessage2 = "LAND ON ONE — AND FORTUNE WILL DECIDE YOUR FATE.";
 
 	// ── Signals ───────────────────────────────────────────────────────────────
 	/// <summary>Fired after the initiative gun sequence ends and the gun despawns.</summary>
@@ -109,6 +111,8 @@ public partial class Ophanim : Node3D
 	private string _pendingWinnerName = "";
 
 	private (Vector3 worldPos, System.Action onSpawn)[] _pendingItemGrants;
+	private (Vector3 worldPos, System.Action onSpawn)[] _pendingGoldenGrants;
+	private (Vector3 worldPos, System.Action onSpawn)[] _pendingShellGrants;
 
 	private readonly Random _rng = new Random();
 
@@ -261,13 +265,17 @@ public partial class Ophanim : Node3D
 
 		if (_pendingShots != null)
 		{
-			var shots       = _pendingShots;
-			var winnerName  = _pendingWinnerName;
-			var itemGrants  = _pendingItemGrants;
-			_pendingShots      = null;
-			_pendingWinnerName = "";
-			_pendingItemGrants = null;
-			RunInitiativeGunSequence(shots, winnerName, itemGrants);
+			var shots        = _pendingShots;
+			var winnerName   = _pendingWinnerName;
+			var itemGrants   = _pendingItemGrants;
+			var goldenGrants = _pendingGoldenGrants;
+			var shellGrants  = _pendingShellGrants;
+			_pendingShots        = null;
+			_pendingWinnerName   = "";
+			_pendingItemGrants   = null;
+			_pendingGoldenGrants = null;
+			_pendingShellGrants  = null;
+			RunInitiativeGunSequence(shots, winnerName, itemGrants, goldenGrants, shellGrants);
 		}
 	}
 
@@ -278,15 +286,19 @@ public partial class Ophanim : Node3D
 	public void StartInitiativeSequence(
 		(Vector3 pos, string result)[] shots,
 		string winnerName,
-		(Vector3 worldPos, System.Action onSpawn)[] itemGrants = null)
+		(Vector3 worldPos, System.Action onSpawn)[] itemGrants   = null,
+		(Vector3 worldPos, System.Action onSpawn)[] goldenGrants = null,
+		(Vector3 worldPos, System.Action onSpawn)[] shellGrants  = null)
 	{
 		if (_greetingDone)
-			RunInitiativeGunSequence(shots, winnerName, itemGrants);
+			RunInitiativeGunSequence(shots, winnerName, itemGrants, goldenGrants, shellGrants);
 		else
 		{
-			_pendingShots      = shots;
-			_pendingWinnerName = winnerName;
-			_pendingItemGrants = itemGrants;
+			_pendingShots        = shots;
+			_pendingWinnerName   = winnerName;
+			_pendingItemGrants   = itemGrants;
+			_pendingGoldenGrants = goldenGrants;
+			_pendingShellGrants  = shellGrants;
 		}
 	}
 
@@ -340,7 +352,9 @@ public partial class Ophanim : Node3D
 	private async void RunInitiativeGunSequence(
 		(Vector3 pos, string result)[] shots,
 		string winnerName,
-		(Vector3 worldPos, System.Action onSpawn)[] itemGrants)
+		(Vector3 worldPos, System.Action onSpawn)[] itemGrants,
+		(Vector3 worldPos, System.Action onSpawn)[] goldenGrants,
+		(Vector3 worldPos, System.Action onSpawn)[] shellGrants)
 	{
 		if (_initiativeGun == null) return;
 
@@ -391,6 +405,8 @@ public partial class Ophanim : Node3D
 		// Despawn the gun, then hand off to item grants before signalling completion.
 		if (IsInstanceValid(_initiativeGun))
 		{
+			// Disable all physics inside the gun before scaling to zero — Jolt rejects singular transforms.
+			SetPhysicsEnabled(_initiativeGun, false);
 			var despawnTween = CreateTween();
 			despawnTween.TweenProperty(_initiativeGun, "scale", Vector3.Zero, 0.3f)
 						.SetTrans(Tween.TransitionType.Back)
@@ -399,18 +415,21 @@ public partial class Ophanim : Node3D
 			{
 				if (IsInstanceValid(_initiativeGun)) _initiativeGun.QueueFree();
 				_initiativeGun = null;
-				RunItemGrantsSequence(itemGrants);
+				RunItemGrantsSequence(itemGrants, goldenGrants, shellGrants);
 			};
 		}
 		else
 		{
-			RunItemGrantsSequence(itemGrants);
+			RunItemGrantsSequence(itemGrants, goldenGrants, shellGrants);
 		}
 	}
 
 	// ── Item Grant Rays ───────────────────────────────────────────────────────
 
-	private async void RunItemGrantsSequence((Vector3 worldPos, System.Action onSpawn)[] grants)
+	private async void RunItemGrantsSequence(
+		(Vector3 worldPos, System.Action onSpawn)[] grants,
+		(Vector3 worldPos, System.Action onSpawn)[] goldenGrants,
+		(Vector3 worldPos, System.Action onSpawn)[] shellGrants)
 	{
 		if (grants != null && grants.Length > 0)
 		{
@@ -426,7 +445,42 @@ public partial class Ophanim : Node3D
 			}
 		}
 
-		// Explain the lives system before handing off to the game.
+		// Introduce the golden squares before revealing them.
+		if (goldenGrants != null && goldenGrants.Length > 0)
+		{
+			await ToSignal(GetTree().CreateTimer(0.3f), SceneTreeTimer.SignalName.Timeout);
+			if (!IsInsideTree()) return;
+			await RunDecodeSequenceAsync(GoldenSquaresMessage, GreetingHoldDuration * 0.55f);
+			if (!IsInsideTree()) return;
+			await ToSignal(GetTree().CreateTimer(GreetingMsgPause), SceneTreeTimer.SignalName.Timeout);
+			if (!IsInsideTree()) return;
+			await RunDecodeSequenceAsync(GoldenSquaresMessage2, GreetingHoldDuration * 0.55f);
+			if (!IsInsideTree()) return;
+
+			foreach (var (worldPos, onSpawn) in goldenGrants)
+			{
+				await ShootItemRay(worldPos, onSpawn);
+				if (!IsInsideTree()) return;
+				await ToSignal(GetTree().CreateTimer(ItemGrantPause), SceneTreeTimer.SignalName.Timeout);
+				if (!IsInsideTree()) return;
+			}
+		}
+
+		// Fire one ray per player's shell set, then explain the lives system.
+		if (shellGrants != null && shellGrants.Length > 0)
+		{
+			await ToSignal(GetTree().CreateTimer(0.3f), SceneTreeTimer.SignalName.Timeout);
+			if (!IsInsideTree()) return;
+
+			foreach (var (worldPos, onSpawn) in shellGrants)
+			{
+				await ShootItemRay(worldPos, onSpawn);
+				if (!IsInsideTree()) return;
+				await ToSignal(GetTree().CreateTimer(ItemGrantPause), SceneTreeTimer.SignalName.Timeout);
+				if (!IsInsideTree()) return;
+			}
+		}
+
 		await ToSignal(GetTree().CreateTimer(0.3f), SceneTreeTimer.SignalName.Timeout);
 		if (!IsInsideTree()) return;
 		await RunDecodeSequenceAsync(LivesMessage, GreetingHoldDuration * 0.7f);
@@ -694,5 +748,13 @@ public partial class Ophanim : Node3D
 			if (found != null) return found;
 		}
 		return null;
+	}
+
+	private static void SetPhysicsEnabled(Node node, bool enabled)
+	{
+		if (node is CollisionObject3D col)
+			col.ProcessMode = enabled ? ProcessModeEnum.Inherit : ProcessModeEnum.Disabled;
+		foreach (Node child in node.GetChildren(true))
+			SetPhysicsEnabled(child, enabled);
 	}
 }
