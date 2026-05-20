@@ -3,6 +3,7 @@
 [ext_resource type="Texture2D" uid="uid://bdow7xpjm0o3" path="res://Assets/Textures/moon_sky.png" id="1_qxria"]
 [ext_resource type="AudioStream" uid="uid://d35ykscrkw14f" path="res://Assets/Music/Portal Radio Tune.mp3" id="4_hx8n4"]
 [ext_resource type="PackedScene" uid="uid://b8bnktsbevaar" path="res://Assets/Environment/MainScene/SceneTest.glb" id="6_scene_test"]
+[ext_resource type="PackedScene" uid="uid://gmbeacpp0km6" path="res://Scenes/Game/Roulette.tscn" id="6_usjqs"]
 [ext_resource type="PackedScene" uid="uid://bpd6m0lb3j2ls" path="res://Scenes/Player.tscn" id="6_y4jh7"]
 [ext_resource type="Script" uid="uid://ct45xk2s628kn" path="res://Scripts/Environment/EnvironmentCollision.cs" id="7_env_collision"]
 [ext_resource type="PackedScene" uid="uid://b7105h1f46xpg" path="res://Assets/PlayingSet/General/mesa_poker.glb" id="8_f140w"]
@@ -615,7 +616,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.1901207, 0, -0.09963226)
 script = ExtResource("50_tablemgr")
 ChairScene = ExtResource("51_chair_scene")
 PlayerItemSetScene = ExtResource("52_pitemset")
-OphanimNode = NodePath("../../Ophanim")
+OphanimNode = NodePath("../Ophanim")
 
 [node name="mesa_poker" parent="Room1/PlayingSetup" unique_id=474140406 instance=ExtResource("8_f140w")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.457277, 0.43543047, -5.255393)
@@ -626,6 +627,18 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.453938, 0.7376139, -5.248
 
 [node name="CubileteAndDice" parent="Room1/PlayingSetup" unique_id=740891976 instance=ExtResource("17_mymud")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14.709938, 0.8132103, -5.257575)
+
+[node name="Ophanim" parent="Room1" unique_id=711424089 instance=ExtResource("47_uuu6x")]
+transform = Transform3D(-2.1855694e-08, 0, -0.5, 0, 0.5, 0, 0.5, 0, -2.1855694e-08, -15.350682, 1.6314306, -5.350116)
+RedactionRate = 0.03
+BubbleWorldScale = 2.6
+GreetingMsg3 = "THE MAKAROV WILL ROTATE. A CLICK PASSES. A SHOT DECIDES."
+InitiativeGunScene = ExtResource("43_jkhus")
+GunRestYAboveTable = 0.4
+BrimstoneRaySound = ExtResource("45_xot12")
+
+[node name="Roulette" parent="Room1" unique_id=1714169080 instance=ExtResource("6_usjqs")]
+transform = Transform3D(1.0000001, -1.5529405e-22, 0, 0, -1.0000001, -8.742278e-08, 0, 8.742278e-08, -1, -15.255946, 3.5341876, -5.342228)
 
 [node name="Room2" type="Node3D" parent="." unique_id=1167468490]
 
@@ -804,12 +817,3 @@ anchors_preset = 0
 script = ExtResource("60_dicehud")
 
 [node name="DitherEffect" parent="." unique_id=1599022892 instance=ExtResource("37_dither_effect")]
-
-[node name="Ophanim" parent="." unique_id=711424089 instance=ExtResource("47_uuu6x")]
-transform = Transform3D(-2.1855694e-08, 0, -0.5, 0, 0.5, 0, 0.5, 0, -2.1855694e-08, -15.350682, 1.6314306, -5.350116)
-RedactionRate = 0.03
-BubbleWorldScale = 2.6
-GreetingMsg3 = "THE MAKAROV WILL ROTATE. A CLICK PASSES. A SHOT DECIDES."
-InitiativeGunScene = ExtResource("43_jkhus")
-GunRestYAboveTable = 0.4
-BrimstoneRaySound = ExtResource("45_xot12")

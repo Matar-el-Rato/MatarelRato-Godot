@@ -204,7 +204,7 @@ public partial class FocusController : Node
 
 	public override void _Input(InputEvent @event)
 	{
-		if (_isFocused && @event.IsActionPressed("sprint"))
+		if (_isFocused && !ChatManager.IsChatOpen && @event.IsActionPressed("sprint"))
 			ExitFocus();
 	}
 

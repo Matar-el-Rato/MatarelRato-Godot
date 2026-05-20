@@ -213,7 +213,7 @@ public partial class TableManager : Node3D
         int    userId = root.TryGetProperty("user_id", out var uvEl) ? uvEl.GetInt32() : -1;
 
         if (_seatTokensByColor.TryGetValue(color, out var token) && IsInstanceValid(token)) {
-            token.QueueFree();
+            token.Disappear();
             _seatTokensByColor.Remove(color);
         }
         if (_chairsByColor.TryGetValue(color, out var vacatedChair))
@@ -317,11 +317,31 @@ public partial class TableManager : Node3D
             shellGrants.Add((capturedSet.GetItemWorldPosition("shell"), () => capturedSet.SpawnShells()));
         }
 
+        // One ray per board piece — fired after BEGIN announcement.
+        var pieceGrants = new List<(Vector3, Action)>();
+        var tableroForPieces = GetNodeOrNull<TableroController>("tablero");
+        if (tableroForPieces != null)
+        {
+            foreach (var color in _activeTurnOrder)
+            {
+                for (int p = 0; p < 4; p++)
+                {
+                    var capturedColor = color;
+                    var capturedP     = p;
+                    var ficha         = tableroForPieces.GetPiece(color, p);
+                    if (ficha == null) continue;
+                    Vector3 piecePos = ficha.GlobalPosition;
+                    pieceGrants.Add((piecePos, () => tableroForPieces.RevealFicha(capturedColor, capturedP)));
+                }
+            }
+        }
+
         if (shots.Count > 0)
             OphanimNode.StartInitiativeSequence(shots.ToArray(), winnerName,
                 itemGrants.Count > 0   ? itemGrants.ToArray()   : null,
                 goldenGrants.Count > 0 ? goldenGrants.ToArray() : null,
-                shellGrants.Count > 0  ? shellGrants.ToArray()  : null);
+                shellGrants.Count > 0  ? shellGrants.ToArray()  : null,
+                pieceGrants.Count > 0  ? pieceGrants.ToArray()  : null);
 
         if (!OphanimNode.IsConnected(Ophanim.SignalName.InitiativeSequenceCompleted,
                 Callable.From(OnInitiativeSequenceCompleted)))
@@ -338,10 +358,15 @@ public partial class TableManager : Node3D
         _isMyTurn = (userId == LiveConnectionManager.LocalUserId);
         GD.Print($"[TM] turn_start user_id={userId} isMyTurn={_isMyTurn}");
 
-        // Skip the cubilete arc if:
-        //   - Ophanim's initiative sequence is still playing (cubilete spawns via ray instead), OR
-        //   - It's the same player's turn again (doubles — cubilete is already there).
-        if (_initiativeInProgress || userId == _cubileteAtUserId) return;
+        if (_initiativeInProgress) return;
+
+        if (userId == _cubileteAtUserId)
+        {
+            // Doubles: cup stays in place but must be re-armed so the local player can grab it again.
+            if (_isMyTurn)
+                GetNodeOrNull<CubileteController>("CubileteAndDice")?.ReadyForRoll();
+            return;
+        }
 
         if (_colorByUserId.TryGetValue(userId, out var color))
         {
@@ -493,12 +518,26 @@ public partial class TableManager : Node3D
 
     private void OnGoldenSquareEvent(JsonElement root)
     {
-        string result = root.TryGetProperty("roulette_result", out var r) ? r.GetString() : "";
-        string item   = "";
-        if (root.TryGetProperty("item", out var it) && it.ValueKind == JsonValueKind.String)
-            item = it.GetString();
-        GD.Print($"[TM] golden_square_event result={result} item={item}");
+        int    userId    = root.TryGetProperty("user_id",    out var u)  ? u.GetInt32()  : -1;
+        string finalItem = root.TryGetProperty("final_item", out var fi) && fi.ValueKind == JsonValueKind.String
+                         ? fi.GetString() : null;
+
+        string who     = _usernameByUserId.TryGetValue(userId, out var n) ? n : $"#{userId}";
+        string display = finalItem != null ? GoldenItemDisplayName(finalItem) : "nothing";
+
+        ChatManager.AddLog($"[color=#ffd633][GOLDEN][/color] {who} got: {display}");
+        GD.Print($"[TM] golden_square_event user={userId} final_item={finalItem}");
     }
+
+    private static string GoldenItemDisplayName(string itemName) => itemName switch
+    {
+        "gun"              => "Gun",
+        "cigarette"        => "Cigarette",
+        "magnifying_glass" => "Magnifying Glass",
+        "handcuffs"        => "Handcuffs",
+        "fire_axe"         => "Fire Axe",
+        _                  => itemName,
+    };
 
     private void OnTripleDouble(JsonElement root)
     {

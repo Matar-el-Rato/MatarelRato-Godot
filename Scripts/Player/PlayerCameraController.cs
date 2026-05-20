@@ -215,7 +215,7 @@ public partial class PlayerCameraController : CharacterBody3D
 			vel.Z = Mathf.MoveToward(vel.Z, 0f, WalkSpeed);
 
 			bool isFocused = FocusController.Instance != null && FocusController.Instance.IsFocused;
-			if (_isSitting && !isFocused && (Input.IsActionJustPressed("sprint") || Input.IsKeyPressed(Key.Shift)))
+			if (_isSitting && !isFocused && !ChatManager.IsChatOpen && (Input.IsActionJustPressed("sprint") || Input.IsKeyPressed(Key.Shift)))
 				Unsit();
 
 			// Force camera to the seated offset unless FocusController has taken over.

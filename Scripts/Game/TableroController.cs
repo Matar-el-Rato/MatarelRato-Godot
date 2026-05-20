@@ -89,7 +89,7 @@ public partial class TableroController : Node3D
 
 	// ── Public API ────────────────────────────────────────────────────────────
 
-	/// <summary>Spawns four pieces for <paramref name="color"/> and places them in base.</summary>
+	/// <summary>Spawns four pieces for <paramref name="color"/> and places them in base, hidden until revealed.</summary>
 	public void SpawnPlayer(string color)
 	{
 		for (int i = 0; i < 4; i++)
@@ -99,8 +99,32 @@ public partial class TableroController : Node3D
 			ficha.Initialize(color, i);
 			ficha.SetBoardIndex(-1);
 			ficha.GlobalPosition = GetBasePosition(color, i);
+			ficha.Visible        = false;
 			_pieces[$"{color}_{i}"] = ficha;
 		}
+	}
+
+	/// <summary>Scale-in reveals a piece that was hidden by SpawnPlayer.</summary>
+	public void RevealFicha(string color, int pieceIndex)
+	{
+		var ficha = GetPiece(color, pieceIndex);
+		if (ficha == null) return;
+
+		// Disable all collision objects before scaling from near-zero to avoid Jolt singular-transform warnings.
+		SetCollisionEnabled(ficha, false);
+
+		ficha.Scale   = Vector3.One * 0.001f;
+		ficha.Visible = true;
+
+		var tween = ficha.CreateTween();
+		tween.TweenProperty(ficha, "scale", Vector3.One, 0.35f)
+			 .SetTrans(Tween.TransitionType.Back)
+			 .SetEase(Tween.EaseType.Out);
+		tween.TweenCallback(Callable.From(() =>
+		{
+			if (IsInstanceValid(ficha))
+				SetCollisionEnabled(ficha, true);
+		}));
 	}
 
 	/// <summary>
@@ -410,7 +434,7 @@ public partial class TableroController : Node3D
 			Transparency             = BaseMaterial3D.TransparencyEnum.Alpha,
 			EmissionEnabled          = true,
 			Emission                 = new Color(1f, 0.72f, 0.1f),
-			EmissionEnergyMultiplier = 0.7f,
+			EmissionEnergyMultiplier = 12f,
 			CullMode                 = BaseMaterial3D.CullModeEnum.Disabled,
 			NoDepthTest              = false,
 			RenderPriority           = 2,
@@ -457,4 +481,12 @@ public partial class TableroController : Node3D
 
 	private static string Capitalize(string s) =>
 		string.IsNullOrEmpty(s) ? s : char.ToUpper(s[0]) + s.Substring(1);
+
+	private static void SetCollisionEnabled(Node node, bool enabled)
+	{
+		if (node is CollisionObject3D col)
+			col.ProcessMode = enabled ? ProcessModeEnum.Inherit : ProcessModeEnum.Disabled;
+		foreach (Node child in node.GetChildren(true))
+			SetCollisionEnabled(child, enabled);
+	}
 }

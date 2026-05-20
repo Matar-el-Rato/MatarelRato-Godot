@@ -20,6 +20,9 @@ public partial class ChatManager : Control
 	// Static reference so any script can call AddLog without a node reference.
 	private static ChatManager _instance;
 
+	/// <summary>True while the chat input field is open. Checked by other systems to suppress Shift.</summary>
+	public static bool IsChatOpen => _instance?._isChatOpen ?? false;
+
 	private RichTextLabel    _chatHistory;
 	private ScrollContainer  _scrollContainer;
 	private PanelContainer   _panelContainer;
@@ -240,6 +243,27 @@ public partial class ChatManager : Control
 
 		switch (cmd)
 		{
+			case "/dice":
+			{
+				string args  = spaceIdx >= 0 ? input.Substring(spaceIdx + 1).Trim() : "";
+				var    parts = args.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+				if (parts.Length < 2
+				    || !int.TryParse(parts[0], out int d1)
+				    || !int.TryParse(parts[1], out int d2)
+				    || d1 < 1 || d1 > 6 || d2 < 1 || d2 > 6)
+				{
+					AddLog("[color=#888888]Usage: /dice <1-6> <1-6>[/color]");
+					return true;
+				}
+				string rollJson = $"{{\"action\":\"roll_dice\",\"die1\":{d1},\"die2\":{d2}}}";
+				LiveConnectionManager.SendGameAction(
+					LiveConnectionManager.CurrentMatchId,
+					LiveConnectionManager.LocalUserId,
+					rollJson);
+				AddLog($"[color=#88ff88][DEBUG][/color] Forced roll: {d1} + {d2} = {d1 + d2}");
+				return true;
+			}
+
 			case "/players":
 				if (!AuthManager.IsLoggedIn)
 				{

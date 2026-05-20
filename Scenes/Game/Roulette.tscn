@@ -1,0 +1,40 @@
+[gd_scene format=3 uid="uid://gmbeacpp0km6"]
+
+[ext_resource type="PackedScene" uid="uid://dr3v4uux1eh1u" path="res://Assets/PlayingSet/General/roulette.glb" id="1_t0wkl"]
+[ext_resource type="PackedScene" uid="uid://demqrpu1x2s4x" path="res://Assets/PlayingSet/General/roulette_ball.glb" id="2_66mt4"]
+[ext_resource type="PackedScene" uid="uid://dcxjkrni7bfnw" path="res://Assets/PlayingSet/General/roulette_spinner.glb" id="3_auh5k"]
+[ext_resource type="Script" uid="uid://dpbmfn6rvrgai" path="res://Scripts/Game/RouletteController.cs" id="4_script"]
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_contain"]
+height = 0.5616577
+radius = 0.65185547
+
+[node name="Roulette" type="Node3D" unique_id=1714169080]
+script = ExtResource("4_script")
+
+[node name="RouletteBody" type="StaticBody3D" parent="." unique_id=938773043]
+
+[node name="roulette" parent="RouletteBody" unique_id=1276880155 instance=ExtResource("1_t0wkl")]
+
+[node name="SpinnerBody" type="AnimatableBody3D" parent="." unique_id=2014963908]
+
+[node name="roulette_spinner" parent="SpinnerBody" unique_id=1625766644 instance=ExtResource("3_auh5k")]
+
+[node name="Ball" type="RigidBody3D" parent="." unique_id=1371506921]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.57521456, 0.23344466, 0)
+gravity_scale = 0.0
+
+[node name="roulette_ball" parent="Ball" unique_id=2032569733 instance=ExtResource("2_66mt4")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0019316077, 0.0072538853, 0)
+
+[node name="ContainmentArea" type="Area3D" parent="." unique_id=1404026392]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.15, 0)
+
+[node name="ContainmentShape" type="CollisionShape3D" parent="ContainmentArea" unique_id=478895388]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25576782, 0)
+shape = SubResource("CylinderShape3D_contain")
+
+[node name="OmniLight3D" type="OmniLight3D" parent="." unique_id=1817223143]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.92508364, 0)
+light_color = Color(0.81610155, 0.62337345, 0.261233, 1)
+light_energy = 1.417

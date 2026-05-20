@@ -363,6 +363,20 @@ public partial class CubileteController : Node3D
 	}
 
 	/// <summary>
+	/// Resets the cup to Stationary in place, ready for another grab+roll.
+	/// Called on a doubles extra turn when the cup stays at the current player's position.
+	/// </summary>
+	public void ReadyForRoll()
+	{
+		foreach (var die in _dice) { die.Freeze = true; die.Visible = false; }
+		GlobalRotation = Vector3.Zero;
+		SetCubileteVisible(true);
+		_currentState             = State.Stationary;
+		_interactable.ProcessMode = ProcessModeEnum.Inherit;
+		_interactable.PromptText  = "Grab Cubilete";
+	}
+
+	/// <summary>
 	/// Arc the cup clockwise around <paramref name="boardCenter"/> to <paramref name="targetSurfacePos"/>,
 	/// then settle and enable interaction. Dice are hidden during transit and re-parked on arrival.
 	/// </summary>

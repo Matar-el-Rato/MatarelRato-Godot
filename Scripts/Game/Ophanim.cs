@@ -68,8 +68,12 @@ public partial class Ophanim : Node3D
 	[Export] public float ItemRayRadius        = 0.018f;
 	[Export] public float ItemGrantPause       = 0.2f;
 	[Export] public string LivesMessage          = "EACH PLAYER BEGINS WITH 3 LIVES. LOSE THEM ALL — ELIMINATED.";
-	[Export] public string GoldenSquaresMessage  = "FOUR SQUARES ON THIS BOARD HAVE BEEN MARKED IN GOLD.";
+	[Export] public string GoldenSquaresMessage  = "FOUR SQUARES ON THIS BOARD WILL BE MARKED IN GOLD.";
 	[Export] public string GoldenSquaresMessage2 = "LAND ON ONE — AND FORTUNE WILL DECIDE YOUR FATE.";
+	[Export] public string BeginMessage          = "BEGIN.";
+	[Export] public float  BeginHoldDuration     = 0.5f;
+	[Export] public float  PieceGrantPause       = 0.1f;
+	[Export] public float  PieceRayVolumeDb      = -18f;
 
 	// ── Signals ───────────────────────────────────────────────────────────────
 	/// <summary>Fired after the initiative gun sequence ends and the gun despawns.</summary>
@@ -113,6 +117,7 @@ public partial class Ophanim : Node3D
 	private (Vector3 worldPos, System.Action onSpawn)[] _pendingItemGrants;
 	private (Vector3 worldPos, System.Action onSpawn)[] _pendingGoldenGrants;
 	private (Vector3 worldPos, System.Action onSpawn)[] _pendingShellGrants;
+	private (Vector3 worldPos, System.Action onSpawn)[] _pendingPieceGrants;
 
 	private readonly Random _rng = new Random();
 
@@ -270,12 +275,14 @@ public partial class Ophanim : Node3D
 			var itemGrants   = _pendingItemGrants;
 			var goldenGrants = _pendingGoldenGrants;
 			var shellGrants  = _pendingShellGrants;
+			var pieceGrants  = _pendingPieceGrants;
 			_pendingShots        = null;
 			_pendingWinnerName   = "";
 			_pendingItemGrants   = null;
 			_pendingGoldenGrants = null;
 			_pendingShellGrants  = null;
-			RunInitiativeGunSequence(shots, winnerName, itemGrants, goldenGrants, shellGrants);
+			_pendingPieceGrants  = null;
+			RunInitiativeGunSequence(shots, winnerName, itemGrants, goldenGrants, shellGrants, pieceGrants);
 		}
 	}
 
@@ -288,10 +295,11 @@ public partial class Ophanim : Node3D
 		string winnerName,
 		(Vector3 worldPos, System.Action onSpawn)[] itemGrants   = null,
 		(Vector3 worldPos, System.Action onSpawn)[] goldenGrants = null,
-		(Vector3 worldPos, System.Action onSpawn)[] shellGrants  = null)
+		(Vector3 worldPos, System.Action onSpawn)[] shellGrants  = null,
+		(Vector3 worldPos, System.Action onSpawn)[] pieceGrants  = null)
 	{
 		if (_greetingDone)
-			RunInitiativeGunSequence(shots, winnerName, itemGrants, goldenGrants, shellGrants);
+			RunInitiativeGunSequence(shots, winnerName, itemGrants, goldenGrants, shellGrants, pieceGrants);
 		else
 		{
 			_pendingShots        = shots;
@@ -299,6 +307,7 @@ public partial class Ophanim : Node3D
 			_pendingItemGrants   = itemGrants;
 			_pendingGoldenGrants = goldenGrants;
 			_pendingShellGrants  = shellGrants;
+			_pendingPieceGrants  = pieceGrants;
 		}
 	}
 
@@ -354,7 +363,8 @@ public partial class Ophanim : Node3D
 		string winnerName,
 		(Vector3 worldPos, System.Action onSpawn)[] itemGrants,
 		(Vector3 worldPos, System.Action onSpawn)[] goldenGrants,
-		(Vector3 worldPos, System.Action onSpawn)[] shellGrants)
+		(Vector3 worldPos, System.Action onSpawn)[] shellGrants,
+		(Vector3 worldPos, System.Action onSpawn)[] pieceGrants)
 	{
 		if (_initiativeGun == null) return;
 
@@ -415,12 +425,12 @@ public partial class Ophanim : Node3D
 			{
 				if (IsInstanceValid(_initiativeGun)) _initiativeGun.QueueFree();
 				_initiativeGun = null;
-				RunItemGrantsSequence(itemGrants, goldenGrants, shellGrants);
+				RunItemGrantsSequence(itemGrants, goldenGrants, shellGrants, pieceGrants);
 			};
 		}
 		else
 		{
-			RunItemGrantsSequence(itemGrants, goldenGrants, shellGrants);
+			RunItemGrantsSequence(itemGrants, goldenGrants, shellGrants, pieceGrants);
 		}
 	}
 
@@ -429,7 +439,8 @@ public partial class Ophanim : Node3D
 	private async void RunItemGrantsSequence(
 		(Vector3 worldPos, System.Action onSpawn)[] grants,
 		(Vector3 worldPos, System.Action onSpawn)[] goldenGrants,
-		(Vector3 worldPos, System.Action onSpawn)[] shellGrants)
+		(Vector3 worldPos, System.Action onSpawn)[] shellGrants,
+		(Vector3 worldPos, System.Action onSpawn)[] pieceGrants = null)
 	{
 		if (grants != null && grants.Length > 0)
 		{
@@ -466,7 +477,12 @@ public partial class Ophanim : Node3D
 			}
 		}
 
-		// Fire one ray per player's shell set, then explain the lives system.
+		// Explain the lives system first, then reveal the shells.
+		await ToSignal(GetTree().CreateTimer(0.3f), SceneTreeTimer.SignalName.Timeout);
+		if (!IsInsideTree()) return;
+		await RunDecodeSequenceAsync(LivesMessage, GreetingHoldDuration * 0.7f);
+		if (!IsInsideTree()) return;
+
 		if (shellGrants != null && shellGrants.Length > 0)
 		{
 			await ToSignal(GetTree().CreateTimer(0.3f), SceneTreeTimer.SignalName.Timeout);
@@ -481,10 +497,20 @@ public partial class Ophanim : Node3D
 			}
 		}
 
-		await ToSignal(GetTree().CreateTimer(0.3f), SceneTreeTimer.SignalName.Timeout);
-		if (!IsInsideTree()) return;
-		await RunDecodeSequenceAsync(LivesMessage, GreetingHoldDuration * 0.7f);
-		if (!IsInsideTree()) return;
+		if (pieceGrants != null && pieceGrants.Length > 0)
+		{
+			await ToSignal(GetTree().CreateTimer(0.2f), SceneTreeTimer.SignalName.Timeout);
+			if (!IsInsideTree()) return;
+			await RunDecodeSequenceAsync(BeginMessage, BeginHoldDuration);
+			if (!IsInsideTree()) return;
+			foreach (var (worldPos, onSpawn) in pieceGrants)
+			{
+				await ShootItemRay(worldPos, onSpawn, PieceRayVolumeDb);
+				if (!IsInsideTree()) return;
+				await ToSignal(GetTree().CreateTimer(PieceGrantPause), SceneTreeTimer.SignalName.Timeout);
+				if (!IsInsideTree()) return;
+			}
+		}
 
 		EmitSignal(SignalName.InitiativeSequenceCompleted);
 		AscendAndHide();
@@ -509,7 +535,7 @@ public partial class Ophanim : Node3D
 		};
 	}
 
-	private async System.Threading.Tasks.Task ShootItemRay(Vector3 targetWorldPos, System.Action onSpawn)
+	private async System.Threading.Tasks.Task ShootItemRay(Vector3 targetWorldPos, System.Action onSpawn, float volumeDb = float.NaN)
 	{
 		Vector3 from = GlobalPosition;
 		Vector3 to   = targetWorldPos;
@@ -540,7 +566,7 @@ public partial class Ophanim : Node3D
 			AlbedoColor             = new Color(1f, 1f, 1f),
 			EmissionEnabled         = true,
 			Emission                = new Color(1f, 1f, 1f),
-			EmissionEnergyMultiplier = 4f,
+			EmissionEnergyMultiplier = 48f,
 		};
 		rayNode.Mesh             = cylinder;
 		rayNode.MaterialOverride = mat;
@@ -551,7 +577,7 @@ public partial class Ophanim : Node3D
 		{
 			audio            = new AudioStreamPlayer3D { TopLevel = true };
 			audio.Stream     = BrimstoneRaySound;
-			audio.VolumeDb   = BrimstoneRayVolumeDb;
+			audio.VolumeDb   = float.IsNaN(volumeDb) ? BrimstoneRayVolumeDb : volumeDb;
 			GetParent().AddChild(audio);
 			audio.GlobalPosition = from;
 			audio.Play();
