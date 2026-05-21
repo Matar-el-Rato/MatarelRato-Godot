@@ -41,6 +41,7 @@
 [ext_resource type="PackedScene" uid="uid://cok64jr501daj" path="res://Scenes/RoomJoiner.tscn" id="41_75tun"]
 [ext_resource type="PackedScene" uid="uid://bgv6wbfejnsf6" path="res://Scenes/Game/Gun.tscn" id="43_jkhus"]
 [ext_resource type="AudioStream" uid="uid://c1jheyu3w75dw" path="res://Assets/Sound FX/brimstone_ray.wav" id="45_xot12"]
+[ext_resource type="Shader" uid="uid://cdxyxjn6vq4yv" path="res://Shaders/fisheye.gdshader" id="47_8um71"]
 [ext_resource type="PackedScene" uid="uid://b0qrw5i73q7b3" path="res://Scenes/Ophanim.tscn" id="47_uuu6x"]
 [ext_resource type="Script" uid="uid://bk2cbuauhf6vh" path="res://Scripts/Game/TableManager.cs" id="50_tablemgr"]
 [ext_resource type="PackedScene" uid="uid://dch41rs3n3v01" path="res://Scenes/Game/Chair.tscn" id="51_chair_scene"]
@@ -79,6 +80,12 @@ size = Vector3(51.375, 5.825, 81.03)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_ergw4"]
 size = Vector3(14.614136, 4.0545654, 4.798706)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_hkvke"]
+shader = ExtResource("47_8um71")
+shader_parameter/k1 = 0.310000014725
+shader_parameter/k2 = 0.0
+shader_parameter/zoom = 1.2000000095
 
 [node name="Main3D" type="Node3D" unique_id=2050789802]
 
@@ -611,12 +618,13 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13.980343, 0, -5.9173303)
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.0573406, 1.5272827, 0.5214219)
 shape = SubResource("BoxShape3D_ergw4")
 
-[node name="PlayingSetup" type="Node3D" parent="Room1" unique_id=1885415639 node_paths=PackedStringArray("OphanimNode")]
+[node name="PlayingSetup" type="Node3D" parent="Room1" unique_id=1885415639 node_paths=PackedStringArray("OphanimNode", "RouletteNode")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.1901207, 0, -0.09963226)
 script = ExtResource("50_tablemgr")
 ChairScene = ExtResource("51_chair_scene")
 PlayerItemSetScene = ExtResource("52_pitemset")
 OphanimNode = NodePath("../Ophanim")
+RouletteNode = NodePath("../Roulette")
 
 [node name="mesa_poker" parent="Room1/PlayingSetup" unique_id=474140406 instance=ExtResource("8_f140w")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.457277, 0.43543047, -5.255393)
@@ -817,3 +825,14 @@ anchors_preset = 0
 script = ExtResource("60_dicehud")
 
 [node name="DitherEffect" parent="." unique_id=1599022892 instance=ExtResource("37_dither_effect")]
+
+[node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=128007283]
+
+[node name="ColorRect" type="ColorRect" parent="CanvasLayer" unique_id=1537912868]
+material = SubResource("ShaderMaterial_hkvke")
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2

@@ -12,9 +12,12 @@ using System.Text.Json;
 /// </summary>
 public partial class TableManager : Node3D
 {
-    [Export] public PackedScene ChairScene;
-    [Export] public PackedScene PlayerItemSetScene;
-    [Export] public Ophanim     OphanimNode;
+    [Export] public PackedScene        ChairScene;
+    [Export] public PackedScene        PlayerItemSetScene;
+    [Export] public Ophanim            OphanimNode;
+    [Export] public RouletteController RouletteNode;
+    // Drag the ColorRect's ShaderMaterial here so raycast undistortion stays in sync with the shader.
+    [Export] public ShaderMaterial     FisheyeMaterial;
 
     // ── Maps ──────────────────────────────────────────────────────────────────
     private readonly Dictionary<string, Chair>     _chairsByColor     = new();
@@ -90,6 +93,11 @@ public partial class TableManager : Node3D
     private FichaNode _hoveredPiece = null;
     private Camera3D  _hoverCamera  = null;
 
+    // Tracks when the current piece-move animation finishes so golden_square_event
+    // can wait for the piece to actually arrive before starting the roulette sequence.
+    private System.Threading.Tasks.Task _lastMoveTask =
+        System.Threading.Tasks.Task.CompletedTask;
+
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
     public override void _Ready()
@@ -116,9 +124,10 @@ public partial class TableManager : Node3D
         _usernameByUserId.Clear();
         _takenChairCount  = 0;
         _activeTurnOrder.Clear();
-        _rollConnected       = false;
-        _cubileteAtUserId    = -1;
+        _rollConnected        = false;
+        _cubileteAtUserId     = -1;
         _initiativeInProgress = false;
+        _lastMoveTask         = System.Threading.Tasks.Task.CompletedTask;
         _itemSetsBySlot.Clear();
         foreach (var row in _boardPositions)
             Array.Clear(row, 0, row.Length);
@@ -439,7 +448,12 @@ public partial class TableManager : Node3D
 
         var tablero = GetNodeOrNull<TableroController>("tablero");
         if (tablero != null)
+        {
+            var tcs = new System.Threading.Tasks.TaskCompletionSource<bool>();
+            _lastMoveTask = tcs.Task;
             await tablero.ApplyServerMove(color, pieceId, from, to);
+            tcs.SetResult(true);
+        }
 
         if (wasMyMove)
             FocusController.Instance?.ExitFocus();
@@ -516,7 +530,7 @@ public partial class TableManager : Node3D
         _isMyTurn    = false;
     }
 
-    private void OnGoldenSquareEvent(JsonElement root)
+    private async void OnGoldenSquareEvent(JsonElement root)
     {
         int    userId    = root.TryGetProperty("user_id",    out var u)  ? u.GetInt32()  : -1;
         string finalItem = root.TryGetProperty("final_item", out var fi) && fi.ValueKind == JsonValueKind.String
@@ -524,9 +538,78 @@ public partial class TableManager : Node3D
 
         string who     = _usernameByUserId.TryGetValue(userId, out var n) ? n : $"#{userId}";
         string display = finalItem != null ? GoldenItemDisplayName(finalItem) : "nothing";
-
-        ChatManager.AddLog($"[color=#ffd633][GOLDEN][/color] {who} got: {display}");
         GD.Print($"[TM] golden_square_event user={userId} final_item={finalItem}");
+
+        // ── Wait for the piece to finish moving to the golden square ──────────
+        await _lastMoveTask;
+        if (!IsInsideTree()) return;
+
+        // ── Play arrival sound ────────────────────────────────────────────────
+        var comboClip = GD.Load<AudioStream>("res://Assets/Sound FX/combosound.wav");
+        if (comboClip != null)
+        {
+            var sfx = new AudioStreamPlayer { Stream = comboClip, VolumeDb = -4f };
+            AddChild(sfx);
+            sfx.Play();
+            sfx.Finished += () => sfx.QueueFree();
+        }
+
+        // ── Reveal roulette + re-descend Ophanim simultaneously ──────────────
+        RouletteNode?.Reveal();
+        OphanimNode?.ReDescend();
+
+        float waitTime = OphanimNode != null ? OphanimNode.GoldenDescentDuration : 1.5f;
+        await ToSignal(GetTree().CreateTimer(waitTime), SceneTreeTimer.SignalName.Timeout);
+        if (!IsInsideTree()) return;
+
+        // ── Ophanim taunts before the ball is thrown ─────────────────────────
+        if (OphanimNode != null)
+        {
+            await OphanimNode.SayAsync(OphanimNode.GoldenLuckyMessage, 1.5f);
+            if (!IsInsideTree()) return;
+        }
+
+        // ── Throw ball ───────────────────────────────────────────────────────
+        RouletteNode?.BeginSpin();
+
+        // ── Wait for ball to settle ──────────────────────────────────────────
+        if (RouletteNode != null)
+        {
+            await ToSignal(RouletteNode, RouletteController.SignalName.BallSettled);
+            if (!IsInsideTree()) return;
+        }
+        else
+        {
+            await ToSignal(GetTree().CreateTimer(4.0f), SceneTreeTimer.SignalName.Timeout);
+            if (!IsInsideTree()) return;
+        }
+
+        // ── Build item grant ─────────────────────────────────────────────────
+        _colorByUserId.TryGetValue(userId, out var gColor);
+        int slot = gColor != null ? ColorToSlot(gColor.ToLower()) : -1;
+        _itemSetsBySlot.TryGetValue(slot, out var itemSet);
+
+        Vector3 itemWorldPos = itemSet != null && finalItem != null
+            ? itemSet.GetItemWorldPosition(finalItem)
+            : OphanimNode?.GlobalPosition ?? GlobalPosition;
+
+        System.Action onGrant = finalItem != null && itemSet != null
+            ? () => itemSet.SpawnItem(finalItem)
+            : (System.Action)null;
+
+        // ── Ophanim announces + shoots ray ───────────────────────────────────
+        string msg = $"{who.ToUpper()} HAS BEEN GRANTED: {display.ToUpper()}.";
+        ChatManager.AddLog($"[color=#ffd633][GOLDEN][/color] {who} got: {display}");
+
+        if (OphanimNode != null)
+            await OphanimNode.AnnounceGoldenGrant(msg, itemWorldPos, onGrant);
+        else
+            onGrant?.Invoke();
+
+        if (!IsInsideTree()) return;
+
+        // ── Hide roulette (concurrent with Ophanim ascending) ────────────────
+        RouletteNode?.HideAgain();
     }
 
     private static string GoldenItemDisplayName(string itemName) => itemName switch
@@ -599,11 +682,11 @@ public partial class TableManager : Node3D
 
     private void UpdatePieceHover()
     {
-        if (_hoverCamera == null)
-            _hoverCamera = GetViewport().GetCamera3D();
+        // Always fetch the active camera — FocusController may move or switch it.
+        _hoverCamera = GetViewport().GetCamera3D();
         if (_hoverCamera == null) return;
 
-        var mousePos = GetViewport().GetMousePosition();
+        var mousePos  = UndistortMousePos(GetViewport().GetMousePosition());
         var rayOrigin = _hoverCamera.ProjectRayOrigin(mousePos);
         var rayDir    = _hoverCamera.ProjectRayNormal(mousePos);
 
@@ -613,12 +696,13 @@ public partial class TableManager : Node3D
         foreach (var piece in _selectablePieces)
         {
             if (!IsInstanceValid(piece)) continue;
-            // Sphere intersection: center 5 cm above piece node origin, radius 5 cm.
-            var   center  = piece.GlobalPosition + Vector3.Up * 0.05f;
+            // Sphere centre sits at the visual mid-height of the piece.
+            // Radius is generous so steep downward angles still register.
+            var   center  = piece.GlobalPosition + Vector3.Up * 0.09f;
             float t       = (center - rayOrigin).Dot(rayDir);
             if (t < 0f) continue;
             float distSq  = (rayOrigin + rayDir * t - center).LengthSquared();
-            if (distSq < 0.05f * 0.05f && t < nearestT) { nearest = piece; nearestT = t; }
+            if (distSq < 0.10f * 0.10f && t < nearestT) { nearest = piece; nearestT = t; }
         }
 
         if (nearest == _hoveredPiece) return;
@@ -635,6 +719,38 @@ public partial class TableManager : Node3D
             nearest.SetHovered(true);
             ShowPiecePath(nearest);
         }
+    }
+
+    public override void _UnhandledInput(InputEvent @event)
+    {
+        if (_hoveredPiece == null) return;
+        if (FocusController.Instance?.IsFocused != true) return;
+        if (@event is InputEventMouseButton mb && mb.ButtonIndex == MouseButton.Left && mb.Pressed)
+            OnPieceClicked(_hoveredPiece);
+    }
+
+    // Applies the same forward transform as fisheye.gdshader so that raycasting
+    // operates on undistorted coordinates matching what the player sees on screen.
+    private Vector2 UndistortMousePos(Vector2 mousePos)
+    {
+        if (FisheyeMaterial == null) return mousePos;
+
+        var vp     = GetViewport().GetVisibleRect().Size;
+        float k1   = (float)FisheyeMaterial.GetShaderParameter("k1");
+        float k2   = (float)FisheyeMaterial.GetShaderParameter("k2");
+        float zoom = (float)FisheyeMaterial.GetShaderParameter("zoom");
+        float aspect = vp.X / vp.Y;
+
+        Vector2 uv = (mousePos / vp - Vector2.One * 0.5f) / zoom;
+        uv.X *= aspect;
+
+        float r2 = uv.Dot(uv);
+        float r4  = r2 * r2;
+        Vector2 d = uv * (1f + k1 * r2 + k2 * r4);
+
+        d.X /= aspect;
+        d   += Vector2.One * 0.5f;
+        return d * vp;
     }
 
     private void ShowPiecePath(FichaNode piece)

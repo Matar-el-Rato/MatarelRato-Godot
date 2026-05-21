@@ -88,7 +88,9 @@ public partial class FichaNode : Node3D
 		// Hover is driven externally by TableManager.SetHovered() via ray casting,
 		// because the tablero's trimesh StaticBody3D intercepts the physics pick ray
 		// before it reaches this area.
-		_clickArea = new Area3D { Name = "ClickArea", InputRayPickable = true };
+		// InputRayPickable disabled — clicks are detected by TableManager using the
+		// shader-corrected mouse position via _hoveredPiece, not Godot's physics pick ray.
+		_clickArea = new Area3D { Name = "ClickArea", InputRayPickable = false };
 		var shape = new CollisionShape3D();
 		shape.Shape = new BoxShape3D { Size = new Vector3(0.08f, 0.14f, 0.08f) };
 		var shapeOffset = new CollisionShape3D();

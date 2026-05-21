@@ -75,6 +75,12 @@ public partial class Ophanim : Node3D
 	[Export] public float  PieceGrantPause       = 0.1f;
 	[Export] public float  PieceRayVolumeDb      = -18f;
 
+	// ── Golden Square ─────────────────────────────────────────────────────────
+	[ExportGroup("Golden Square")]
+	[Export] public float  GoldenDescentDuration = 1.5f;
+	[Export] public float  GoldenHoldDuration    = 2.8f;
+	[Export] public string GoldenLuckyMessage    = "LUCKY YOU...";
+
 	// ── Signals ───────────────────────────────────────────────────────────────
 	/// <summary>Fired after the initiative gun sequence ends and the gun despawns.</summary>
 	[Signal] public delegate void InitiativeSequenceCompletedEventHandler();
@@ -241,6 +247,44 @@ public partial class Ophanim : Node3D
 			_descendYOffset = 0f;
 			RunGreetingSequence();
 		};
+	}
+
+	// ── Golden Square Sequence ────────────────────────────────────────────────
+
+	/// <summary>Re-descend after the initiative sequence has finished and Ophanim is hidden.</summary>
+	public void ReDescend()
+	{
+		Visible           = true;
+		_descendYOffset   = DescentHiddenOffset;
+		_droneAudio?.Play();
+		_wingFlapAudio?.Play();
+
+		var tween = CreateTween();
+		tween.TweenMethod(
+			Callable.From((float v) => _descendYOffset = v),
+			DescentHiddenOffset, 0f, GoldenDescentDuration)
+			.SetTrans(Tween.TransitionType.Cubic)
+			.SetEase(Tween.EaseType.Out);
+		tween.Finished += () => _descendYOffset = 0f;
+	}
+
+	/// <summary>Run a decode sequence and wait for it to finish. No other side effects.</summary>
+	public async System.Threading.Tasks.Task SayAsync(string message, float holdDuration = -1f)
+	{
+		if (holdDuration < 0f) holdDuration = GoldenHoldDuration;
+		await RunDecodeSequenceAsync(message, holdDuration);
+	}
+
+	/// <summary>Say the grant announcement, shoot the item ray, then ascend and hide.
+	/// Awaitable — completes after the ray fires (ascent continues in background).</summary>
+	public async System.Threading.Tasks.Task AnnounceGoldenGrant(
+		string message, Vector3 itemWorldPos, System.Action onItemGranted)
+	{
+		await RunDecodeSequenceAsync(message, GoldenHoldDuration);
+		if (!IsInsideTree()) return;
+		await ShootItemRay(itemWorldPos, onItemGranted);
+		if (!IsInsideTree()) return;
+		AscendAndHide();
 	}
 
 	// ── Greeting Sequence ─────────────────────────────────────────────────────
