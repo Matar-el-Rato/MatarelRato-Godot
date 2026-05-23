@@ -12,10 +12,10 @@ public partial class DamoclesSword : Node3D
     [ExportGroup("Timer FX")]
     [Export] public AudioStream ClockTickSound;
     [Export] public float TickVolumeStart  = -20f;
-    [Export] public float TickVolume30     = -14f;
+    [Export] public float TickVolume20     = -14f;
     [Export] public float TickVolume10     =  -8f;
     [Export] public float TickVolume5      =  -2f;
-    [Export] public float Stage30DropExtra =  0.18f;
+    [Export] public float Stage20DropExtra =  0.18f;
     [Export] public float GlowRange        =  0.7f;
     [Export] public float GlowEnergy10     =  2.5f;
     [Export] public float GlowEnergy5      =  5.0f;
@@ -140,21 +140,21 @@ public partial class DamoclesSword : Node3D
         _glowTween?.Kill();
         _glowTween = null;
 
-        if (secondsRemaining == 30)
+        if (secondsRemaining == 20)
         {
-            // Sword hangs a bit lower over 4 s
+            // Sword hangs a bit lower over 3 s
             var tween = CreateTween();
             tween.TweenMethod(
                 Callable.From((float v) => HangDistance = v),
-                HangDistance, HangDistance + Stage30DropExtra, 4f)
+                HangDistance, HangDistance + Stage20DropExtra, 3f)
                 .SetTrans(Tween.TransitionType.Cubic)
                 .SetEase(Tween.EaseType.Out);
 
-            // Volume ramps up to 30-s level over 8 s
+            // Volume ramps up to 20-s level over 5 s
             if (_tickPlayer != null)
             {
                 var vt = CreateTween();
-                vt.TweenProperty(_tickPlayer, "volume_db", TickVolume30, 8f)
+                vt.TweenProperty(_tickPlayer, "volume_db", TickVolume20, 5f)
                   .SetTrans(Tween.TransitionType.Linear);
             }
         }

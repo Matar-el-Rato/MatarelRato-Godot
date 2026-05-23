@@ -76,7 +76,7 @@ public partial class Ophanim : Node3D
 	[Export] public float  BeginHoldDuration     = 0.5f;
 	[Export] public float  PieceGrantPause       = 0.1f;
 	[Export] public float  PieceRayVolumeDb       = -18f;
-	[Export] public string SwordSpawnMessage      = "DON'T LET THIS DAGGER FALL, OR ELSE...";
+	[Export] public string SwordSpawnMessage      = "YOU ALL HAVE 30 SECONDS. DO NOT LET THIS DAGGER FALL.";
 	[Export] public float  SwordSpawnHoldDuration = 2.0f;
 
 	// ── Golden Square ─────────────────────────────────────────────────────────

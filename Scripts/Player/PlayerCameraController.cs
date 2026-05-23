@@ -71,6 +71,7 @@ public partial class PlayerCameraController : CharacterBody3D
 	// Tension / heartbeat state (scales with lives remaining).
 	public static PlayerCameraController LocalInstance { get; private set; }
 	private AudioStreamPlayer _heartbeatAudio;
+	private ColorRect         _hitVignette;
 	private float _heartBpm      = 50f;
 	private float _heartVolumeDb = -6f;
 	private float _heartTimer    = 0f;
@@ -143,6 +144,19 @@ public partial class PlayerCameraController : CharacterBody3D
 			_heartbeatAudio.Stream   = GD.Load<AudioStream>("res://Assets/Sound FX/heart_thud.wav");
 			_heartbeatAudio.VolumeDb = _heartVolumeDb;
 			CallDeferred(Node.MethodName.AddChild, _heartbeatAudio);
+		}
+
+		if (_hitVignette == null)
+		{
+			var layer       = new CanvasLayer { Layer = 20 };
+			_hitVignette    = new ColorRect
+			{
+				Color       = new Color(0.55f, 0f, 0f, 0f),
+				MouseFilter = Control.MouseFilterEnum.Ignore,
+			};
+			_hitVignette.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+			layer.AddChild(_hitVignette);
+			CallDeferred(Node.MethodName.AddChild, layer);
 		}
 	}
 
@@ -626,6 +640,18 @@ public void SwapCharacter(CharacterEntry entry, float duration = 0.8f)
 				Callable.From((float v) => mat.SetShaderParameter("zoom", v)),
 				Variant.From(fromZoom), Variant.From(shaderZoom), 1.5f);
 		}
+	}
+
+	public void PlayHitVignette()
+	{
+		if (_hitVignette == null) return;
+		var tween = CreateTween();
+		tween.TweenProperty(_hitVignette, "color:a", 0.45f, 0.15f)
+			 .SetTrans(Tween.TransitionType.Quad)
+			 .SetEase(Tween.EaseType.Out);
+		tween.TweenProperty(_hitVignette, "color:a", 0f, 0.9f)
+			 .SetTrans(Tween.TransitionType.Quad)
+			 .SetEase(Tween.EaseType.In);
 	}
 
 	private void UpdateHeartbeat(float delta)

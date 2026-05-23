@@ -689,9 +689,12 @@ public partial class TableManager : Node3D
         if (slot >= 0 && _itemSetsBySlot.TryGetValue(slot, out var itemSet))
             itemSet.SetLives(lives);
 
-        // Apply camera/audio tension for the local player only.
+        // Apply camera/audio tension and hit vignette for the local player only.
         if (userId == LiveConnectionManager.LocalUserId)
+        {
             PlayerCameraController.LocalInstance?.SetTension(lives);
+            PlayerCameraController.LocalInstance?.PlayHitVignette();
+        }
     }
 
     private void OnGameOver(JsonElement root)
@@ -729,12 +732,15 @@ public partial class TableManager : Node3D
         _pendingSwordUserId = -1;
 
         // 2. Flush life_lost immediately (updates HUD lives); hold everything else.
+        // Call OnLifeLost directly — going through HandleGameAction would re-buffer
+        // the message because _swordFalling is still true at this point.
         var deferred = new List<string>();
         while (_swordPendingJsons.TryDequeue(out var buffered))
         {
             using var d = JsonDocument.Parse(buffered);
-            string a = d.RootElement.TryGetProperty("action", out var ae) ? ae.GetString() : "";
-            if (a == "life_lost") HandleGameAction(buffered);
+            var  root = d.RootElement;
+            string a = root.TryGetProperty("action", out var ae) ? ae.GetString() : "";
+            if (a == "life_lost") OnLifeLost(root);
             else                  deferred.Add(buffered);
         }
 
@@ -903,14 +909,20 @@ public partial class TableManager : Node3D
 
     // ── Cubilete ──────────────────────────────────────────────────────────────
 
-    private void OnInitiativeSequenceCompleted()
+    private async void OnInitiativeSequenceCompleted()
     {
         _initiativeInProgress = false;
-        if (OphanimNode != null)
-        {
-            float tableroY = GetNodeOrNull<Node3D>("tablero")?.GlobalPosition.Y ?? BoardCenter.Y;
-            _sword?.SpawnFromOphanim(OphanimNode, tableroY);
-        }
+        if (OphanimNode == null) return;
+
+        // Wait for Ophanim to finish ascending to its resting position before spawning
+        // the sword — otherwise it spawns too low and immediately hits the board.
+        await ToSignal(
+            GetTree().CreateTimer(OphanimNode.DescentDuration),
+            SceneTreeTimer.SignalName.Timeout);
+        if (!IsInsideTree()) return;
+
+        float tableroY = GetNodeOrNull<Node3D>("tablero")?.GlobalPosition.Y ?? BoardCenter.Y;
+        _sword?.SpawnFromOphanim(OphanimNode, tableroY);
     }
 
     private void OnRollCompleted(int die1, int die2)
