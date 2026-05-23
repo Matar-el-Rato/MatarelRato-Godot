@@ -14,7 +14,7 @@ config/name="Matar el Rato"
 run/main_scene="res://Scenes/UI/WelcomeScreen.tscn"
 config/features=PackedStringArray("4.6", "C#", "Forward Plus")
 boot_splash/show_image=false
-config/icon="uid://cln40rbm5kcan"
+config/icon="uid://ds2s3n7xy0hgj"
 
 [display]
 
