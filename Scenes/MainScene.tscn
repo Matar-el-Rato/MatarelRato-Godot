@@ -45,9 +45,9 @@
 [ext_resource type="Shader" uid="uid://cdxyxjn6vq4yv" path="res://Shaders/fisheye.gdshader" id="47_8um71"]
 [ext_resource type="PackedScene" uid="uid://b0qrw5i73q7b3" path="res://Scenes/Ophanim.tscn" id="47_uuu6x"]
 [ext_resource type="Script" uid="uid://bk2cbuauhf6vh" path="res://Scripts/Game/TableManager.cs" id="50_tablemgr"]
-[ext_resource type="Script" path="res://Scripts/Game/DamoclesSword.cs" id="55_damocles_script"]
 [ext_resource type="PackedScene" uid="uid://dch41rs3n3v01" path="res://Scenes/Game/Chair.tscn" id="51_chair_scene"]
 [ext_resource type="PackedScene" uid="uid://dp1t3ms3t0v02" path="res://Scenes/Game/PlayerItemSet.tscn" id="52_pitemset"]
+[ext_resource type="Script" uid="uid://j8aoyub8x1u7" path="res://Scripts/Game/DamoclesSword.cs" id="55_damocles_script"]
 [ext_resource type="Script" uid="uid://dv8cr4xwhbspu" path="res://Scripts/UI/DiceHUD.cs" id="60_dicehud"]
 
 [sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_moon"]

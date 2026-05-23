@@ -10,11 +10,11 @@ config_version=5
 
 [application]
 
-config/name="SO-Project"
+config/name="Matar el Rato"
 run/main_scene="res://Scenes/UI/WelcomeScreen.tscn"
 config/features=PackedStringArray("4.6", "C#", "Forward Plus")
 boot_splash/show_image=false
-config/icon="res://icon.svg"
+config/icon="uid://cln40rbm5kcan"
 
 [display]
 
