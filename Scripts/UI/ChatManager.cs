@@ -283,6 +283,19 @@ public partial class ChatManager : Control
 				}
 				return true;
 
+			case "/fov":
+			{
+				string args = spaceIdx >= 0 ? input.Substring(spaceIdx + 1).Trim() : "";
+				if (!int.TryParse(args, out int lives) || lives < 1 || lives > 3)
+				{
+					AddLog("[color=#888888]Usage: /fov <1-3>  (1 = 1 life, 3 = full health)[/color]");
+					return true;
+				}
+				PlayerCameraController.LocalInstance?.SetTension(lives);
+				AddLog($"[color=#88ff88][DEBUG][/color] Tension set to {lives} lives — FOV, shader and heartbeat updated.");
+				return true;
+			}
+
 			case "/tell":
 				// TODO: Direct message to a specific player: "/tell <playername> <message>"
 				// Requires a new REQ_SEND_TELL packet type and server routing by username.

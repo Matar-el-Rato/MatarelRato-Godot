@@ -70,9 +70,9 @@ public partial class Interactor : Node3D
 
 	public override void _Process(double delta)
 	{
-		if (IsLocked)
+		if (IsLocked || ChatManager.IsChatOpen)
 		{
-			// Clear any lingering target when locked (e.g. focus was grabbed mid-hover).
+			// Clear any lingering target when locked or chatting.
 			if (_currentInteractable != null)
 			{
 				_currentInteractable.OnBlur();
@@ -165,6 +165,12 @@ public partial class Interactor : Node3D
 
 			// Treat disabled interactables as if nothing was hit (owned by another player).
 			if (interactable is Interactable iDisabled && !iDisabled.Enabled)
+				interactable = null;
+
+			// Block interactions with world objects while seated.
+			if (interactable is Interactable iSitting
+				&& !iSitting.AllowWhileSitting
+				&& PlayerCameraController.LocalInstance?.IsSitting == true)
 				interactable = null;
 
 			if (interactable != _currentInteractable)

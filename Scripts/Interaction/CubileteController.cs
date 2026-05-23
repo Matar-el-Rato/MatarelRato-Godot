@@ -83,6 +83,7 @@ public partial class CubileteController : Node3D
 		SetCubileteVisible(false);
 		foreach (var die in _dice) die.Visible = false;
 		_interactable.ProcessMode = ProcessModeEnum.Disabled;
+		_interactable.Enabled     = false;
 
 		CallDeferred(MethodName.FindPlayerCamera);
 	}
@@ -118,6 +119,17 @@ public partial class CubileteController : Node3D
 			GetViewport().SetInputAsHandled();
 			StartRoll();
 		}
+	}
+
+	// ── Turn gating ───────────────────────────────────────────────────────────
+
+	/// <summary>
+	/// Called by TableManager on each turn_start to enable interaction only for
+	/// the current-turn player.
+	/// </summary>
+	public void SetInteractionEnabled(bool enabled)
+	{
+		_interactable.Enabled = enabled;
 	}
 
 	// ── State machine ─────────────────────────────────────────────────────────

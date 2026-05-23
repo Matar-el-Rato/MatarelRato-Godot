@@ -35,6 +35,9 @@ public partial class FocusController : Node
 	/// <summary>True while any target is being focused.</summary>
 	public bool IsFocused => _isFocused;
 
+	/// <summary>Fired with true when focus starts, false when it fully ends.</summary>
+	public static event Action<bool> FocusStateChanged;
+
 	// ── Lifecycle ─────────────────────────────────────────────────────────────
 
 	public override void _Ready()
@@ -94,6 +97,7 @@ public partial class FocusController : Node
 		Input.MouseMode          = Input.MouseModeEnum.Visible;
 
 		TweenCamera(focalPoint.GlobalTransform, DefaultFOV);
+		FocusStateChanged?.Invoke(true);
 	}
 
 	/// <summary>
@@ -139,9 +143,23 @@ public partial class FocusController : Node
 		focusPos += targetTransform.Basis.Y * positionOffset.Y;
 		focusPos += targetTransform.Basis.Z * positionOffset.Z;
 
-		// Camera looks toward the surface; Z is used as the "up" reference.
-		Vector3 forward  = -normal;
-		Vector3 upVector = targetTransform.Basis.Z.Normalized();
+		// Camera looks toward the surface.
+		Vector3 forward = -normal;
+
+		// Orient so the player always appears on the LEFT of the screen.
+		// Project the board→player vector onto the surface plane, then rotate it 90°
+		// around the normal so the camera's right axis points away from the player.
+		Vector3 upVector;
+		if (_playerBody != null)
+		{
+			Vector3 toPlayer        = _playerBody.GlobalPosition - target.GlobalPosition;
+			Vector3 toPlayerInPlane = (toPlayer - toPlayer.Dot(normal) * normal).Normalized();
+			upVector = toPlayerInPlane.Cross(normal);
+		}
+		else
+		{
+			upVector = targetTransform.Basis.Z.Normalized();
+		}
 
 		if (rotationOffset != 0f)
 			upVector = upVector.Rotated(normal, Mathf.DegToRad(rotationOffset));
@@ -164,6 +182,7 @@ public partial class FocusController : Node
 			focusTransform.Origin  = focusPos;
 			TweenCamera(focusTransform, targetFOV);
 		}
+		FocusStateChanged?.Invoke(true);
 	}
 
 	/// <summary>
@@ -191,6 +210,7 @@ public partial class FocusController : Node
 			Interactor.IsLocked  = false;
 			Input.MouseMode      = Input.MouseModeEnum.Captured;
 			_currentFocusTarget  = null;
+			FocusStateChanged?.Invoke(false);
 		};
 	}
 
@@ -204,8 +224,7 @@ public partial class FocusController : Node
 
 	public override void _Input(InputEvent @event)
 	{
-		if (_isFocused && !ChatManager.IsChatOpen && @event.IsActionPressed("sprint"))
-			ExitFocus();
+		// Focus is exited only through the on-screen ✕ button.
 	}
 
 	// ── Private helpers ───────────────────────────────────────────────────────

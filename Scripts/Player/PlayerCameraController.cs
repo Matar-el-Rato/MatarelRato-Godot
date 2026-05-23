@@ -57,9 +57,24 @@ public partial class PlayerCameraController : CharacterBody3D
 	public  bool  IsSitting      => _isSitting;
 	public  bool  IsTransitioning => _isTransitioning;
 
-	// Lower-left Shift-key hint shown while seated or in focus mode.
+	// Lower-left Shift-key hint shown while seated.
 	private Control _shiftHint;
 	private Label   _shiftHintText;
+	// Left-edge ✕ button shown while focused on a tablero.
+	private Control     _exitFocusButton;
+	private TextureRect _exitGradient;
+	private Label       _exitXLabel;
+	private Tween       _exitHoverTween;
+	private Tween       _exitFadeTween;
+	private bool        _exitButtonVisible = false;
+
+	// Tension / heartbeat state (scales with lives remaining).
+	public static PlayerCameraController LocalInstance { get; private set; }
+	private AudioStreamPlayer _heartbeatAudio;
+	private float _heartBpm      = 50f;
+	private float _heartVolumeDb = -6f;
+	private float _heartTimer    = 0f;
+
 	private Chair _currentChair;
 	private float _sittingYaw     = 0f;
 	private Vector3 _preSitPosition;
@@ -78,6 +93,7 @@ public partial class PlayerCameraController : CharacterBody3D
 
 	public override void _Ready()
 	{
+		LocalInstance = this;
 		EnsureInitialized();
 
 		FloorSnapLength    = 0.3f;
@@ -86,6 +102,7 @@ public partial class PlayerCameraController : CharacterBody3D
 		ApplyFloorSnap();
 
 		CallDeferred(MethodName.BuildShiftHint);
+		CallDeferred(MethodName.BuildExitFocusButton);
 	}
 
 	/// <summary>
@@ -117,6 +134,15 @@ public partial class PlayerCameraController : CharacterBody3D
 			_footstepAudio.VolumeDb = -4f;
 			// AddChild must be deferred — calling it inside another node's _Ready is blocked.
 			CallDeferred(Node.MethodName.AddChild, _footstepAudio);
+		}
+
+		if (_heartbeatAudio == null)
+		{
+			_heartbeatAudio          = new AudioStreamPlayer();
+			_heartbeatAudio.Name     = "HeartbeatAudio";
+			_heartbeatAudio.Stream   = GD.Load<AudioStream>("res://Assets/Sound FX/heart_thud.wav");
+			_heartbeatAudio.VolumeDb = _heartVolumeDb;
+			CallDeferred(Node.MethodName.AddChild, _heartbeatAudio);
 		}
 	}
 
@@ -484,6 +510,7 @@ public void SwapCharacter(CharacterEntry entry, float duration = 0.8f)
 		_currentChair    = chair;
 		_sittingYaw      = 0f;
 		_preSitPosition  = GlobalPosition;
+		_heartTimer      = 60f / _heartBpm * 0.5f; // first beat after half an interval
 
 		if (_collisionShape != null)
 			_collisionShape.Disabled = true;
@@ -540,17 +567,94 @@ public void SwapCharacter(CharacterEntry entry, float duration = 0.8f)
 		UpdateAnimations(Vector3.Zero);
 	}
 
+	// ── Tension (lives-based FOV / shader / heartbeat) ────────────────────────
+
+	/// <summary>
+	/// Applies the visual and audio tension level matching <paramref name="lives"/> (1–3).
+	/// Call from the /fov debug command or whenever lives change for the local player.
+	/// </summary>
+	public void SetTension(int lives)
+	{
+		float newFov, bobMult, heartBpm, heartDb, shaderK1, shaderZoom;
+		switch (lives)
+		{
+			case 1:
+				newFov = 105f; bobMult = 2.6f; heartBpm = 120f; heartDb = 4f;
+				shaderK1 = 0.82f; shaderZoom = 1.68f;
+				break;
+			case 2:
+				newFov = 95f; bobMult = 1.8f; heartBpm = 90f; heartDb = -2f;
+				shaderK1 = 0.65f; shaderZoom = 1.50f;
+				break;
+			default: // 3 lives = normal
+				newFov = 75f; bobMult = 1.0f; heartBpm = 50f; heartDb = -6f;
+				shaderK1 = 0.31f; shaderZoom = 1.20f;
+				break;
+		}
+
+		_baseFOV        = newFov;
+		WalkBobAmount   = 0.05f * bobMult;
+		SprintBobAmount = 0.08f * bobMult;
+		SideBobAmount   = 0.03f * bobMult;
+
+		_heartBpm      = heartBpm;
+		_heartVolumeDb = heartDb;
+		if (_heartbeatAudio != null)
+			_heartbeatAudio.VolumeDb = heartDb;
+
+		// Tween FOV only when standing and not under FocusController's control.
+		// While sitting the chair owns the FOV; _baseFOV is updated above so Unsit() restores correctly.
+		if (_camera != null && !_isSitting && (FocusController.Instance == null || !FocusController.Instance.IsFocused))
+		{
+			CreateTween()
+				.TweenProperty(_camera, "fov", newFov, 1.5f)
+				.SetTrans(Tween.TransitionType.Sine)
+				.SetEase(Tween.EaseType.InOut);
+		}
+
+		// Smoothly interpolate fisheye shader parameters.
+		var colorRect = GetTree()?.Root.FindChild("ColorRect", true, false) as ColorRect;
+		if (colorRect?.Material is ShaderMaterial mat)
+		{
+			float fromK1   = mat.GetShaderParameter("k1").As<float>();
+			float fromZoom = mat.GetShaderParameter("zoom").As<float>();
+			var   stween   = CreateTween().SetParallel(true);
+			stween.TweenMethod(
+				Callable.From((float v) => mat.SetShaderParameter("k1",   v)),
+				Variant.From(fromK1), Variant.From(shaderK1), 1.5f);
+			stween.TweenMethod(
+				Callable.From((float v) => mat.SetShaderParameter("zoom", v)),
+				Variant.From(fromZoom), Variant.From(shaderZoom), 1.5f);
+		}
+	}
+
+	private void UpdateHeartbeat(float delta)
+	{
+		if (!_isSitting || _heartbeatAudio == null || !_heartbeatAudio.IsInsideTree()) return;
+		_heartTimer -= delta;
+		if (_heartTimer <= 0f)
+		{
+			_heartbeatAudio.Play();
+			_heartTimer = 60f / _heartBpm;
+		}
+	}
+
 	// ── Shift hint UI ─────────────────────────────────────────────────────────
 
 	public override void _Process(double delta)
 	{
 		UpdateShiftHint();
+		UpdateHeartbeat((float)delta);
 	}
 
 	private void BuildShiftHint()
 	{
 		var ui = GetNodeOrNull<CanvasLayer>("UI");
 		if (ui == null) return;
+
+		// Render this CanvasLayer above the fisheye post-process shader so zooming
+		// the shader never clips the HUD elements.
+		ui.Layer = 10;
 
 		// HBoxContainer pinned to the bottom-left corner.
 		var hbox = new HBoxContainer();
@@ -608,25 +712,137 @@ public void SwapCharacter(CharacterEntry entry, float duration = 0.8f)
 		_shiftHintText = textLabel;
 	}
 
+	private void BuildExitFocusButton()
+	{
+		var ui = GetNodeOrNull<CanvasLayer>("UI");
+		if (ui == null) return;
+
+		// Root container – full left-edge strip, captures all mouse input on that side.
+		var container = new Control();
+		container.AnchorLeft   = 0f; container.AnchorRight  = 0f;
+		container.AnchorTop    = 0f; container.AnchorBottom = 1f;
+		container.OffsetLeft   = 0f; container.OffsetRight  = 80f;
+		container.OffsetTop    = 0f; container.OffsetBottom = 0f;
+		container.MouseFilter  = Control.MouseFilterEnum.Stop;
+		container.MouseDefaultCursorShape = Control.CursorShape.PointingHand;
+		container.Visible = false;
+		ui.AddChild(container);
+		_exitFocusButton = container;
+
+		// Red (left, faint) → transparent (right) gradient spanning the full height.
+		var gradient = new Gradient();
+		gradient.Colors  = new Color[] { new Color(0.9f, 0.05f, 0.05f, 0.6f), new Color(0.9f, 0.05f, 0.05f, 0f) };
+		gradient.Offsets = new float[] { 0f, 1f };
+		var gradTex = new GradientTexture2D();
+		gradTex.Gradient = gradient;
+		gradTex.Width    = 80;
+		gradTex.Height   = 4;   // height is irrelevant – Scale mode stretches it
+		gradTex.Fill     = GradientTexture2D.FillEnum.Linear;
+		gradTex.FillFrom = Vector2.Zero;
+		gradTex.FillTo   = new Vector2(1f, 0f);
+
+		_exitGradient = new TextureRect();
+		_exitGradient.Texture     = gradTex;
+		_exitGradient.StretchMode = TextureRect.StretchModeEnum.Scale;
+		_exitGradient.AnchorLeft  = 0f; _exitGradient.AnchorRight  = 1f;
+		_exitGradient.AnchorTop   = 0f; _exitGradient.AnchorBottom = 1f;
+		_exitGradient.OffsetLeft  = 0f; _exitGradient.OffsetRight  = 0f;
+		_exitGradient.OffsetTop   = 0f; _exitGradient.OffsetBottom = 0f;
+		_exitGradient.MouseFilter = Control.MouseFilterEnum.Ignore;
+		_exitGradient.Modulate    = new Color(1f, 1f, 1f, 0f);
+		container.AddChild(_exitGradient);
+
+		// ✕ label – larger, nudged away from the edge, centered vertically.
+		_exitXLabel = new Label();
+		_exitXLabel.Text = "✕";
+		_exitXLabel.AnchorLeft   = 0f;   _exitXLabel.AnchorRight  = 1f;
+		_exitXLabel.AnchorTop    = 0.5f; _exitXLabel.AnchorBottom = 0.5f;
+		_exitXLabel.OffsetLeft   = 22f;  _exitXLabel.OffsetRight  = 0f;
+		_exitXLabel.OffsetTop    = -26f; _exitXLabel.OffsetBottom = 26f;
+		_exitXLabel.HorizontalAlignment = HorizontalAlignment.Center;
+		_exitXLabel.VerticalAlignment   = VerticalAlignment.Center;
+		_exitXLabel.MouseFilter = Control.MouseFilterEnum.Ignore;
+		var font = GD.Load<FontFile>("res://Assets/Fonts/Jacquard24-Regular.ttf");
+		if (font != null)
+		{
+			_exitXLabel.AddThemeFontOverride("font", font);
+			_exitXLabel.AddThemeFontSizeOverride("font_size", 62);
+		}
+		_exitXLabel.AddThemeColorOverride("font_color", new Color(1f, 1f, 1f, 1f));
+		_exitXLabel.AddThemeConstantOverride("outline_size", 0);
+		container.AddChild(_exitXLabel);
+
+		// Hover: fade gradient in (faint peak), turn ✕ red.
+		container.MouseEntered += () => {
+			_exitHoverTween?.Kill();
+			_exitHoverTween = CreateTween().SetParallel(true);
+			_exitHoverTween.TweenProperty(_exitGradient, "modulate", new Color(1f, 1f, 1f, 1f), 0.22f)
+				.SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.Out);
+			_exitHoverTween.TweenProperty(_exitXLabel, "modulate", new Color(1f, 0.15f, 0.15f, 1f), 0.22f)
+				.SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.Out);
+		};
+
+		// Exit: fade gradient out, restore white ✕.
+		container.MouseExited += () => {
+			_exitHoverTween?.Kill();
+			_exitHoverTween = CreateTween().SetParallel(true);
+			_exitHoverTween.TweenProperty(_exitGradient, "modulate", new Color(1f, 1f, 1f, 0f), 0.35f)
+				.SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.In);
+			_exitHoverTween.TweenProperty(_exitXLabel, "modulate", Colors.White, 0.35f)
+				.SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.In);
+		};
+
+		// Click: exit focus.
+		container.GuiInput += (@event) => {
+			if (@event is InputEventMouseButton mb && mb.ButtonIndex == MouseButton.Left && mb.Pressed)
+				FocusController.Instance?.ExitFocus();
+		};
+	}
+
 	private void UpdateShiftHint()
 	{
-		if (_shiftHint == null) return;
-
 		bool focused = FocusController.Instance?.IsFocused ?? false;
 
-		if (focused)
+		if (_shiftHint != null)
 		{
-			_shiftHint.Visible    = true;
-			_shiftHintText.Text   = "Return";
+			// While focused the red button handles exiting — hide the shift hint.
+			if (!focused && _isSitting)
+			{
+				_shiftHint.Visible  = true;
+				_shiftHintText.Text = "Stand Up";
+			}
+			else
+			{
+				_shiftHint.Visible = false;
+			}
 		}
-		else if (_isSitting)
+
+		if (_exitFocusButton != null)
 		{
-			_shiftHint.Visible    = true;
-			_shiftHintText.Text   = "Stand Up";
-		}
-		else
-		{
-			_shiftHint.Visible = false;
+			if (focused && !_exitButtonVisible)
+			{
+				// Focus just started — fade in.
+				_exitButtonVisible = true;
+				_exitFocusButton.Modulate = new Color(1f, 1f, 1f, 0f);
+				_exitFocusButton.Visible  = true;
+				_exitFadeTween?.Kill();
+				_exitFadeTween = CreateTween();
+				_exitFadeTween.TweenProperty(_exitFocusButton, "modulate:a", 1f, 0.35f)
+					.SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.Out);
+			}
+			else if (!focused && _exitButtonVisible)
+			{
+				// Focus just ended — reset hover state and fade out.
+				_exitButtonVisible = false;
+				_exitHoverTween?.Kill();
+				if (_exitGradient != null) _exitGradient.Modulate = new Color(1f, 1f, 1f, 0f);
+				if (_exitXLabel   != null) _exitXLabel.Modulate   = Colors.White;
+				_exitFadeTween?.Kill();
+				_exitFadeTween = CreateTween();
+				_exitFadeTween.TweenProperty(_exitFocusButton, "modulate:a", 0f, 0.12f)
+					.SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.In);
+				_exitFadeTween.TweenCallback(Callable.From(() => _exitFocusButton.Visible = false));
+			}
 		}
 	}
 }

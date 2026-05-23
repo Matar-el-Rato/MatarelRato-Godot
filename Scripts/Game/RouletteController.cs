@@ -10,8 +10,10 @@ public partial class RouletteController : Node3D
     [Export] public float SettleSpeedThreshold = 0.05f;
     [Export] public float SettleTime           = 1.5f;
     [Export] public float MaxBallTime          = 6.0f;
-    [Export] public float RevealDuration = 0.55f;
-    [Export] public float HideDuration  = 0.4f;
+    [Export] public float RevealDuration       = 0.55f;
+    [Export] public float HideDuration         = 0.4f;
+    /// <summary>How long the ball takes to coast to a full stop after the slot is decided.</summary>
+    [Export] public float DecelerationDuration = 0.9f;
 
     [Signal] public delegate void BallSettledEventHandler();
 
@@ -29,6 +31,8 @@ public partial class RouletteController : Node3D
     private float   _throwTimer;
     private bool    _isSettled;
     private bool    _active;
+    private bool    _isDecelerating;
+    private float   _decelerateTimer;
 
     public override void _Ready()
     {
@@ -73,6 +77,36 @@ public partial class RouletteController : Node3D
 
         float f = (float)delta;
 
+        // ── Deceleration phase: ball slot decided, coast to a smooth stop ─────
+        if (_isDecelerating)
+        {
+            _decelerateTimer += f;
+            float t     = Mathf.Clamp(_decelerateTimer / DecelerationDuration, 0f, 1f);
+            float eased = t * t; // ease-in so braking strengthens gradually
+            _ball.LinearDamp  = Mathf.Lerp(0.1f,  8f, eased);
+            _ball.AngularDamp = Mathf.Lerp(0.5f, 12f, eased);
+
+            _ball.ApplyCentralForce(-GlobalTransform.Basis.Y.Normalized() * LocalGravity * _ball.Mass);
+            _spinnerCurrentRps = Mathf.Max(0f, _spinnerCurrentRps - SpinnerDeceleration * f);
+            _spinnerAngle     += _spinnerCurrentRps * Mathf.Tau * f;
+            _spinnerBody.Rotation = new Vector3(0f, _spinnerAngle, 0f);
+
+            if (_decelerateTimer >= DecelerationDuration)
+            {
+                _ball.LinearVelocity  = Vector3.Zero;
+                _ball.AngularVelocity = Vector3.Zero;
+                _ball.LinearDamp      = 0.1f;
+                _ball.AngularDamp     = 0.5f;
+                _active               = false;
+                _isDecelerating       = false;
+                _isSettled            = true;
+                GD.Print("[Roulette] Ball settled.");
+                EmitSignal(SignalName.BallSettled);
+            }
+            return;
+        }
+
+        // ── Normal physics ────────────────────────────────────────────────────
         _ball.ApplyCentralForce(-GlobalTransform.Basis.Y.Normalized() * LocalGravity * _ball.Mass);
 
         float localY = _ball.Position.Y;
@@ -135,8 +169,12 @@ public partial class RouletteController : Node3D
     public void HideAgain()
     {
         _active               = false;
+        _isDecelerating       = false;
+        _decelerateTimer      = 0f;
         _ball.LinearVelocity  = Vector3.Zero;
         _ball.AngularVelocity = Vector3.Zero;
+        _ball.LinearDamp      = 0.1f;
+        _ball.AngularDamp     = 0.5f;
         SetCollisionsEnabled(false);
 
         var t = CreateTween();
@@ -184,11 +222,15 @@ public partial class RouletteController : Node3D
     {
         _active            = false;
         _isSettled         = false;
+        _isDecelerating    = false;
+        _decelerateTimer   = 0f;
         _spinnerCurrentRps = 0f;
         _settleTimer       = 0f;
         _throwTimer        = 0f;
         _ball.LinearVelocity  = Vector3.Zero;
         _ball.AngularVelocity = Vector3.Zero;
+        _ball.LinearDamp      = 0.1f;
+        _ball.AngularDamp     = 0.5f;
         _ball.Position        = _ballStartPos;
     }
 
@@ -196,12 +238,10 @@ public partial class RouletteController : Node3D
 
     private void Settle()
     {
-        _active      = false;
-        _isSettled   = true;
-        _settleTimer = 0f;
-        _throwTimer  = 0f;
-        GD.Print("[Roulette] Ball settled.");
-        EmitSignal(SignalName.BallSettled);
+        _isDecelerating  = true;
+        _decelerateTimer = 0f;
+        _settleTimer     = 0f;
+        _throwTimer      = 0f;
     }
 
     private void ThrowBall()

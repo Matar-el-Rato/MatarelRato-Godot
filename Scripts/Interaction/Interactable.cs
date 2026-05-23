@@ -32,6 +32,9 @@ public partial class Interactable : Node3D, IInteractable
 	/// </summary>
 	public bool Enabled { get; set; } = true;
 
+	/// <summary>When false, the player cannot interact with this while seated.</summary>
+	[Export] public bool AllowWhileSitting = true;
+
 	[Export] public string PromptText        = "Interact";
 	[Export] public string InteractionAction = "interact";
 	/// <summary>Shown in the tooltip bubble after hovering for 0.5 s. Leave empty to suppress.</summary>

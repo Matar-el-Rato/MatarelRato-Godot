@@ -24,6 +24,7 @@
 [ext_resource type="PackedScene" uid="uid://dgv6wbfejnsf6" path="res://Scenes/UI/ChatUI.tscn" id="22_chat_ui"]
 [ext_resource type="AudioStream" uid="uid://bc3dpjpyfbu0" path="res://Assets/Sound FX/light_flicker.wav" id="23_oo3wg"]
 [ext_resource type="PackedScene" uid="uid://b035w31kcbj6f" path="res://Assets/Pizzeria/recepcionist_bell.glb" id="27_4sso6"]
+[ext_resource type="PackedScene" uid="uid://cdkqskp0i35g1" path="res://Assets/PlayingSet/General/damocles.glb" id="28_8um71"]
 [ext_resource type="Script" uid="uid://bmkswcfkw2bfr" path="res://Scripts/Interaction/BellController.cs" id="28_bell_script"]
 [ext_resource type="AudioStream" uid="uid://bapkmgr80xnml" path="res://Assets/Sound FX/receptionist_bell.wav" id="29_bell_sound"]
 [ext_resource type="Script" uid="uid://bkaid1pe6sdan" path="res://Scripts/Interaction/FocusController.cs" id="30_focus_ctrl"]
@@ -44,6 +45,7 @@
 [ext_resource type="Shader" uid="uid://cdxyxjn6vq4yv" path="res://Shaders/fisheye.gdshader" id="47_8um71"]
 [ext_resource type="PackedScene" uid="uid://b0qrw5i73q7b3" path="res://Scenes/Ophanim.tscn" id="47_uuu6x"]
 [ext_resource type="Script" uid="uid://bk2cbuauhf6vh" path="res://Scripts/Game/TableManager.cs" id="50_tablemgr"]
+[ext_resource type="Script" path="res://Scripts/Game/DamoclesSword.cs" id="55_damocles_script"]
 [ext_resource type="PackedScene" uid="uid://dch41rs3n3v01" path="res://Scenes/Game/Chair.tscn" id="51_chair_scene"]
 [ext_resource type="PackedScene" uid="uid://dp1t3ms3t0v02" path="res://Scenes/Game/PlayerItemSet.tscn" id="52_pitemset"]
 [ext_resource type="Script" uid="uid://dv8cr4xwhbspu" path="res://Scripts/UI/DiceHUD.cs" id="60_dicehud"]
@@ -647,6 +649,10 @@ BrimstoneRaySound = ExtResource("45_xot12")
 
 [node name="Roulette" parent="Room1" unique_id=1714169080 instance=ExtResource("6_usjqs")]
 transform = Transform3D(1.0000001, -1.5529405e-22, 0, 0, -1.0000001, -8.742278e-08, 0, 8.742278e-08, -1, -15.255946, 3.5341876, -5.342228)
+
+[node name="damocles" parent="Room1" unique_id=1517889442 instance=ExtResource("28_8um71")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.262368, 0.69990087, -5.344487)
+script = ExtResource("55_damocles_script")
 
 [node name="Room2" type="Node3D" parent="." unique_id=1167468490]
 

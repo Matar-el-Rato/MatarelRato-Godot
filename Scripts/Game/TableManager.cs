@@ -72,7 +72,11 @@ public partial class TableManager : Node3D
     // (first turn_start after initiative, doubles extra turn).
     private int   _cubileteAtUserId  = -1;
     // Suppress MoveToPlayer while Ophanim's initiative sequence is still playing.
-    private bool  _initiativeInProgress = false;
+    private bool          _initiativeInProgress = false;
+    private DamoclesSword         _sword;
+    private int                   _pendingSwordUserId  = -1;
+    private bool                  _swordFalling        = false;
+    private readonly Queue<string> _swordPendingJsons  = new();
 
     // ── Game board state ──────────────────────────────────────────────────────
     // positions[colorSlot][pieceIndex]; slot 0=blue 1=green 2=yellow 3=red.
@@ -127,6 +131,8 @@ public partial class TableManager : Node3D
         _rollConnected        = false;
         _cubileteAtUserId     = -1;
         _initiativeInProgress = false;
+        _sword?.Dismiss();
+        _pendingSwordUserId   = -1;
         _lastMoveTask         = System.Threading.Tasks.Task.CompletedTask;
         _itemSetsBySlot.Clear();
         foreach (var row in _boardPositions)
@@ -154,6 +160,22 @@ public partial class TableManager : Node3D
             if (!root.TryGetProperty("action", out var actionEl)) return;
             string action = actionEl.GetString();
 
+            // While the Damocles sword is falling, defer turn-progression events
+            // so the animation plays out before the game state advances.
+            if (_swordFalling)
+            {
+                switch (action)
+                {
+                    case "life_lost":
+                    case "turn_end":
+                    case "turn_start":
+                    case "handcuff_skip":
+                    case "player_eliminated":
+                        _swordPendingJsons.Enqueue(json);
+                        return;
+                }
+            }
+
             switch (action)
             {
                 case "chair_taken":          OnChairTaken(root);          break;
@@ -174,6 +196,8 @@ public partial class TableManager : Node3D
                 case "handcuff_skip":        OnHandcuffSkip(root);        break;
                 case "life_lost":            OnLifeLost(root);            break;
                 case "game_over":            OnGameOver(root);            break;
+                case "turn_timer_warning":   OnTimerWarning(root);        break;
+                case "turn_timer_expired":   OnTimerExpired(root);        break;
             }
         }
         catch (Exception ex)
@@ -290,19 +314,7 @@ public partial class TableManager : Node3D
             }
         }
 
-        // Prepend a cubilete spawn ray so it appears at the winner's spot
-        // with a brimstone beam, before the item rays fire.
-        if (winnerUserId >= 0 && _colorByUserId.TryGetValue(winnerUserId, out var winnerColor))
-        {
-            Vector3 cubPos = GetCubiletePositionForColor(winnerColor.ToLower());
-            int     wUid   = winnerUserId;
-            (Vector3, Action) cubiletGrant = (cubPos, () =>
-            {
-                GetNodeOrNull<CubileteController>("CubileteAndDice")?.AppearAt(cubPos);
-                _cubileteAtUserId = wUid;
-            });
-            itemGrants.Insert(0, cubiletGrant);
-        }
+        // Cubilete appears after BEGIN alongside the pieces, not before items fire.
 
         // Build a separate list for golden square rays (Ophanim introduces them first).
         var goldenGrants = new List<(Vector3, Action)>();
@@ -345,6 +357,18 @@ public partial class TableManager : Node3D
             }
         }
 
+        // Cubilete appears with the pieces (after BEGIN), at the winner's position.
+        if (winnerUserId >= 0 && _colorByUserId.TryGetValue(winnerUserId, out var winnerColor))
+        {
+            Vector3 cubPos = GetCubiletePositionForColor(winnerColor.ToLower());
+            int     wUid   = winnerUserId;
+            pieceGrants.Insert(0, (cubPos, () =>
+            {
+                GetNodeOrNull<CubileteController>("CubileteAndDice")?.AppearAt(cubPos);
+                _cubileteAtUserId = wUid;
+            }));
+        }
+
         if (shots.Count > 0)
             OphanimNode.StartInitiativeSequence(shots.ToArray(), winnerName,
                 itemGrants.Count > 0   ? itemGrants.ToArray()   : null,
@@ -367,7 +391,15 @@ public partial class TableManager : Node3D
         _isMyTurn = (userId == LiveConnectionManager.LocalUserId);
         GD.Print($"[TM] turn_start user_id={userId} isMyTurn={_isMyTurn}");
 
+        GetNodeOrNull<CubileteController>("CubileteAndDice")?.SetInteractionEnabled(_isMyTurn);
+
         if (_initiativeInProgress) return;
+
+        if (OphanimNode != null)
+        {
+            float tableroY = GetNodeOrNull<Node3D>("tablero")?.GlobalPosition.Y ?? BoardCenter.Y;
+            _sword?.SpawnFromOphanim(OphanimNode, tableroY);
+        }
 
         if (userId == _cubileteAtUserId)
         {
@@ -388,6 +420,7 @@ public partial class TableManager : Node3D
 
     private void OnDiceResult(JsonElement root)
     {
+        _sword?.Dismiss();
         int    userId     = root.TryGetProperty("user_id",    out var drU)   ? drU.GetInt32()   : -1;
         int    die1       = root.TryGetProperty("die1",       out var dr1)   ? dr1.GetInt32()   : 0;
         int    die2       = root.TryGetProperty("die2",       out var dr2)   ? dr2.GetInt32()   : 0;
@@ -544,6 +577,8 @@ public partial class TableManager : Node3D
         await _lastMoveTask;
         if (!IsInsideTree()) return;
 
+        _sword?.Dismiss();
+
         // ── Play arrival sound ────────────────────────────────────────────────
         var comboClip = GD.Load<AudioStream>("res://Assets/Sound FX/combosound.wav");
         if (comboClip != null)
@@ -644,7 +679,7 @@ public partial class TableManager : Node3D
 
     private void OnLifeLost(JsonElement root)
     {
-        int userId = root.TryGetProperty("user_id", out var u)  ? u.GetInt32()  : -1;
+        int userId = root.TryGetProperty("user_id",         out var u) ? u.GetInt32() : -1;
         int lives  = root.TryGetProperty("lives_remaining", out var l) ? l.GetInt32() : 0;
         string who = _usernameByUserId.TryGetValue(userId, out var n) ? n : $"#{userId}";
         GD.Print($"[TM] life_lost: {who} now has {lives} lives");
@@ -653,6 +688,10 @@ public partial class TableManager : Node3D
         int slot = ColorToSlot(color.ToLower());
         if (slot >= 0 && _itemSetsBySlot.TryGetValue(slot, out var itemSet))
             itemSet.SetLives(lives);
+
+        // Apply camera/audio tension for the local player only.
+        if (userId == LiveConnectionManager.LocalUserId)
+            PlayerCameraController.LocalInstance?.SetTension(lives);
     }
 
     private void OnGameOver(JsonElement root)
@@ -660,6 +699,59 @@ public partial class TableManager : Node3D
         int winnerId = root.TryGetProperty("winner_user_id", out var w) ? w.GetInt32() : -1;
         string who   = _usernameByUserId.TryGetValue(winnerId, out var n) ? n : $"#{winnerId}";
         GD.Print($"[TM] game_over! Winner: {who}");
+    }
+
+    private void OnTimerWarning(JsonElement root)
+    {
+        int remaining = root.TryGetProperty("seconds_remaining", out var sr) ? sr.GetInt32() : 0;
+        ChatManager.AddLog($"[color=#ff8800][TIMER][/color] {remaining} seconds remaining!");
+        _sword?.OnTimerWarning(remaining);
+    }
+
+    private void OnTimerExpired(JsonElement root)
+    {
+        _pendingSwordUserId = root.TryGetProperty("user_id", out var u) ? u.GetInt32() : -1;
+        _swordFalling       = true;
+        ChatManager.AddLog("[color=#ff4400][TIMER][/color] Turn timer expired.");
+        _sword?.Cut();
+    }
+
+    private async void OnSwordImpaled()
+    {
+        // 1. Fire red ray the moment the blade strikes.
+        if (_pendingSwordUserId >= 0 && OphanimNode != null
+            && _colorByUserId.TryGetValue(_pendingSwordUserId, out var color))
+        {
+            var tablero = GetNodeOrNull<TableroController>("tablero");
+            if (tablero != null && TableroController.StartPositions.TryGetValue(color.ToLower(), out int startSq))
+                OphanimNode.ShootLifeLostRay(tablero.GetBoardWorldPosition(startSq, color.ToLower()));
+        }
+        _pendingSwordUserId = -1;
+
+        // 2. Flush life_lost immediately (updates HUD lives); hold everything else.
+        var deferred = new List<string>();
+        while (_swordPendingJsons.TryDequeue(out var buffered))
+        {
+            using var d = JsonDocument.Parse(buffered);
+            string a = d.RootElement.TryGetProperty("action", out var ae) ? ae.GetString() : "";
+            if (a == "life_lost") HandleGameAction(buffered);
+            else                  deferred.Add(buffered);
+        }
+
+        // 3. Blade stays stuck for 1 second.
+        await ToSignal(GetTree().CreateTimer(1.0f), SceneTreeTimer.SignalName.Timeout);
+        if (!IsInsideTree()) return;
+
+        _sword?.Dismiss();
+        _swordFalling = false;
+
+        // 4. Replay turn-progression messages in arrival order.
+        foreach (var buffered in deferred)
+            HandleGameAction(buffered);
+
+        // Also drain anything that arrived during the 1-second pause.
+        while (_swordPendingJsons.TryDequeue(out var late))
+            HandleGameAction(late);
     }
 
     // ── Piece selection ───────────────────────────────────────────────────────
@@ -814,7 +906,11 @@ public partial class TableManager : Node3D
     private void OnInitiativeSequenceCompleted()
     {
         _initiativeInProgress = false;
-        // Cubilete is already at the winner's position from the initiative ray.
+        if (OphanimNode != null)
+        {
+            float tableroY = GetNodeOrNull<Node3D>("tablero")?.GlobalPosition.Y ?? BoardCenter.Y;
+            _sword?.SpawnFromOphanim(OphanimNode, tableroY);
+        }
     }
 
     private void OnRollCompleted(int die1, int die2)
@@ -885,6 +981,13 @@ public partial class TableManager : Node3D
             var off = cubilete.GlobalPosition - tablero.GlobalPosition;
             _cubileteRadius    = new Vector2(off.X, off.Z).Length();
             _cubileteHeightOff = off.Y + cubilete.HiddenDepth;
+        }
+
+        _sword = GetParent()?.GetNodeOrNull<DamoclesSword>("damocles");
+        if (_sword != null)
+        {
+            _sword.Impaled -= OnSwordImpaled;
+            _sword.Impaled += OnSwordImpaled;
         }
 
         if (cubilete != null && !_rollConnected)

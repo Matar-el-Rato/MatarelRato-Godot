@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://bm2fuo6xhem0y"
+path="res://.godot/imported/heart_thud.wav-0ed8885d31b62a8ca0d6dcb23eaca674.sample"
+
+[deps]
+
+source_file="res://Assets/Sound FX/heart_thud.wav"
+dest_files=["res://.godot/imported/heart_thud.wav-0ed8885d31b62a8ca0d6dcb23eaca674.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2

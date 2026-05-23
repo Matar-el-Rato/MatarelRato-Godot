@@ -72,6 +72,7 @@ public partial class Door : Node3D
 		{
 			_originalPromptText     = _interactable.PromptText;
 			_originalHighlightColor = _interactable.HighlightColor;
+			_interactable.AllowWhileSitting = false;
 			_interactable.Interacted += OnInteracted;
 			_interactable.Focused    += OnFocused;
 			_interactable.Unfocused  += OnUnfocused;

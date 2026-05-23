@@ -10,10 +10,11 @@ public partial class Ophanim : Node3D
 
 	// ── Hover ─────────────────────────────────────────────────────────────────
 	[ExportGroup("Hover")]
-	[Export] public float HoverBobAmplitude  = 0.12f;
-	[Export] public float HoverSwayAmplitude = 0.15f;
-	[Export] public float HoverRotateDeg     = 5.5f;
-	[Export] public float HoverSpeed         = 0.7f;
+	[Export] public float HoverBobAmplitude      = 0.12f;
+	[Export] public float HoverSwayAmplitude     = 0.15f;
+	[Export] public float HoverRotateDeg         = 5.5f;
+	[Export] public float HoverSpeed             = 0.7f;
+	[Export] public float RestingSwayMultiplier  = 0.25f;
 
 	// ── Decode Settings ───────────────────────────────────────────────────────
 	[ExportGroup("Decode")]
@@ -41,6 +42,7 @@ public partial class Ophanim : Node3D
 	[ExportGroup("Descent")]
 	[Export] public float DescentHiddenOffset = 3.5f;
 	[Export] public float DescentDuration     = 2.5f;
+	[Export] public float RestingOffset       = 0.5f;
 
 	// ── Audio ─────────────────────────────────────────────────────────────────
 	[ExportGroup("Audio")]
@@ -73,7 +75,9 @@ public partial class Ophanim : Node3D
 	[Export] public string BeginMessage          = "BEGIN.";
 	[Export] public float  BeginHoldDuration     = 0.5f;
 	[Export] public float  PieceGrantPause       = 0.1f;
-	[Export] public float  PieceRayVolumeDb      = -18f;
+	[Export] public float  PieceRayVolumeDb       = -18f;
+	[Export] public string SwordSpawnMessage      = "DON'T LET THIS DAGGER FALL, OR ELSE...";
+	[Export] public float  SwordSpawnHoldDuration = 2.0f;
 
 	// ── Golden Square ─────────────────────────────────────────────────────────
 	[ExportGroup("Golden Square")]
@@ -110,6 +114,7 @@ public partial class Ophanim : Node3D
 	private Vector3 _visibleBasePosition;
 	private Vector3 _baseRotation;
 	private float   _descendYOffset;
+	private float   _swayMultiplier = 1f;
 	private bool    _hasActivated;
 	private Vector3 _boardCenterWorld;
 
@@ -134,6 +139,7 @@ public partial class Ophanim : Node3D
 		_visibleBasePosition = Position;
 		_baseRotation        = Rotation;
 		_descendYOffset      = DescentHiddenOffset;
+		FocusController.FocusStateChanged += OnFocusStateChanged;
 
 		var animPlayer = FindAnimationPlayer(this);
 		if (animPlayer != null && animPlayer.HasAnimation("Animation"))
@@ -163,18 +169,25 @@ public partial class Ophanim : Node3D
 
 	public override void _Process(double delta)
 	{
+		bool focusHide = FocusController.Instance?.IsFocused ?? false;
+		Visible = !focusHide;
+		if (focusHide) return;
+
+		float targetMult = _descendYOffset >= RestingOffset * 0.5f ? RestingSwayMultiplier : 1f;
+		_swayMultiplier  = Mathf.Lerp(_swayMultiplier, targetMult, (float)delta * 2f);
+
 		float t = (float)Time.GetTicksMsec() / 1000.0f * HoverSpeed;
 		Position = _visibleBasePosition + new Vector3(0f, _descendYOffset, 0f) + new Vector3(
-			Mathf.Sin(t * 0.53f) * HoverSwayAmplitude,
-			Mathf.Sin(t * 0.80f) * HoverBobAmplitude,
-			Mathf.Sin(t * 0.37f) * HoverSwayAmplitude * 0.6f
+			Mathf.Sin(t * 0.53f) * HoverSwayAmplitude * _swayMultiplier,
+			Mathf.Sin(t * 0.80f) * HoverBobAmplitude  * _swayMultiplier,
+			Mathf.Sin(t * 0.37f) * HoverSwayAmplitude * 0.6f * _swayMultiplier
 		);
 		float rotRad = Mathf.DegToRad(HoverRotateDeg);
 		Rotation = _baseRotation + new Vector3(
 			Mathf.Sin(t * 0.60f) * rotRad * 0.5f,
 			Mathf.Sin(t * 0.45f) * rotRad,
 			Mathf.Sin(t * 0.70f) * rotRad * 0.7f
-		);
+		) * _swayMultiplier;
 	}
 
 	// ── Ambient Audio ─────────────────────────────────────────────────────────
@@ -254,15 +267,10 @@ public partial class Ophanim : Node3D
 	/// <summary>Re-descend after the initiative sequence has finished and Ophanim is hidden.</summary>
 	public void ReDescend()
 	{
-		Visible           = true;
-		_descendYOffset   = DescentHiddenOffset;
-		_droneAudio?.Play();
-		_wingFlapAudio?.Play();
-
 		var tween = CreateTween();
 		tween.TweenMethod(
 			Callable.From((float v) => _descendYOffset = v),
-			DescentHiddenOffset, 0f, GoldenDescentDuration)
+			_descendYOffset, 0f, GoldenDescentDuration)
 			.SetTrans(Tween.TransitionType.Cubic)
 			.SetEase(Tween.EaseType.Out);
 		tween.Finished += () => _descendYOffset = 0f;
@@ -554,6 +562,10 @@ public partial class Ophanim : Node3D
 				await ToSignal(GetTree().CreateTimer(PieceGrantPause), SceneTreeTimer.SignalName.Timeout);
 				if (!IsInsideTree()) return;
 			}
+			await ToSignal(GetTree().CreateTimer(0.3f), SceneTreeTimer.SignalName.Timeout);
+			if (!IsInsideTree()) return;
+			await RunDecodeSequenceAsync(SwordSpawnMessage, SwordSpawnHoldDuration);
+			if (!IsInsideTree()) return;
 		}
 
 		EmitSignal(SignalName.InitiativeSequenceCompleted);
@@ -568,18 +580,19 @@ public partial class Ophanim : Node3D
 		var tween = CreateTween();
 		tween.TweenMethod(
 			Callable.From((float v) => _descendYOffset = v),
-			_descendYOffset, DescentHiddenOffset, DescentDuration)
+			_descendYOffset, RestingOffset, DescentDuration)
 			.SetTrans(Tween.TransitionType.Cubic)
 			.SetEase(Tween.EaseType.In);
-		tween.Finished += () =>
-		{
-			_droneAudio?.Stop();
-			_wingFlapAudio?.Stop();
-			Visible = false;
-		};
+		tween.Finished += () => _descendYOffset = RestingOffset;
 	}
 
-	private async System.Threading.Tasks.Task ShootItemRay(Vector3 targetWorldPos, System.Action onSpawn, float volumeDb = float.NaN)
+	/// <summary>Fires a red life-drain ray from Ophanim toward the given world position (fire and forget).</summary>
+	public void ShootLifeLostRay(Vector3 targetWorldPos)
+	{
+		_ = ShootItemRay(targetWorldPos, null, BrimstoneRayVolumeDb, new Color(0.85f, 0.08f, 0.08f));
+	}
+
+	private async System.Threading.Tasks.Task ShootItemRay(Vector3 targetWorldPos, System.Action onSpawn, float volumeDb = float.NaN, Color? tintColor = null)
 	{
 		Vector3 from = GlobalPosition;
 		Vector3 to   = targetWorldPos;
@@ -593,7 +606,9 @@ public partial class Ophanim : Node3D
 		Vector3 right = dir.Cross(refUp).Normalized();
 		Vector3 back  = right.Cross(dir).Normalized();
 
-		// Ray mesh — white emissive cylinder.
+		Color rayColor = tintColor ?? new Color(1f, 1f, 1f);
+
+		// Ray mesh — emissive cylinder.
 		var rayNode = new MeshInstance3D { TopLevel = true };
 		GetParent().AddChild(rayNode);
 		rayNode.GlobalTransform = new Transform3D(new Basis(right, dir, back), (from + to) * 0.5f);
@@ -607,9 +622,9 @@ public partial class Ophanim : Node3D
 		var mat = new StandardMaterial3D
 		{
 			ShadingMode             = StandardMaterial3D.ShadingModeEnum.Unshaded,
-			AlbedoColor             = new Color(1f, 1f, 1f),
+			AlbedoColor             = rayColor,
 			EmissionEnabled         = true,
-			Emission                = new Color(1f, 1f, 1f),
+			Emission                = rayColor,
 			EmissionEnergyMultiplier = 48f,
 		};
 		rayNode.Mesh             = cylinder;
@@ -800,6 +815,16 @@ public partial class Ophanim : Node3D
 
 		_dialogBubble?.HideDialog();
 		_isDecoding = false;
+	}
+
+	public override void _ExitTree()
+	{
+		FocusController.FocusStateChanged -= OnFocusStateChanged;
+	}
+
+	private void OnFocusStateChanged(bool focused)
+	{
+		Visible = !focused;
 	}
 
 	// ── Helpers ───────────────────────────────────────────────────────────────
