@@ -299,13 +299,18 @@ public partial class TableroController : Node3D
 	/// animating the reveal over ~1 second.
 	/// Call <see cref="HidePathPreview"/> to remove it.
 	/// </summary>
-	public void ShowPathPreview(List<int> path, string color)
+	public void ShowPathPreview(List<int> path, string color, Vector3? pieceWorldPos = null)
 	{
 		HidePathPreview();
 		if (path.Count == 0) return;
 
 		const float yOff     = 0.03f;
 		const float totalDur = 0.9f;
+
+		// Origin: piece's actual visual position so barrier-offset meshes start from the right place.
+		Vector3 originPos = pieceWorldPos.HasValue
+			? pieceWorldPos.Value + Vector3.Up * yOff
+			: GetBoardWorldPosition(path[0], color) + Vector3.Up * yOff;
 
 		// ── Connecting line (fade in over first 60 % of the animation) ────────
 		var lineMat = new StandardMaterial3D
@@ -317,11 +322,11 @@ public partial class TableroController : Node3D
 			RenderPriority = 5,
 		};
 
-		// LineStrip needs ≥ 2 vertices; skip when path is a single direct jump (base exit).
-		if (path.Count >= 2)
+		// Line: origin → every path square (always at least 2 vertices).
 		{
 			var lineMesh = new ImmediateMesh();
 			lineMesh.SurfaceBegin(Mesh.PrimitiveType.LineStrip, lineMat);
+			lineMesh.SurfaceAddVertex(ToLocal(originPos));
 			foreach (int sq in path)
 				lineMesh.SurfaceAddVertex(ToLocal(GetBoardWorldPosition(sq, color) + Vector3.Up * yOff));
 			lineMesh.SurfaceEnd();
@@ -337,7 +342,7 @@ public partial class TableroController : Node3D
 				.SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.Out);
 		}
 
-		// ── Intermediate dots (pop in staggered along path timing) ────────────
+		// ── Intermediate dots: origin + all squares except destination ────────
 		var dotMesh = new SphereMesh { Radius = 0.009f, Height = 0.018f, RadialSegments = 6, Rings = 3 };
 		var dotMat  = new StandardMaterial3D
 		{
@@ -348,7 +353,12 @@ public partial class TableroController : Node3D
 			RenderPriority = 6,
 		};
 
-		int dotCount = path.Count - 1;
+		// origin first, then all intermediate squares (path[0] … path[count-2])
+		var dotPositions = new List<Vector3> { originPos };
+		for (int i = 0; i < path.Count - 1; i++)
+			dotPositions.Add(GetBoardWorldPosition(path[i], color) + Vector3.Up * yOff);
+
+		int dotCount = dotPositions.Count;
 		for (int i = 0; i < dotCount; i++)
 		{
 			var dot = new MeshInstance3D
@@ -359,7 +369,7 @@ public partial class TableroController : Node3D
 				Scale            = Vector3.Zero,
 			};
 			AddChild(dot);
-			dot.GlobalPosition = GetBoardWorldPosition(path[i], color) + Vector3.Up * yOff;
+			dot.GlobalPosition = dotPositions[i];
 			_pathPreviewNodes.Add(dot);
 
 			float delay = dotCount > 1 ? (float)i / (dotCount - 1) * totalDur * 0.45f : 0f;
@@ -444,8 +454,8 @@ public partial class TableroController : Node3D
 		// Rotated (portrait):     1-7 (top-right bar), 25-41 (left bar + bottom-left), 59+ (right bar).
 		// Not rotated (landscape): 8-24 (top column + top-left), 42-58 (bottom + bottom-right).
 		bool needsRotation = (boardIndex >= 1  && boardIndex <= 7)  ||
-		                     (boardIndex >= 25 && boardIndex <= 41) ||
-		                     (boardIndex >= 59);
+							 (boardIndex >= 25 && boardIndex <= 41) ||
+							 (boardIndex >= 59);
 
 		var marker = new MeshInstance3D
 		{
@@ -475,6 +485,57 @@ public partial class TableroController : Node3D
 				0.50f, 0.30f, 1.1f)
 				.SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
 		}));
+	}
+
+	// ── Barrier positioning ───────────────────────────────────────────────────
+
+	private const float BarrierHalfOffset = 0.026f;
+
+	// Returns the lateral offset vector for a board index.
+	// Portrait squares (longitudinal axis = Z): pieces run along Z, so offset along Z.
+	// Landscape squares (longitudinal axis = X): pieces run along X, so offset along X.
+	private static Vector3 GetLateralOffset(int boardIndex, string color)
+	{
+		bool portrait;
+		if (boardIndex >= 100) {
+			// Corridor orientation follows its arm: yellow/red corridors are portrait, blue/green are landscape.
+			portrait = color == "yellow" || color == "red";
+		} else {
+			portrait = (boardIndex >= 1  && boardIndex <= 7)  ||
+					   (boardIndex >= 25 && boardIndex <= 41) ||
+					   (boardIndex >= 59);
+		}
+		return portrait ? new Vector3(0f, 0f, BarrierHalfOffset)
+						: new Vector3(BarrierHalfOffset, 0f, 0f);
+	}
+
+	/// <summary>Slides the two same-color pieces at <paramref name="square"/> apart into a visible barrier.</summary>
+	public void ApplyBarrierPositions(string color, int square)
+	{
+		var center = GetBoardWorldPosition(square, color);
+		var offset = GetLateralOffset(square, color);
+		int placed = 0;
+		for (int p = 0; p < 4 && placed < 2; p++) {
+			var ficha = GetPiece(color, p);
+			if (ficha == null || ficha.BoardIndex != square) continue;
+			var target = center + (placed == 0 ? -offset : offset);
+			var tw = CreateTween().SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
+			tw.TweenProperty(ficha, "global_position", target, 0.25f);
+			placed++;
+		}
+	}
+
+	/// <summary>Slides the lone remaining piece at <paramref name="square"/> back to the square center after a barrier breaks.</summary>
+	public void CenterPieceAt(string color, int square)
+	{
+		var center = GetBoardWorldPosition(square, color);
+		for (int p = 0; p < 4; p++) {
+			var ficha = GetPiece(color, p);
+			if (ficha == null || ficha.BoardIndex != square) continue;
+			var tw = CreateTween().SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
+			tw.TweenProperty(ficha, "global_position", center, 0.25f);
+			break;
+		}
 	}
 
 	// ── Utility ───────────────────────────────────────────────────────────────

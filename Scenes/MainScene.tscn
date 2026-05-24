@@ -620,13 +620,14 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13.980343, 0, -5.9173303)
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.0573406, 1.5272827, 0.5214219)
 shape = SubResource("BoxShape3D_ergw4")
 
-[node name="PlayingSetup" type="Node3D" parent="Room1" unique_id=1885415639 node_paths=PackedStringArray("OphanimNode", "RouletteNode")]
+[node name="PlayingSetup" type="Node3D" parent="Room1" unique_id=1885415639 node_paths=PackedStringArray("OphanimNode", "RouletteNode", "RoomMusicPlayer")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.1901207, 0, -0.09963226)
 script = ExtResource("50_tablemgr")
 ChairScene = ExtResource("51_chair_scene")
 PlayerItemSetScene = ExtResource("52_pitemset")
 OphanimNode = NodePath("../Ophanim")
 RouletteNode = NodePath("../Roulette")
+RoomMusicPlayer = NodePath("../AudioStreamPlayer3D")
 
 [node name="mesa_poker" parent="Room1/PlayingSetup" unique_id=474140406 instance=ExtResource("8_f140w")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.457277, 0.43543047, -5.255393)

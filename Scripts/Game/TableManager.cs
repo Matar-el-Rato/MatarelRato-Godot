@@ -18,6 +18,8 @@ public partial class TableManager : Node3D
     [Export] public RouletteController RouletteNode;
     // Drag the ColorRect's ShaderMaterial here so raycast undistortion stays in sync with the shader.
     [Export] public ShaderMaterial     FisheyeMaterial;
+    // Drag the room's AudioStreamPlayer3D node here so it can be crossfaded when the game starts.
+    [Export] public AudioStreamPlayer3D RoomMusicPlayer;
 
     // ── Maps ──────────────────────────────────────────────────────────────────
     private readonly Dictionary<string, Chair>     _chairsByColor     = new();
@@ -102,6 +104,13 @@ public partial class TableManager : Node3D
     private System.Threading.Tasks.Task _lastMoveTask =
         System.Threading.Tasks.Task.CompletedTask;
 
+    // Set while PlayDoublesReroll is running so OnTurnStart skips its ReadyForRoll call.
+    private bool _doublesAnimating     = false;
+    // Updated from dice_result; passed to the reroll sound selector.
+    private int  _consecutiveDoubles   = 0;
+    // Plays the game music track; started on initiative_sequence and cleaned up on reset.
+    private AudioStreamPlayer _gameMusicPlayer;
+
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
     public override void _Ready()
@@ -131,7 +140,17 @@ public partial class TableManager : Node3D
         _rollConnected        = false;
         _cubileteAtUserId     = -1;
         _initiativeInProgress = false;
+        _doublesAnimating     = false;
         _sword?.Dismiss();
+
+        if (_gameMusicPlayer != null && IsInstanceValid(_gameMusicPlayer))
+        {
+            var dying = _gameMusicPlayer;
+            _gameMusicPlayer = null;
+            var fadeOut = dying.CreateTween();
+            fadeOut.TweenProperty(dying, "volume_db", -80.0f, 2.0f);
+            fadeOut.Finished += () => { if (IsInstanceValid(dying)) dying.QueueFree(); };
+        }
         _pendingSwordUserId   = -1;
         _lastMoveTask         = System.Threading.Tasks.Task.CompletedTask;
         _itemSetsBySlot.Clear();
@@ -270,6 +289,8 @@ public partial class TableManager : Node3D
         // Suppress cubilete arc during the full Ophanim sequence.
         _initiativeInProgress = true;
 
+        StartGameMusic();
+
         // Store golden squares if present.
         if (root.TryGetProperty("golden_squares", out var gsEl))
         {
@@ -403,9 +424,11 @@ public partial class TableManager : Node3D
 
         if (userId == _cubileteAtUserId)
         {
-            // Doubles: cup stays in place but must be re-armed so the local player can grab it again.
-            if (_isMyTurn)
+            // Doubles: PlayDoublesReroll handles the cup reset; only fall back to ReadyForRoll
+            // if the animation was not started (e.g. very fast server round-trip).
+            if (_isMyTurn && !_doublesAnimating)
                 GetNodeOrNull<CubileteController>("CubileteAndDice")?.ReadyForRoll();
+            _doublesAnimating = false;
             return;
         }
 
@@ -426,6 +449,10 @@ public partial class TableManager : Node3D
         int    die2       = root.TryGetProperty("die2",       out var dr2)   ? dr2.GetInt32()   : 0;
         int    total      = die1 + die2;
         bool   isMyRoll   = userId == LiveConnectionManager.LocalUserId;
+        bool   isDoubles  = root.TryGetProperty("is_doubles",         out var idEl) && idEl.GetBoolean();
+        int    consec     = root.TryGetProperty("consecutive_doubles", out var cdEl) ? cdEl.GetInt32() : 0;
+
+        if (isDoubles) _consecutiveDoubles = consec;
 
         string who = _usernameByUserId.TryGetValue(userId, out var dName) ? dName : $"#{userId}";
 
@@ -460,6 +487,11 @@ public partial class TableManager : Node3D
             : localMoveable;
 
         HighlightMoveablePieces(ourColor, moveable);
+
+        // Start returning dice after 1 s so the board is tidy before the player clicks a piece.
+        if (isDoubles && ourColor.Length > 0)
+            GetNodeOrNull<CubileteController>("CubileteAndDice")?
+                .ReturnDiceEarly(GetCubiletePositionForColor(ourColor));
     }
 
     private async void OnPieceMoved(JsonElement root)
@@ -516,16 +548,32 @@ public partial class TableManager : Node3D
         GD.Print($"[TM] goal_scored: user {userId} piece {pieceId}, total in goal: {inGoal}");
     }
 
-    private void OnBarrierFormed(JsonElement root)
+    private async void OnBarrierFormed(JsonElement root)
     {
-        int sq = root.TryGetProperty("square", out var s) ? s.GetInt32() : -1;
-        GD.Print($"[TM] barrier_formed at square {sq}");
+        int userId = root.TryGetProperty("user_id", out var u) ? u.GetInt32() : -1;
+        int sq     = root.TryGetProperty("square",  out var s) ? s.GetInt32() : -1;
+        if (sq < 0 || userId < 0 || !_colorByUserId.TryGetValue(userId, out var color)) return;
+        color = color.ToLower();
+
+        await _lastMoveTask;
+        if (!IsInsideTree()) return;
+
+        GetNodeOrNull<TableroController>("tablero")?.ApplyBarrierPositions(color, sq);
+        GD.Print($"[TM] barrier_formed at square {sq} ({color})");
     }
 
-    private void OnBarrierBroken(JsonElement root)
+    private async void OnBarrierBroken(JsonElement root)
     {
-        int sq = root.TryGetProperty("square", out var s) ? s.GetInt32() : -1;
-        GD.Print($"[TM] barrier_broken at square {sq}");
+        int userId = root.TryGetProperty("user_id", out var u) ? u.GetInt32() : -1;
+        int sq     = root.TryGetProperty("square",  out var s) ? s.GetInt32() : -1;
+        if (sq < 0 || userId < 0 || !_colorByUserId.TryGetValue(userId, out var color)) return;
+        color = color.ToLower();
+
+        await _lastMoveTask;
+        if (!IsInsideTree()) return;
+
+        GetNodeOrNull<TableroController>("tablero")?.CenterPieceAt(color, sq);
+        GD.Print($"[TM] barrier_broken at square {sq} ({color})");
     }
 
     private void OnExtraTurn(JsonElement root)
@@ -537,13 +585,26 @@ public partial class TableManager : Node3D
         bool isUs = userId == LiveConnectionManager.LocalUserId;
         GD.Print($"[TM] extra_turn reason={reason} pending={pending} isUs={isUs}");
 
+        if (reason == "doubles")
+        {
+            _doublesAnimating = true;
+            var cubilete = GetNodeOrNull<CubileteController>("CubileteAndDice");
+            if (cubilete != null)
+            {
+                if (isUs)
+                    cubilete.PlayDoublesReroll(_consecutiveDoubles);
+                else
+                    StartRemoteDoublesReroll(cubilete, _consecutiveDoubles);
+            }
+            return;
+        }
+
         if (isUs && pending > 0)
         {
             // Bonus move: highlight pieces that can move by pending_movements.
             string ourColor = _colorByUserId.TryGetValue(userId, out var oc) ? oc.ToLower() : "";
             if (ourColor.Length > 0)
             {
-                // All on-board pieces are valid for bonus move (server validates actual target).
                 int slot = ParchisLogic.ColorToSlot(ourColor);
                 var valid = new List<int>();
                 for (int p = 0; p < 4; p++)
@@ -552,7 +613,15 @@ public partial class TableManager : Node3D
                 HighlightMoveablePieces(ourColor, valid);
             }
         }
-        // For "doubles" reason: turn_start fires again for same player → OnTurnStart handles it.
+    }
+
+    // Awaits the move animation so the icon appears after the piece has landed,
+    // giving PlayRemoteThrow enough time to finish returning dice to the cup.
+    private async void StartRemoteDoublesReroll(CubileteController cubilete, int consecutiveDoubles)
+    {
+        await _lastMoveTask;
+        if (!IsInsideTree() || !IsInstanceValid(cubilete)) return;
+        cubilete.PlayRemoteDoublesReroll(consecutiveDoubles);
     }
 
     private void OnTurnEnd(JsonElement root)
@@ -664,9 +733,19 @@ public partial class TableManager : Node3D
         if (userId < 0 || pieceId < 0) return;
         if (!_colorByUserId.TryGetValue(userId, out var color)) return;
         color = color.ToLower();
-        int slot = ParchisLogic.ColorToSlot(color);
+        int slot    = ParchisLogic.ColorToSlot(color);
+        var tablero = GetNodeOrNull<TableroController>("tablero");
+
+        // Fire a red ray from Ophanim toward the piece before sending it home.
+        if (tablero != null && OphanimNode != null && slot >= 0 && slot < 4)
+        {
+            int currentSq = _boardPositions[slot][pieceId];
+            if (currentSq > 0)
+                OphanimNode.ShootLifeLostRay(tablero.GetBoardWorldPosition(currentSq, color));
+        }
+
         if (slot >= 0 && slot < 4) _boardPositions[slot][pieceId] = 0;
-        GetNodeOrNull<TableroController>("tablero")?.ReturnToBase(color, pieceId);
+        tablero?.ReturnToBase(color, pieceId);
         GD.Print($"[TM] triple_double_penalty: {color} piece {pieceId} sent home");
     }
 
@@ -714,9 +793,17 @@ public partial class TableManager : Node3D
     private void OnTimerExpired(JsonElement root)
     {
         _pendingSwordUserId = root.TryGetProperty("user_id", out var u) ? u.GetInt32() : -1;
-        _swordFalling       = true;
         ChatManager.AddLog("[color=#ff4400][TIMER][/color] Turn timer expired.");
-        _sword?.Cut();
+
+        ClearSelectables();
+        _isMyTurn = false;
+
+        if (_sword != null && IsInstanceValid(_sword))
+        {
+            _swordFalling = true;
+            _sword.Cut();
+        }
+        // If sword is null, _swordFalling stays false so turn_end/turn_start flow through immediately.
     }
 
     private async void OnSwordImpaled()
@@ -725,9 +812,7 @@ public partial class TableManager : Node3D
         if (_pendingSwordUserId >= 0 && OphanimNode != null
             && _colorByUserId.TryGetValue(_pendingSwordUserId, out var color))
         {
-            var tablero = GetNodeOrNull<TableroController>("tablero");
-            if (tablero != null && TableroController.StartPositions.TryGetValue(color.ToLower(), out int startSq))
-                OphanimNode.ShootLifeLostRay(tablero.GetBoardWorldPosition(startSq, color.ToLower()));
+            OphanimNode.ShootLifeLostRay(GetCubiletePositionForColor(color));
         }
         _pendingSwordUserId = -1;
 
@@ -873,7 +958,7 @@ public partial class TableManager : Node3D
 
         var path = tablero.BuildPath(color, from, to);
         if (path.Count > 0)
-            tablero.ShowPathPreview(path, color);
+            tablero.ShowPathPreview(path, color, piece.GlobalPosition);
     }
 
     private void ClearSelectables()
@@ -1059,5 +1144,39 @@ public partial class TableManager : Node3D
         for (int i = 0; i < SlotColorNames.Length; i++)
             if (SlotColorNames[i].ToLower() == colorLower) return i;
         return -1;
+    }
+
+    // ── Music crossfade ───────────────────────────────────────────────────────
+
+    private void StartGameMusic()
+    {
+        if (_gameMusicPlayer != null && IsInstanceValid(_gameMusicPlayer)) return;
+
+        const float CrossfadeDuration = 10.0f;
+        const float GameMusicVolume   = -16.0f;
+
+        if (RoomMusicPlayer != null && IsInstanceValid(RoomMusicPlayer))
+        {
+            RoomMusicPlayer.CreateTween()
+                .TweenProperty(RoomMusicPlayer, "volume_db", -80.0f, CrossfadeDuration)
+                .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.InOut);
+        }
+
+        var stream = GD.Load<AudioStreamMP3>("res://Assets/Music/Buckshot_Roulette_OST.mp3");
+        if (stream == null) return;
+
+        var looped = (AudioStreamMP3)stream.Duplicate();
+        looped.Loop = true;
+
+        _gameMusicPlayer          = new AudioStreamPlayer();
+        _gameMusicPlayer.Stream   = looped;
+        _gameMusicPlayer.VolumeDb = -80.0f;
+        _gameMusicPlayer.Bus      = "Master";
+        AddChild(_gameMusicPlayer);
+        _gameMusicPlayer.Play();
+
+        _gameMusicPlayer.CreateTween()
+            .TweenProperty(_gameMusicPlayer, "volume_db", GameMusicVolume, CrossfadeDuration)
+            .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.InOut);
     }
 }

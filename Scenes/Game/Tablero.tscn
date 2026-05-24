@@ -20,7 +20,7 @@ UseShellHighlight = true
 
 [node name="FocusInteractable" type="Node" parent="." unique_id=200000004]
 script = ExtResource("3_focus")
-Distance = 1.3
+Distance = 1.6
 TargetFOV = 60.0
 
 [node name="Positions" type="Node3D" parent="." unique_id=200000010]

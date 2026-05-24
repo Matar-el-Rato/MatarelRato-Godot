@@ -156,16 +156,27 @@ public partial class MusicZone : Area3D
 	}
 
 	/// <summary>
+	/// Fades this zone's track to silence over <paramref name="duration"/> seconds,
+	/// preventing any body-exit callback from re-triggering the normal fade.
+	/// </summary>
+	public void FadeOut(float duration)
+	{
+		_insideCount = 0;
+		FadeTo(-80.0f, duration);
+	}
+
+	/// <summary>
 	/// Tweens the audio player's volume_db to <paramref name="targetDb"/>.
 	/// Kills any in-progress tween first to avoid fighting transitions.
+	/// Pass <paramref name="duration"/> to override the exported <see cref="FadeTime"/>.
 	/// </summary>
-	private void FadeTo(float targetDb, Action onFinished = null)
+	private void FadeTo(float targetDb, float duration = -1f, Action onFinished = null)
 	{
 		if (_fadeTween != null && _fadeTween.IsValid())
 			_fadeTween.Kill();
 
 		_fadeTween = CreateTween();
-		_fadeTween.TweenProperty(_player, "volume_db", targetDb, FadeTime)
+		_fadeTween.TweenProperty(_player, "volume_db", targetDb, duration < 0f ? FadeTime : duration)
 			.SetTrans(Tween.TransitionType.Cubic)
 			.SetEase(Tween.EaseType.InOut);
 

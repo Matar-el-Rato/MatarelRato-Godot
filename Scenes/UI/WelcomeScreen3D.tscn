@@ -1,0 +1,148 @@
+[gd_scene format=3 uid="uid://dsfflkoqcomca"]
+
+[ext_resource type="PackedScene" uid="uid://cma67s42ghwvw" path="res://Assets/Environment/WelcomeScreen/scene_render.glb" id="1_47s25"]
+[ext_resource type="Script" uid="uid://beb1qoxi267tv" path="res://Scripts/Environment/LightFlicker.cs" id="2_flicker"]
+
+[sub_resource type="Environment" id="Environment_dark"]
+background_mode = 1
+ambient_light_source = 1
+volumetric_fog_enabled = true
+volumetric_fog_density = 0.03
+
+[sub_resource type="CameraAttributesPractical" id="CameraAttributesPractical_47s25"]
+exposure_multiplier = 0.265
+dof_blur_far_enabled = true
+dof_blur_far_distance = 2.95
+dof_blur_far_transition = 2.0
+dof_blur_near_enabled = true
+dof_blur_near_distance = 4.4
+dof_blur_near_transition = 3.0
+
+[sub_resource type="Curve" id="Curve_smoke_alpha"]
+_data = [Vector2(0, 0.3), 0.0, 0.0, 0, 0, Vector2(1, 0), -1.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="CurveTexture" id="CurveTexture_smoke_alpha"]
+curve = SubResource("Curve_smoke_alpha")
+
+[sub_resource type="Curve" id="Curve_smoke_scale"]
+_data = [Vector2(0, 0.2), 0.0, 1.5, 0, 0, Vector2(1, 1.2), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="CurveTexture" id="CurveTexture_smoke_scale"]
+curve = SubResource("Curve_smoke_scale")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_smoke"]
+direction = Vector3(0, 1, 0)
+spread = 20.0
+initial_velocity_min = 0.05
+initial_velocity_max = 0.15
+gravity = Vector3(0, 0.1, 0)
+damping_min = 0.05
+damping_max = 0.1
+scale_min = 0.1
+scale_max = 0.3
+scale_curve = SubResource("CurveTexture_smoke_scale")
+color = Color(0.8, 0.8, 0.8, 0.55)
+alpha_curve = SubResource("CurveTexture_smoke_alpha")
+
+[sub_resource type="Gradient" id="Gradient_smoke"]
+offsets = PackedFloat32Array(0, 0.2, 0.8, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_smoke"]
+gradient = SubResource("Gradient_smoke")
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(0.5, 0)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_smoke"]
+transparency = 1
+vertex_color_use_as_albedo = true
+albedo_texture = SubResource("GradientTexture2D_smoke")
+billboard_mode = 3
+particles_anim_h_frames = 1
+particles_anim_v_frames = 1
+particles_anim_loop = false
+
+[sub_resource type="QuadMesh" id="QuadMesh_smoke"]
+material = SubResource("StandardMaterial3D_smoke")
+size = Vector2(0.15, 0.15)
+
+[node name="WelcomeScreen3d" type="Node3D" unique_id=1368278568]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=701234570]
+environment = SubResource("Environment_dark")
+
+[node name="scene_render" parent="." unique_id=4948694 instance=ExtResource("1_47s25")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14.833145, 0, 19.390484)
+
+[node name="WelcomeCamera" type="Camera3D" parent="scene_render" unique_id=1775806868]
+transform = Transform3D(0.04891932, -0.041637108, 0.9979345, -0.008805577, 0.9990739, 0.042116303, -0.998764, -0.01084769, 0.048507374, -9.862059, 0.790306, -18.428684)
+attributes = SubResource("CameraAttributesPractical_47s25")
+current = true
+fov = 11.121102
+near = 0.001
+far = 53.57
+
+[node name="SpotLight3D" type="SpotLight3D" parent="scene_render" unique_id=753435430]
+transform = Transform3D(0.97353506, 6.3630026e-09, -0.22853778, 0.22263722, 0.22576721, 0.94839966, 0.051596344, -0.9741813, 0.21979229, -14.356279, 2.0674677, -17.51497)
+light_color = Color(0.8379549, 0.7944804, 0.53485364, 1)
+light_energy = 1.391
+spot_range = 4.7846746
+spot_angle = 56.249996
+
+[node name="flicker_lights_intense" type="Node3D" parent="scene_render" unique_id=881466693]
+script = ExtResource("2_flicker")
+MinInterval = 0.02
+MaxInterval = 0.07
+
+[node name="OmniLight3D3" type="OmniLight3D" parent="scene_render/flicker_lights_intense" unique_id=1987522185]
+transform = Transform3D(0.04891932, -0.041637108, 0.9979345, -0.008805577, 0.9990739, 0.042116303, -0.998764, -0.01084769, 0.048507374, -14.076635, 0.38441893, -18.686056)
+light_color = Color(0.73742795, 0.77460337, 0.74271727, 1)
+light_energy = 0.525
+
+[node name="OmniLight3D5" type="OmniLight3D" parent="scene_render/flicker_lights_intense" unique_id=1224249361]
+transform = Transform3D(0.058522385, -0.028813748, 0.9978702, -0.032338522, 0.99900407, 0.030743042, -0.99776226, -0.034068808, 0.05753228, -14.094378, 0.38773286, -18.701733)
+light_color = Color(0.9825495, 0.98269707, 0.97929853, 1)
+light_energy = 0.525
+
+[node name="flicker_lights" type="Node3D" parent="scene_render" unique_id=1810124416]
+script = ExtResource("2_flicker")
+
+[node name="OmniLight3D2" type="OmniLight3D" parent="scene_render/flicker_lights" unique_id=653681736]
+transform = Transform3D(0.04891932, -0.041637108, 0.9979345, -0.008805577, 0.9990739, 0.042116303, -0.998764, -0.01084769, 0.048507374, -14.159069, 0.7909173, -18.72234)
+light_color = Color(0.6266745, 0.625506, 0.569297, 1)
+light_energy = 0.209
+
+[node name="OmniLight3D3" type="OmniLight3D" parent="scene_render/flicker_lights" unique_id=681135608]
+transform = Transform3D(0.04891932, -0.041637108, 0.9979345, -0.008805577, 0.9990739, 0.042116303, -0.998764, -0.01084769, 0.048507374, -14.063769, 0.3889457, -18.692804)
+light_color = Color(0.6348271, 0.61942244, 0.59106946, 1)
+light_energy = 0.525
+
+[node name="OmniLight3D5" type="OmniLight3D" parent="scene_render/flicker_lights" unique_id=1287856745]
+transform = Transform3D(0.04891932, -0.041637108, 0.9979345, -0.008805577, 0.9990739, 0.042116303, -0.998764, -0.01084769, 0.048507374, -14.114114, 0.3889457, -18.692804)
+light_color = Color(0.65411067, 0.6140378, 0.57180655, 1)
+light_energy = 0.525
+
+[node name="GunSmoke" type="GPUParticles3D" parent="scene_render" unique_id=112358132]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14.151616, 0.44848707, -18.931307)
+amount = 30
+lifetime = 6.3
+speed_scale = 0.8
+explosiveness = 0.07
+collision_base_size = 0.0
+trail_lifetime = 3.0799999999999996
+process_material = SubResource("ParticleProcessMaterial_smoke")
+draw_pass_1 = SubResource("QuadMesh_smoke")
+
+[node name="GunSmoke2" type="GPUParticles3D" parent="scene_render" unique_id=1115104791]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13.746748, 0.4334824, -17.966486)
+amount = 10
+lifetime = 6.3
+speed_scale = 0.8
+explosiveness = 0.07
+collision_base_size = 0.0
+trail_lifetime = 3.0799999999999996
+process_material = SubResource("ParticleProcessMaterial_smoke")
+draw_pass_1 = SubResource("QuadMesh_smoke")

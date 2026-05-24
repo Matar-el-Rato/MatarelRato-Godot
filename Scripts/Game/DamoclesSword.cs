@@ -10,6 +10,7 @@ public partial class DamoclesSword : Node3D
     [Export] public float RopeRadius      = 0.004f;
 
     [ExportGroup("Timer FX")]
+    [Export] public AudioStream StabSound;
     [Export] public AudioStream ClockTickSound;
     [Export] public float TickVolumeStart  = -20f;
     [Export] public float TickVolume20     = -14f;
@@ -37,6 +38,7 @@ public partial class DamoclesSword : Node3D
 
     // timer FX
     private AudioStreamPlayer3D _tickPlayer;
+    private AudioStreamPlayer3D _stabPlayer;
     private OmniLight3D         _glowLight;
     private Tween               _glowTween;
     private float _tickAccum  = 0f;
@@ -58,6 +60,12 @@ public partial class DamoclesSword : Node3D
             AlbedoColor = new Color(0.28f, 0.18f, 0.08f),
         };
         AddChild(_rope);
+
+        if (StabSound == null)
+            StabSound = GD.Load<AudioStream>("res://Assets/Sound FX/knife_stab.wav");
+
+        _stabPlayer = new AudioStreamPlayer3D { Stream = StabSound, UnitSize = 3f, MaxDb = 6f };
+        AddChild(_stabPlayer);
 
         // Tick audio — load from known path if not assigned via export
         if (ClockTickSound == null)
@@ -300,6 +308,7 @@ public partial class DamoclesSword : Node3D
                 p.Y            = _tableroWorldY - ImpaleDepth;
                 GlobalPosition = p;
                 _state         = State.Impaled;
+                _stabPlayer?.Play();
                 SetProcess(false);
                 Impaled?.Invoke();
             }

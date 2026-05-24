@@ -1,17 +1,11 @@
 // ═══════════════════════════════════════════════════
 // WelcomeScreen.cs
-// Title-screen Control: shows Play / Source Code / Debug buttons
-// over a live SubViewport preview of the main scene.
-// On play, runs a 3-second intro camera sweep (floor → player head)
-// with blur intensifying, then reparents the loaded scene to the tree root.
+// WelcomeScreen3D plays in the background on the title screen.
+// On Play: crossfades to the pre-loaded MainScene (blurred, looking down),
+// sweeps the camera up to eye level, unblurs, then hands off to gameplay.
 // ═══════════════════════════════════════════════════
 using Godot;
 
-/// <summary>
-/// Welcome / title screen displayed at launch.
-/// The main scene is pre-loaded in a background SubViewport.
-/// Pressing Play triggers a loomy intro camera sequence before gameplay begins.
-/// </summary>
 public partial class WelcomeScreen : Control
 {
 	[Export] public string MainScenePath = "res://Scenes/MainScene.tscn";
@@ -25,26 +19,25 @@ public partial class WelcomeScreen : Control
 	private RandomNumberGenerator _rng = new();
 	private const float TrembleStrength = 1.2f;
 
-	private bool _debugMode = false;
+	private bool _debugMode         = false;
+	private bool _transitionStarted = false;
 
-	// Intro camera transition
-	private Camera3D       _introCamera;
+	// Intro sweep
 	private Camera3D       _playerCamera;
 	private ShaderMaterial _blurMaterial;
-	private bool           _transitionStarted = false;
 	private const float    TransitionDuration = 3.0f;
+
+	private LightFlicker _intenseFlicker;
 
 	// ── Lifecycle ─────────────────────────────────────────────────────────────
 
 	public override void _Ready()
 	{
-		// Force pixelated scaling mode for the title screen.
 		GetWindow().ContentScaleMode = Window.ContentScaleModeEnum.Viewport;
-
 		Input.MouseMode = Input.MouseModeEnum.Visible;
 
-		_playButton       = GetNode<Button>("MarginContainer/HBoxContainer/LeftPanel/VBoxContainer/PlayButton");
-		_sourceCodeButton = GetNode<Button>("MarginContainer/HBoxContainer/LeftPanel/VBoxContainer/SourceCodeButton");
+		_playButton       = GetNode<Button>("VBoxContainer/PlayButton");
+		_sourceCodeButton = GetNode<Button>("VBoxContainer/SourceCodeButton");
 		_debugButton      = GetNode<Button>("DebugButton");
 
 		_playButton.Pressed       += OnPlayPressed;
@@ -56,66 +49,44 @@ public partial class WelcomeScreen : Control
 		_sourceCodeButton.MouseEntered += () => OnHoverStarted(_sourceCodeButton);
 		_sourceCodeButton.MouseExited  += () => OnHoverEnded(_sourceCodeButton);
 
-		// Freeze the background preview; movement re-enabled after the intro sequence.
-		var player = GetNodeOrNull<PlayerCameraController>(
-			"BackgroundParent/BackgroundViewport/SubViewport/MainSceneInstance/Player");
-		if (player != null)
-			player.MovementEnabled = false;
-
-		// Cache the blur shader material.
-		var blurOverlay = GetNodeOrNull<ColorRect>("BackgroundParent/BlurOverlay");
+		// Cache blur material.
+		var blurOverlay = GetNodeOrNull<ColorRect>("GameBackground/BlurOverlay");
 		if (blurOverlay != null)
 			_blurMaterial = blurOverlay.Material as ShaderMaterial;
 
-		// Set up the ground-level intro camera.
-		SetupIntroCamera();
+		_intenseFlicker = GetNodeOrNull<LightFlicker>(
+			"WelcomeBackground/WelcomeViewport/SubViewport/WelcomeScene/scene_render/flicker_lights_intense");
+
+		// Callable.From bypasses Godot reflection so the private method actually fires.
+		Callable.From(SetupIntroCamera).CallDeferred();
 	}
 
-	// ── Intro camera setup ────────────────────────────────────────────────────
+	// ── Intro camera ──────────────────────────────────────────────────────────
 
-	/// <summary>
-	/// Injects a new Camera3D into the SubViewport positioned at floor level
-	/// looking sharply upward, replacing the player camera as the active view.
-	/// </summary>
 	private void SetupIntroCamera()
 	{
+		// Freeze the player now that the SubViewport tree is fully ready.
+		var player = GetNodeOrNull<PlayerCameraController>(
+			"GameBackground/GameViewport/SubViewport/MainSceneInstance/Player");
+		if (player != null)
+			player.MovementEnabled = false;
+
 		_playerCamera = GetNodeOrNull<Camera3D>(
-			"BackgroundParent/BackgroundViewport/SubViewport/MainSceneInstance/Player/Camera3D");
+			"GameBackground/GameViewport/SubViewport/MainSceneInstance/Player/Camera3D");
 
-		var subViewport = GetNodeOrNull<SubViewport>(
-			"BackgroundParent/BackgroundViewport/SubViewport");
+		if (_playerCamera == null)
+		{
+			GD.PushWarning("[WelcomeScreen] Could not find player camera — intro sweep disabled.");
+			return;
+		}
 
-		if (_playerCamera == null || subViewport == null) return;
+		// Ensure SubViewport renders from this camera immediately.
+		_playerCamera.MakeCurrent();
 
-		_introCamera     = new Camera3D();
-		_introCamera.Fov = _playerCamera.Fov;
-		subViewport.AddChild(_introCamera);
-
-		// Start near the player's feet, rotated ~80° upward (almost looking at the sky).
-		Vector3 camWorldPos = _playerCamera.GlobalPosition;
-		_introCamera.GlobalPosition = new Vector3(camWorldPos.X, camWorldPos.Y - 1.5f, camWorldPos.Z);
-		_introCamera.GlobalRotation = new Vector3(
-			Mathf.DegToRad(-80f),
-			_playerCamera.GlobalRotation.Y,
-			0f);
-
-		// Hand the viewport over to the intro camera.
-		_introCamera.Current  = true;
-		_playerCamera.Current = false;
-	}
-
-	// ── Button handlers ───────────────────────────────────────────────────────
-
-	private void OnPlayPressed()  => StartIntroTransition();
-	private void OnDebugPressed()
-	{
-		_debugMode = true;
-		StartIntroTransition();
-	}
-
-	private void OnSourceCodePressed()
-	{
-		OS.ShellOpen("https://github.com/Matar-el-Rato/MatarelRato-Godot");
+		// Pre-tilt the camera to look steeply downward. On Play it sweeps back to forward.
+		// PlayerCameraController only updates rotation via _UnhandledInput (guarded by
+		// MovementEnabled), so this won't be overridden while the player is frozen.
+		_playerCamera.Rotation = new Vector3(Mathf.DegToRad(-35f), 0f, 0f);
 	}
 
 	// ── Hover effects ─────────────────────────────────────────────────────────
@@ -137,6 +108,7 @@ public partial class WelcomeScreen : Control
 		button.Scale = new Vector2(1.05f, 1.05f);
 		_hoveredOrigin = button.Position;
 		_hoveredButton = button;
+		_intenseFlicker?.SetIntenseMode(true);
 	}
 
 	private void OnHoverEnded(Button button)
@@ -145,98 +117,105 @@ public partial class WelcomeScreen : Control
 		button.Position = _hoveredOrigin;
 		button.RemoveThemeColorOverride("font_color");
 		button.Scale = new Vector2(1, 1);
+		_intenseFlicker?.SetIntenseMode(false);
 	}
 
-	// ── Intro transition ──────────────────────────────────────────────────────
+	// ── Button handlers ───────────────────────────────────────────────────────
 
-	/// <summary>
-	/// Disables UI input, then tweens the intro camera from the floor (looking up)
-	/// to the player's eye position. The UI fades out, the blur swells then clears,
-	/// so gameplay starts with a fully sharp view. Calls <see cref="ProceedToMainScene"/> when done.
-	/// </summary>
+	private void OnPlayPressed()  => StartIntroTransition();
+	private void OnDebugPressed() { _debugMode = true; StartIntroTransition(); }
+
+	private void OnSourceCodePressed()
+	{
+		OS.ShellOpen("https://github.com/Matar-el-Rato/MatarelRato-Godot");
+	}
+
+	// ── Transition ────────────────────────────────────────────────────────────
+
 	private void StartIntroTransition()
 	{
 		if (_transitionStarted) return;
 		_transitionStarted = true;
+		_hoveredButton     = null;
 
-		// Block all buttons for the duration.
 		_playButton.Disabled       = true;
 		_debugButton.Disabled      = true;
 		_sourceCodeButton.Disabled = true;
-		_hoveredButton             = null;
 
-		if (_introCamera == null || _playerCamera == null)
+		var welcomeBg = GetNodeOrNull<Control>("WelcomeBackground");
+		var gameBg    = GetNodeOrNull<Control>("GameBackground");
+
+		const float FadeOut  = 1.0f;   // welcome → black
+		const float FadeIn   = 0.7f;   // black → blurry game world
+
+		var mainTween = CreateTween().SetParallel(true);
+
+		// Phase 1: fade welcome scene + UI to black.
+		if (welcomeBg != null)
 		{
-			// No cameras found — skip straight to gameplay.
-			ProceedToMainScene();
-			return;
+			mainTween.TweenProperty(welcomeBg, "modulate:a", 0f, FadeOut)
+					 .SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.Out);
+			mainTween.TweenCallback(Callable.From(welcomeBg.QueueFree)).SetDelay(FadeOut);
 		}
-
-		Vector3 targetPos = _playerCamera.GlobalPosition;
-		Vector3 targetRot = _playerCamera.GlobalRotation;
-
-		// ── Camera sweep + UI fade (all parallel) ────────────────────────────
-		var mainTween = CreateTween();
-		mainTween.SetParallel(true);
-
-		// Sweep the camera from the floor up to the player's eye.
-		mainTween.TweenProperty(_introCamera, "global_position", targetPos, TransitionDuration)
-				 .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.InOut);
-		mainTween.TweenProperty(_introCamera, "global_rotation", targetRot, TransitionDuration)
-				 .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.InOut);
-
-		// Fade out UI elements so they dissolve rather than snapping away.
 		var uiContainer = GetNodeOrNull<Control>("MarginContainer");
 		if (uiContainer != null)
-			mainTween.TweenProperty(uiContainer, "modulate", new Color(1f, 1f, 1f, 0f), 1.0f)
+			mainTween.TweenProperty(uiContainer, "modulate:a", 0f, FadeOut)
 					 .SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.Out);
-		mainTween.TweenProperty(_debugButton, "modulate", new Color(1f, 1f, 1f, 0f), 1.0f)
+		var vbox = GetNodeOrNull<Control>("VBoxContainer");
+		if (vbox != null)
+			mainTween.TweenProperty(vbox, "modulate:a", 0f, FadeOut)
+					 .SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.Out);
+		mainTween.TweenProperty(_debugButton, "modulate:a", 0f, FadeOut)
 				 .SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.Out);
 
-		mainTween.Finished += () => ProceedToMainScene();
+		// Phase 2: fade game world in (delayed so black frame is visible).
+		if (gameBg != null)
+			mainTween.TweenProperty(gameBg, "modulate:a", 1f, FadeIn)
+					 .SetDelay(FadeOut)
+					 .SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.In);
 
-		// ── Blur: swell up then fade back to clear (sequential, separate tween) ──
-		// Runs in parallel with the camera sweep but drives its own timing.
-		// Result: blur peaks at the midpoint and is already 0 when gameplay starts.
-		if (_blurMaterial != null)
+		// Phase 3: camera sweep + unblur start when game world begins appearing.
+		if (_playerCamera != null)
 		{
-			float half = TransitionDuration * 0.5f;
-			var blurTween = CreateTween(); // sequential by default
-			blurTween.TweenMethod(
-				Callable.From<float>(v => _blurMaterial.SetShaderParameter("lod", v)),
-				2.5f, 5.0f, half)
-				.SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.In);
-			blurTween.TweenMethod(
-				Callable.From<float>(v => _blurMaterial.SetShaderParameter("lod", v)),
-				5.0f, 0.0f, half)
-				.SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.Out);
+			mainTween.TweenProperty(_playerCamera, "rotation", Vector3.Zero, TransitionDuration)
+					 .SetDelay(FadeOut)
+					 .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.InOut);
+
+			mainTween.Finished += () => ProceedToMainScene();
+
+			if (_blurMaterial != null)
+			{
+				var blurTween = CreateTween();
+				blurTween.TweenInterval(FadeOut);
+				blurTween.TweenMethod(
+					Callable.From<float>(v => _blurMaterial.SetShaderParameter("lod", v)),
+					1.5f, 0.0f, TransitionDuration)
+					.SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
+			}
+		}
+		else
+		{
+			mainTween.Finished += () => ProceedToMainScene();
 		}
 	}
 
-	// ── Scene transition ──────────────────────────────────────────────────────
+	// ── Hand off to gameplay ──────────────────────────────────────────────────
 
-	/// <summary>
-	/// Moves the pre-loaded main scene from the background SubViewport to the scene
-	/// tree root, restores the player camera, re-enables the player, and frees
-	/// this welcome screen.
-	/// </summary>
 	private void ProceedToMainScene()
 	{
 		GetWindow().ContentScaleMode = Window.ContentScaleModeEnum.Viewport;
 
-		// Restore the player's own camera before we leave the SubViewport.
-		if (_playerCamera != null)
-			_playerCamera.Current = true;
-
 		var mainScene = GetNodeOrNull<Node3D>(
-			"BackgroundParent/BackgroundViewport/SubViewport/MainSceneInstance");
+			"GameBackground/GameViewport/SubViewport/MainSceneInstance");
 
 		if (mainScene != null)
 		{
-			// Reparent preserves the scene state (physics, audio, etc.).
 			mainScene.GetParent().RemoveChild(mainScene);
 			GetTree().Root.AddChild(mainScene);
 			GetTree().CurrentScene = mainScene;
+
+			// Re-activate the camera in its new viewport so there's no black frame.
+			_playerCamera?.MakeCurrent();
 
 			var player = mainScene.GetNodeOrNull<PlayerCameraController>("Player");
 			if (player != null)
@@ -246,10 +225,12 @@ public partial class WelcomeScreen : Control
 			}
 		}
 
+		// Zero out GameBackground before QueueFree: the SubViewport is now empty
+		// (MainScene was reparented) so it would flash black for one frame otherwise.
+		GetNodeOrNull<Control>("GameBackground")?.Hide();
+
 		if (_debugMode)
 		{
-			// Capture tree before QueueFree — the timer callback fires 0.3s later
-			// when this node is already freed, so GetTree() would fail.
 			var tree = GetTree();
 			tree.CreateTimer(0.3f).Timeout += async () =>
 			{

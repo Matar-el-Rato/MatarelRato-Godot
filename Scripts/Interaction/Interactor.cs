@@ -26,6 +26,7 @@ public partial class Interactor : Node3D
 	public static bool IsLocked { get; set; } = false;
 
 	private RayCast3D    _rayCast;
+	private Camera3D     _camera;
 	private Control      _promptLabel;
 	private Label        _textLabel;
 	private Label        _keyLabel;
@@ -45,8 +46,9 @@ public partial class Interactor : Node3D
 
 	public override void _Ready()
 	{
-		_rayCast = GetNode<RayCast3D>("RayCast3D");
-		_rayCast.TargetPosition = new Vector3(0, 0, -InteractionRange);
+		_rayCast         = GetNode<RayCast3D>("RayCast3D");
+		_rayCast.Enabled = false;   // replaced by manual PhysicsDirectSpaceState ray
+		_camera          = GetParent<Camera3D>();
 
 		if (!PromptLabelPath.IsEmpty)
 		{
@@ -135,9 +137,18 @@ public partial class Interactor : Node3D
 	/// </summary>
 	private void CheckInteraction()
 	{
-		if (_rayCast.IsColliding())
+		// Manual physics ray from the viewport center via the camera's own projection,
+		// accounting for any post-process distortion (e.g. fisheye shader).
+		var spaceState = GetWorld3D().DirectSpaceState;
+		var vpCenter   = GetViewport().GetVisibleRect().Size * 0.5f;
+		var rayOrigin  = _camera.ProjectRayOrigin(vpCenter);
+		var rayEnd     = rayOrigin + _camera.ProjectRayNormal(vpCenter) * InteractionRange;
+		var rayResult  = spaceState.IntersectRay(
+			PhysicsRayQueryParameters3D.Create(rayOrigin, rayEnd, _rayCast.CollisionMask));
+
+		if (rayResult.Count > 0)
 		{
-			var collider = _rayCast.GetCollider() as Node;
+			var collider = rayResult["collider"].As<Node>();
 			if (collider == null) return;
 
 			IInteractable interactable = null;

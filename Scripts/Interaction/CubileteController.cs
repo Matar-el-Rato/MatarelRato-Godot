@@ -51,6 +51,10 @@ public partial class CubileteController : Node3D
 	private Interactable  _interactable;
 	private Node3D        _playerCamera;
 
+	// Completed when ExecuteReturnDiceEarly finishes; PlayDoublesReroll awaits it.
+	private System.Threading.Tasks.Task _earlyReturnTask =
+		System.Threading.Tasks.Task.CompletedTask;
+
 	// Saved on _Ready so the cup can return after a throw.
 	// Stored as LOCAL transform so the reset target is correct even after the
 	// parent (PlayingSetup) has been tweened to its final table height.
@@ -342,6 +346,142 @@ public partial class CubileteController : Node3D
 		int sum = 0;
 		foreach (int v in values) sum += v;
 		return sum;
+	}
+
+	// ── Doubles reroll animation ──────────────────────────────────────────────
+
+	/// <summary>
+	/// Called from TableManager when dice_result carries is_doubles=true (local player only).
+	/// Waits 1 s, then smoothly returns the cup and dice to <paramref name="boardPos"/> and
+	/// readies the cup — so the board is clear before the player makes their piece move.
+	/// </summary>
+	public void ReturnDiceEarly(Vector3 boardPos)
+	{
+		var tcs = new System.Threading.Tasks.TaskCompletionSource<bool>();
+		_earlyReturnTask = tcs.Task;
+		ExecuteReturnDiceEarly(boardPos, tcs);
+	}
+
+	private async void ExecuteReturnDiceEarly(
+		Vector3 boardPos, System.Threading.Tasks.TaskCompletionSource<bool> tcs)
+	{
+		await ToSignal(GetTree().CreateTimer(1.0f), SceneTreeTimer.SignalName.Timeout);
+		if (!IsInsideTree()) { tcs.TrySetResult(true); return; }
+
+		SetCubileteVisible(true);
+		GlobalRotation = Vector3.Zero;
+		var returnTween = CreateTween().SetParallel(true)
+			.SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.InOut);
+		returnTween.TweenProperty(this, "global_position", boardPos, 0.45f);
+		for (int i = 0; i < _dice.Length; i++)
+			returnTween.TweenProperty(_dice[i], "global_position",
+				boardPos + Vector3.Up * (0.02f + 0.02f * i), 0.45f);
+		await ToSignal(returnTween, Tween.SignalName.Finished);
+		if (!IsInsideTree()) { tcs.TrySetResult(true); return; }
+
+		foreach (var die in _dice) { die.Freeze = true; die.Visible = false; }
+		_currentState             = State.Stationary;
+		_interactable.ProcessMode = ProcessModeEnum.Inherit;
+		_interactable.PromptText  = "Grab Cubilete";
+		tcs.SetResult(true);
+	}
+
+	/// <summary>
+	/// Called from TableManager on extra_turn/doubles (local player).
+	/// Waits ~1.3 s (matching the cup-return animation) via a Godot timer so the
+	/// effect triggers even while the tablero is focused.
+	/// <paramref name="consecutiveDoubles"/> selects the sound (1 = combo_1, 2 = combo_2, 3+ = silent).
+	/// </summary>
+	public async void PlayDoublesReroll(int consecutiveDoubles)
+	{
+		await ToSignal(GetTree().CreateTimer(1.3f), SceneTreeTimer.SignalName.Timeout);
+		if (!IsInsideTree()) return;
+		PlayRerollEffect(consecutiveDoubles);
+	}
+
+	/// <summary>
+	/// Called from TableManager on extra_turn/doubles (remote player).
+	/// Dice are already back in the cup (PlayRemoteThrow finished earlier).
+	/// </summary>
+	public void PlayRemoteDoublesReroll(int consecutiveDoubles)
+	{
+		PlayRerollEffect(consecutiveDoubles);
+	}
+
+	/// <summary>
+	/// Plays the combo sound for this reroll count and animates the SVG icon floating up.
+	/// consecutiveDoubles 1 → reroll_combo_1, 2 → reroll_combo_2, 3+ → silent (triple-double path).
+	/// </summary>
+	private async void PlayRerollEffect(int consecutiveDoubles)
+	{
+		string soundPath = consecutiveDoubles switch {
+			1 => "res://Assets/Sound FX/reroll_combo_1.wav",
+			2 => "res://Assets/Sound FX/reroll_combo_2.wav",
+			_ => null,
+		};
+		if (soundPath != null)
+		{
+			var clip = GD.Load<AudioStream>(soundPath);
+			if (clip != null)
+			{
+				var sfx = new AudioStreamPlayer { Stream = clip, VolumeDb = -3f };
+				AddChild(sfx);
+				sfx.Play();
+				sfx.Finished += () => sfx.QueueFree();
+			}
+		}
+
+		var tex = GD.Load<Texture2D>("res://Assets/Icons/reroll_icon.svg");
+		if (tex == null) return;
+
+		// Shader: use only the texture's alpha for shape, force RGB to white.
+		var shader = new Shader();
+		shader.Code =
+			"shader_type spatial;\n" +
+			"render_mode unshaded, transparent, no_depth_test, cull_disabled;\n" +
+			"uniform sampler2D icon : source_color;\n" +
+			"uniform float alpha_mult : hint_range(0.0, 1.0) = 0.0;\n" +
+			"void fragment() {\n" +
+			"    float a = texture(icon, UV).a;\n" +
+			"    ALBEDO = vec3(1.0);\n" +
+			"    ALPHA  = a * alpha_mult;\n" +
+			"}\n";
+		var shaderMat = new ShaderMaterial();
+		shaderMat.Shader = shader;
+		shaderMat.SetShaderParameter("icon", tex);
+		shaderMat.SetShaderParameter("alpha_mult", 0f);
+
+		var sprite = new Sprite3D
+		{
+			Texture          = tex,
+			PixelSize        = 0.005f,
+			Billboard        = BaseMaterial3D.BillboardModeEnum.Enabled,
+			NoDepthTest      = true,
+			RenderPriority   = 8,
+			MaterialOverride = shaderMat,
+		};
+		AddChild(sprite);
+		sprite.Position = Vector3.Up * 0.06f;
+
+		// Rise over the full duration.
+		sprite.CreateTween()
+			.SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.Out)
+			.TweenProperty(sprite, "position", Vector3.Up * 0.40f, 1.5f);
+
+		// Fade in (0.3 s) → hold (0.4 s) → fade out (0.8 s) via shader alpha_mult.
+		var alphaTween = sprite.CreateTween();
+		alphaTween.TweenMethod(
+				Callable.From((float a) => shaderMat.SetShaderParameter("alpha_mult", a)),
+				0f, 1f, 0.30f)
+			.SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.Out);
+		alphaTween.TweenInterval(0.40f);
+		alphaTween.TweenMethod(
+				Callable.From((float a) => shaderMat.SetShaderParameter("alpha_mult", a)),
+				1f, 0f, 0.80f)
+			.SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.In);
+
+		await ToSignal(alphaTween, Tween.SignalName.Finished);
+		if (IsInstanceValid(sprite)) sprite.QueueFree();
 	}
 
 	// ── Turn transitions ──────────────────────────────────────────────────────

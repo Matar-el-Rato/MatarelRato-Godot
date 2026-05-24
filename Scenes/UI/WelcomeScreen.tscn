@@ -1,33 +1,35 @@
 [gd_scene format=3 uid="uid://cknlf2b7dj8cn"]
 
 [ext_resource type="Script" uid="uid://bfsmg85xfhh45" path="res://Scripts/UI/WelcomeScreen.cs" id="1_jurxp"]
-[ext_resource type="PackedScene" uid="uid://1agynrda5ors" path="res://Scenes/MainScene.tscn" id="2_b07uq"]
-[ext_resource type="Shader" uid="uid://dd7df6ovaqj7v" path="res://Shaders/blur.gdshader" id="3_jq3ek"]
-[ext_resource type="FontFile" uid="uid://cw75wckal27hg" path="res://Assets/Fonts/Jersey10-Regular.ttf" id="4_xodw0"]
-[ext_resource type="Texture2D" uid="uid://baf2o8l6lipkk" path="res://Assets/Miscellaneous/github_logo.svg" id="5_tdam1"]
-[ext_resource type="FontFile" uid="uid://crh154r1w23lt" path="res://Assets/Fonts/Jacquard24-Regular.ttf" id="6_q4rus"]
+[ext_resource type="PackedScene" uid="uid://dsfflkoqcomca" path="res://Scenes/UI/WelcomeScreen3D.tscn" id="2_welcome"]
+[ext_resource type="PackedScene" uid="uid://1agynrda5ors" path="res://Scenes/MainScene.tscn" id="3_main"]
+[ext_resource type="Shader" uid="uid://dd7df6ovaqj7v" path="res://Shaders/blur.gdshader" id="4_blur"]
+[ext_resource type="FontFile" uid="uid://cw75wckal27hg" path="res://Assets/Fonts/Jersey10-Regular.ttf" id="5_font"]
+[ext_resource type="Texture2D" uid="uid://baf2o8l6lipkk" path="res://Assets/Miscellaneous/github_logo.svg" id="6_github"]
+[ext_resource type="FontFile" uid="uid://crh154r1w23lt" path="res://Assets/Fonts/Jacquard24-Regular.ttf" id="7_title"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_blur"]
-shader = ExtResource("3_jq3ek")
-shader_parameter/lod = 2.5
-
-[sub_resource type="Theme" id="Theme_buttons"]
-default_font = ExtResource("4_xodw0")
-default_font_size = 32
+shader = ExtResource("4_blur")
+shader_parameter/lod = 1.5
 
 [sub_resource type="LabelSettings" id="LabelSettings_title"]
-font = ExtResource("6_q4rus")
+font = ExtResource("7_title")
 font_size = 180
-font_color = Color(0.9, 0.9, 0.9, 1)
-shadow_size = 10
+shadow_size = 17
 shadow_color = Color(0, 0, 0, 0.5)
+shadow_offset = Vector2(7.055, 8.055)
 
 [sub_resource type="LabelSettings" id="LabelSettings_8n4fr"]
-font = ExtResource("6_q4rus")
+font = ExtResource("7_title")
 font_size = 220
-font_color = Color(0.9911142, 0.89791375, 0.6138343, 1)
-shadow_size = 10
+font_color = Color(0.77467364, 0, 0.0006519792, 1)
+shadow_size = 17
 shadow_color = Color(0, 0, 0, 0.5)
+shadow_offset = Vector2(6, 3.565)
+
+[sub_resource type="Theme" id="Theme_buttons"]
+default_font = ExtResource("5_font")
+default_font_size = 32
 
 [node name="WelcomeScreen" type="Control" unique_id=1668848884]
 layout_mode = 3
@@ -38,7 +40,16 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_jurxp")
 
-[node name="BackgroundParent" type="Control" parent="." unique_id=293853688]
+[node name="BlackBg" type="ColorRect" parent="." unique_id=112233445]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 1)
+
+[node name="WelcomeBackground" type="Control" parent="." unique_id=293853688]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -46,7 +57,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="BackgroundViewport" type="SubViewportContainer" parent="BackgroundParent" unique_id=1330696641]
+[node name="WelcomeViewport" type="SubViewportContainer" parent="WelcomeBackground" unique_id=1330696641]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -55,14 +66,39 @@ grow_horizontal = 2
 grow_vertical = 2
 stretch = true
 
-[node name="SubViewport" type="SubViewport" parent="BackgroundParent/BackgroundViewport" unique_id=1607203304]
+[node name="SubViewport" type="SubViewport" parent="WelcomeBackground/WelcomeViewport" unique_id=1607203304]
 handle_input_locally = false
 size = Vector2i(1280, 720)
 render_target_update_mode = 4
 
-[node name="MainSceneInstance" parent="BackgroundParent/BackgroundViewport/SubViewport" unique_id=2050789802 instance=ExtResource("2_b07uq")]
+[node name="WelcomeScene" parent="WelcomeBackground/WelcomeViewport/SubViewport" unique_id=2050789802 instance=ExtResource("2_welcome")]
 
-[node name="BlurOverlay" type="ColorRect" parent="BackgroundParent" unique_id=645327295]
+[node name="GameBackground" type="Control" parent="." unique_id=701234580]
+modulate = Color(1, 1, 1, 0)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="GameViewport" type="SubViewportContainer" parent="GameBackground" unique_id=701234581]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+stretch = true
+
+[node name="SubViewport" type="SubViewport" parent="GameBackground/GameViewport" unique_id=701234582]
+handle_input_locally = false
+size = Vector2i(1280, 720)
+render_target_update_mode = 4
+
+[node name="MainSceneInstance" parent="GameBackground/GameViewport/SubViewport" unique_id=701234583 instance=ExtResource("3_main")]
+
+[node name="BlurOverlay" type="ColorRect" parent="GameBackground" unique_id=645327295]
 material = SubResource("ShaderMaterial_blur")
 layout_mode = 1
 anchors_preset = 15
@@ -90,35 +126,6 @@ layout_mode = 2
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/HBoxContainer/LeftPanel" unique_id=373655828]
-layout_mode = 1
-anchors_preset = 4
-anchor_top = 0.5
-anchor_bottom = 0.5
-offset_top = -60.0
-offset_right = 200.0
-offset_bottom = 60.0
-grow_vertical = 2
-theme_override_constants/separation = 10
-
-[node name="PlayButton" type="Button" parent="MarginContainer/HBoxContainer/LeftPanel/VBoxContainer" unique_id=1037235710]
-layout_mode = 2
-theme = SubResource("Theme_buttons")
-text = "Play"
-flat = true
-alignment = 0
-
-[node name="SourceCodeButton" type="Button" parent="MarginContainer/HBoxContainer/LeftPanel/VBoxContainer" unique_id=1555132830]
-layout_mode = 2
-theme = SubResource("Theme_buttons")
-theme_override_constants/icon_max_width = 16
-theme_override_font_sizes/font_size = 25
-text = " Source Code"
-icon = ExtResource("5_tdam1")
-flat = true
-alignment = 0
-expand_icon = true
-
 [node name="RightPanel" type="Control" parent="MarginContainer/HBoxContainer" unique_id=1144258639]
 layout_mode = 2
 size_flags_horizontal = 3
@@ -130,10 +137,10 @@ anchor_left = 1.0
 anchor_top = 0.5
 anchor_right = 1.0
 anchor_bottom = 0.5
-offset_left = -530.0
-offset_top = -32.0
-offset_right = -65.0
-offset_bottom = 149.0
+offset_left = -1120.0
+offset_top = -35.0
+offset_right = -655.0
+offset_bottom = 146.0
 grow_horizontal = 0
 grow_vertical = 2
 text = "el Rato"
@@ -157,6 +164,37 @@ text = "Matar"
 label_settings = SubResource("LabelSettings_8n4fr")
 horizontal_alignment = 2
 
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=373655828]
+layout_mode = 1
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = 892.917
+offset_top = -58.929993
+offset_right = 1155.0
+offset_bottom = 66.07001
+grow_vertical = 2
+theme_override_constants/separation = 10
+
+[node name="PlayButton" type="Button" parent="VBoxContainer" unique_id=1037235710]
+layout_mode = 2
+theme = SubResource("Theme_buttons")
+theme_override_font_sizes/font_size = 50
+text = "Play"
+flat = true
+alignment = 0
+
+[node name="SourceCodeButton" type="Button" parent="VBoxContainer" unique_id=1555132830]
+layout_mode = 2
+theme = SubResource("Theme_buttons")
+theme_override_constants/icon_max_width = 25
+theme_override_font_sizes/font_size = 43
+text = " Source Code"
+icon = ExtResource("6_github")
+flat = true
+alignment = 0
+expand_icon = true
+
 [node name="DebugButton" type="Button" parent="." unique_id=1603560462]
 layout_mode = 1
 anchors_preset = 2
@@ -168,7 +206,7 @@ offset_right = 80.0
 offset_bottom = -15.0
 grow_vertical = 0
 theme_override_colors/font_color = Color(1, 1, 1, 0.4)
-theme_override_fonts/font = ExtResource("4_xodw0")
+theme_override_fonts/font = ExtResource("5_font")
 theme_override_font_sizes/font_size = 14
 text = "DEBUG"
 flat = true
