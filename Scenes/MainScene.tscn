@@ -49,6 +49,7 @@
 [ext_resource type="PackedScene" uid="uid://dp1t3ms3t0v02" path="res://Scenes/Game/PlayerItemSet.tscn" id="52_pitemset"]
 [ext_resource type="Script" uid="uid://j8aoyub8x1u7" path="res://Scripts/Game/DamoclesSword.cs" id="55_damocles_script"]
 [ext_resource type="Script" uid="uid://dv8cr4xwhbspu" path="res://Scripts/UI/DiceHUD.cs" id="60_dicehud"]
+[ext_resource type="Script" uid="uid://movecounthud1" path="res://Scripts/UI/MoveCounterHUD.cs" id="61_movecounter"]
 
 [sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_moon"]
 panorama = ExtResource("1_qxria")
@@ -628,6 +629,7 @@ PlayerItemSetScene = ExtResource("52_pitemset")
 OphanimNode = NodePath("../Ophanim")
 RouletteNode = NodePath("../Roulette")
 RoomMusicPlayer = NodePath("../AudioStreamPlayer3D")
+FisheyeMaterial = SubResource("ShaderMaterial_hkvke")
 
 [node name="mesa_poker" parent="Room1/PlayingSetup" unique_id=474140406 instance=ExtResource("8_f140w")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.457277, 0.43543047, -5.255393)
@@ -760,8 +762,14 @@ PixelsPerUnit = 1000
 [node name="SignInClipboard1" parent="Pizzeria" unique_id=1320131793 instance=ExtResource("34_registration_scene")]
 transform = Transform3D(-0.10452851, 0, 0.9945219, 0, 1, 0, -0.9945219, 0, -0.10452851, 32.61208, 1.0352813, -1.8561821)
 
+[node name="UIInteraction" parent="Pizzeria/SignInClipboard1"]
+FisheyeMaterial = SubResource("ShaderMaterial_hkvke")
+
 [node name="RegistrationClipboard1" parent="Pizzeria" unique_id=940128104 instance=ExtResource("33_signin_scene")]
 transform = Transform3D(0.15643449, 0, 0.98768836, 0, 1, 0, -0.98768836, 0, 0.15643449, 32.937305, 1.0318031, -1.8546613)
+
+[node name="UIInteraction" parent="Pizzeria/RegistrationClipboard1"]
+FisheyeMaterial = SubResource("ShaderMaterial_hkvke")
 
 [node name="ClipboardController" type="Node" parent="Pizzeria" unique_id=55667788]
 script = ExtResource("15_clipboard_ctrl")
@@ -830,6 +838,14 @@ layer = 11
 layout_mode = 3
 anchors_preset = 0
 script = ExtResource("60_dicehud")
+
+[node name="MoveCounterLayer" type="CanvasLayer" parent="." unique_id=2111111107]
+layer = 12
+
+[node name="MoveCounterHUD" type="Control" parent="MoveCounterLayer" unique_id=2111111106]
+layout_mode = 3
+anchors_preset = 0
+script = ExtResource("61_movecounter")
 
 [node name="DitherEffect" parent="." unique_id=1599022892 instance=ExtResource("37_dither_effect")]
 

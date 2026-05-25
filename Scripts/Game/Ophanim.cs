@@ -75,7 +75,8 @@ public partial class Ophanim : Node3D
 	[Export] public string BeginMessage          = "BEGIN.";
 	[Export] public float  BeginHoldDuration     = 0.5f;
 	[Export] public float  PieceGrantPause       = 0.1f;
-	[Export] public float  PieceRayVolumeDb       = -18f;
+	[Export] public float  PieceRayVolumeDb        = -23f;
+	[Export] public float  GoldenRayVolumeDb       = -23f;
 	[Export] public string SwordSpawnMessage      = "YOU ALL HAVE 30 SECONDS. DO NOT LET THIS DAGGER FALL.";
 	[Export] public float  SwordSpawnHoldDuration = 2.0f;
 
@@ -283,14 +284,14 @@ public partial class Ophanim : Node3D
 		await RunDecodeSequenceAsync(message, holdDuration);
 	}
 
-	/// <summary>Say the grant announcement, shoot the item ray, then ascend and hide.
-	/// Awaitable — completes after the ray fires (ascent continues in background).</summary>
+	/// <summary>Say the grant announcement while simultaneously shooting the item ray, then ascend and hide.
+	/// Awaitable — completes after both speech and ray finish.</summary>
 	public async System.Threading.Tasks.Task AnnounceGoldenGrant(
 		string message, Vector3 itemWorldPos, System.Action onItemGranted)
 	{
+		// Fire ray immediately — it finishes long before the speech, so the item appears while talking.
+		_ = ShootItemRay(itemWorldPos, onItemGranted);
 		await RunDecodeSequenceAsync(message, GoldenHoldDuration);
-		if (!IsInsideTree()) return;
-		await ShootItemRay(itemWorldPos, onItemGranted);
 		if (!IsInsideTree()) return;
 		AscendAndHide();
 	}
@@ -311,10 +312,8 @@ public partial class Ophanim : Node3D
 		await ToSignal(GetTree().CreateTimer(GreetingMsgPause), SceneTreeTimer.SignalName.Timeout);
 		if (!IsInsideTree()) return;
 
-		await RunDecodeSequenceAsync(GreetingMsg3, GreetingHoldDuration);
-		if (!IsInsideTree()) return;
-		await ToSignal(GetTree().CreateTimer(GreetingMsgPause), SceneTreeTimer.SignalName.Timeout);
-		if (!IsInsideTree()) return;
+		// Fire the last greeting and spawn the gun concurrently — gun arrives while Ophanim is still talking.
+		_ = RunDecodeSequenceAsync(GreetingMsg3, GreetingHoldDuration);
 
 		_inGreeting  = false;
 		_greetingDone = true;
@@ -517,16 +516,12 @@ public partial class Ophanim : Node3D
 			if (!IsInsideTree()) return;
 			await ToSignal(GetTree().CreateTimer(GreetingMsgPause), SceneTreeTimer.SignalName.Timeout);
 			if (!IsInsideTree()) return;
+			// Fire all golden square rays concurrently as the second message begins.
+			foreach (var (worldPos, onSpawn) in goldenGrants)
+				_ = ShootItemRay(worldPos, onSpawn, GoldenRayVolumeDb);
+
 			await RunDecodeSequenceAsync(GoldenSquaresMessage2, GreetingHoldDuration * 0.55f);
 			if (!IsInsideTree()) return;
-
-			foreach (var (worldPos, onSpawn) in goldenGrants)
-			{
-				await ShootItemRay(worldPos, onSpawn);
-				if (!IsInsideTree()) return;
-				await ToSignal(GetTree().CreateTimer(ItemGrantPause), SceneTreeTimer.SignalName.Timeout);
-				if (!IsInsideTree()) return;
-			}
 		}
 
 		// Explain the lives system first, then reveal the shells.
@@ -555,17 +550,29 @@ public partial class Ophanim : Node3D
 			if (!IsInsideTree()) return;
 			await RunDecodeSequenceAsync(BeginMessage, BeginHoldDuration);
 			if (!IsInsideTree()) return;
-			foreach (var (worldPos, onSpawn) in pieceGrants)
+
+			// Cubilete (index 0) fires alone.
+			await ShootItemRay(pieceGrants[0].worldPos, pieceGrants[0].onSpawn, PieceRayVolumeDb);
+			if (!IsInsideTree()) return;
+			await ToSignal(GetTree().CreateTimer(PieceGrantPause), SceneTreeTimer.SignalName.Timeout);
+			if (!IsInsideTree()) return;
+
+			// Remaining pieces in chunks of 4 (one player at a time, all concurrent).
+			float chunkWait = ItemRayGrowTime + ItemRayHoldTime + ItemRayShrinkTime + PieceGrantPause * 2f;
+			for (int i = 1; i < pieceGrants.Length; i += 4)
 			{
-				await ShootItemRay(worldPos, onSpawn, PieceRayVolumeDb);
-				if (!IsInsideTree()) return;
-				await ToSignal(GetTree().CreateTimer(PieceGrantPause), SceneTreeTimer.SignalName.Timeout);
+				int end = Math.Min(i + 4, pieceGrants.Length);
+				for (int j = i; j < end; j++)
+					_ = ShootItemRay(pieceGrants[j].worldPos, pieceGrants[j].onSpawn, PieceRayVolumeDb);
+				await ToSignal(GetTree().CreateTimer(chunkWait), SceneTreeTimer.SignalName.Timeout);
 				if (!IsInsideTree()) return;
 			}
+
+			// Start the sword speech but don't wait — ascend and emit signal immediately so
+			// the sword spawns while Ophanim is still talking.
 			await ToSignal(GetTree().CreateTimer(0.3f), SceneTreeTimer.SignalName.Timeout);
 			if (!IsInsideTree()) return;
-			await RunDecodeSequenceAsync(SwordSpawnMessage, SwordSpawnHoldDuration);
-			if (!IsInsideTree()) return;
+			_ = RunDecodeSequenceAsync(SwordSpawnMessage, SwordSpawnHoldDuration);
 		}
 
 		EmitSignal(SignalName.InitiativeSequenceCompleted);

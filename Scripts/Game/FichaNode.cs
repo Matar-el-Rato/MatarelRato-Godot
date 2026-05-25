@@ -27,20 +27,32 @@ public partial class FichaNode : Node3D
 	// ── Private ───────────────────────────────────────────────────────────────
 	private const string BorderSurface = "border";
 	private StandardMaterial3D _borderMat;
-	private ShaderMaterial      _hoverMat;
 	private Tween               _pulseTween;
 	private bool _selectable = false;
-	private Area3D _clickArea;
-	private readonly System.Collections.Generic.List<MeshInstance3D> _allMeshes = new();
 
 	// ── Init ──────────────────────────────────────────────────────────────────
+
+	/// <summary>Collision layer reserved for piece hover bodies — must match TableManager's mask.</summary>
+	public const uint HoverLayer = 1u << 15;
 
 	public void Initialize(string color, int pieceIndex)
 	{
 		PlayerColor = color;
 		PieceIndex  = pieceIndex;
 		CallDeferred(MethodName.ApplyColor);
-		CallDeferred(MethodName.SetupClickArea);
+		CallDeferred(MethodName.SetupHoverBody);
+	}
+
+	private void SetupHoverBody()
+	{
+		// A thin capsule that hugs the pawn shape, on a dedicated layer so the
+		// TableManager ray can hit pieces directly without the tablero trimesh interfering.
+		var body  = new StaticBody3D { Name = "HoverBody", CollisionLayer = HoverLayer, CollisionMask = 0 };
+		var shape = new CollisionShape3D();
+		shape.Shape    = new CapsuleShape3D { Radius = 0.025f, Height = 0.10f };
+		shape.Position = new Vector3(0f, 0.05f, 0f);
+		body.AddChild(shape);
+		AddChild(body);
 	}
 
 	private void ApplyColor()
@@ -66,63 +78,32 @@ public partial class FichaNode : Node3D
 		}
 	}
 
-	private void SetupClickArea()
-	{
-		// Collect all mesh instances for hover overlay.
-		CollectMeshes(this, _allMeshes);
-
-		var shader = GD.Load<Shader>("res://Shaders/highlight.gdshader");
-		if (shader != null)
-		{
-			_hoverMat = new ShaderMaterial { Shader = shader, RenderPriority = 10 };
-			_hoverMat.SetShaderParameter("outline_color",          Colors.Yellow);
-			_hoverMat.SetShaderParameter("thickness",              2.0f);
-			_hoverMat.SetShaderParameter("smoothing_cutoff",       0.1f);
-			_hoverMat.SetShaderParameter("smoothing_max",          0.1f);
-			_hoverMat.SetShaderParameter("transparency_threshold", 0.1f);
-			_hoverMat.SetShaderParameter("edge_sensitivity",       0.01f);
-			_hoverMat.SetShaderParameter("occlusion_bias",         0.02f);
-		}
-
-		// Area3D is used only for click detection.
-		// Hover is driven externally by TableManager.SetHovered() via ray casting,
-		// because the tablero's trimesh StaticBody3D intercepts the physics pick ray
-		// before it reaches this area.
-		// InputRayPickable disabled — clicks are detected by TableManager using the
-		// shader-corrected mouse position via _hoveredPiece, not Godot's physics pick ray.
-		_clickArea = new Area3D { Name = "ClickArea", InputRayPickable = false };
-		var shape = new CollisionShape3D();
-		shape.Shape = new BoxShape3D { Size = new Vector3(0.08f, 0.14f, 0.08f) };
-		var shapeOffset = new CollisionShape3D();
-		_clickArea.AddChild(shape);
-		shape.Position = new Vector3(0f, 0.06f, 0f);
-		AddChild(_clickArea);
-
-		_clickArea.InputEvent += (camera, ev, position, normal, shapeIndex) =>
-		{
-			if (!_selectable) return;
-			if (FocusController.Instance == null || !FocusController.Instance.IsFocused) return;
-			if (ev is InputEventMouseButton mb && mb.ButtonIndex == MouseButton.Left && mb.Pressed)
-				EmitSignal(SignalName.PieceClicked, this);
-		};
-	}
+	// ── Hover highlight ───────────────────────────────────────────────────────
 
 	/// <summary>
-	/// Called by TableManager when the camera ray enters or exits this piece.
-	/// Applies or removes the yellow outline shader overlay.
+	/// Called by TableManager when the ray enters or exits this piece.
+	/// Orange constant emission when on; restores the selectable pulse when off.
 	/// </summary>
 	public void SetHovered(bool on)
 	{
-		if (_hoverMat == null) return;
-		foreach (var m in _allMeshes)
-			m.MaterialOverlay = on ? _hoverMat : null;
-	}
-
-	private static void CollectMeshes(Node node, System.Collections.Generic.List<MeshInstance3D> list)
-	{
-		if (node is MeshInstance3D m) list.Add(m);
-		foreach (Node child in node.GetChildren(true))
-			CollectMeshes(child, list);
+		if (_borderMat == null) return;
+		if (on)
+		{
+			_pulseTween?.Kill();
+			_borderMat.EmissionEnabled          = true;
+			_borderMat.Emission                 = new Color(1f, 0.50f, 0f);
+			_borderMat.EmissionEnergyMultiplier = 1.8f;
+		}
+		else
+		{
+			if (_selectable)
+				BeginPulse();
+			else
+			{
+				_borderMat.EmissionEnabled          = false;
+				_borderMat.EmissionEnergyMultiplier = 1.0f;
+			}
+		}
 	}
 
 	// ── Selectable highlight ──────────────────────────────────────────────────
@@ -130,28 +111,33 @@ public partial class FichaNode : Node3D
 	public void SetSelectable(bool on)
 	{
 		_selectable = on;
-		if (!on) foreach (var m in _allMeshes) m.MaterialOverlay = null;
-
 		if (_pulseTween != null) { _pulseTween.Kill(); _pulseTween = null; }
-
 		if (_borderMat == null) return;
-		if (on) {
-			_borderMat.EmissionEnabled          = true;
-			_borderMat.Emission                 = Colors.White;
-			_borderMat.EmissionEnergyMultiplier = 0.0f;
-			_pulseTween = CreateTween().SetLoops();
-			_pulseTween.TweenMethod(
-				Callable.From((float v) => _borderMat.EmissionEnergyMultiplier = v),
-				0.0f, 0.4f, 0.7f)
-				.SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
-			_pulseTween.TweenMethod(
-				Callable.From((float v) => _borderMat.EmissionEnergyMultiplier = v),
-				0.4f, 0.0f, 0.7f)
-				.SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
-		} else {
+		if (on)
+			BeginPulse();
+		else
+		{
 			_borderMat.EmissionEnabled          = false;
 			_borderMat.EmissionEnergyMultiplier = 1.0f;
 		}
+	}
+
+	private void BeginPulse()
+	{
+		if (_borderMat == null) return;
+		_pulseTween?.Kill();
+		_borderMat.EmissionEnabled          = true;
+		_borderMat.Emission                 = Colors.White;
+		_borderMat.EmissionEnergyMultiplier = 0.0f;
+		_pulseTween = CreateTween().SetLoops();
+		_pulseTween.TweenMethod(
+			Callable.From((float v) => _borderMat.EmissionEnergyMultiplier = v),
+			0.0f, 0.4f, 0.7f)
+			.SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
+		_pulseTween.TweenMethod(
+			Callable.From((float v) => _borderMat.EmissionEnergyMultiplier = v),
+			0.4f, 0.0f, 0.7f)
+			.SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
 	}
 
 	// ── State helpers ─────────────────────────────────────────────────────────

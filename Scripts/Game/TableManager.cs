@@ -92,6 +92,7 @@ public partial class TableManager : Node3D
     // Current dice and move state.
     private int          _pendingDie1;
     private int          _pendingDie2;
+    private int          _pendingBonusMoves; // extra moves from capture (+20) or goal (+10)
     private bool         _isMyTurn = false;
     private readonly List<FichaNode> _selectablePieces = new();
 
@@ -104,7 +105,7 @@ public partial class TableManager : Node3D
     private System.Threading.Tasks.Task _lastMoveTask =
         System.Threading.Tasks.Task.CompletedTask;
 
-    // Set while PlayDoublesReroll is running so OnTurnStart skips its ReadyForRoll call.
+    // Set on extra_turn/doubles so OnTurnStart skips the ReadyForRoll call (cup was already reset by ReturnDiceEarly).
     private bool _doublesAnimating     = false;
     // Updated from dice_result; passed to the reroll sound selector.
     private int  _consecutiveDoubles   = 0;
@@ -424,8 +425,8 @@ public partial class TableManager : Node3D
 
         if (userId == _cubileteAtUserId)
         {
-            // Doubles: PlayDoublesReroll handles the cup reset; only fall back to ReadyForRoll
-            // if the animation was not started (e.g. very fast server round-trip).
+            // Doubles: cup was already reset by ReturnDiceEarly; only call ReadyForRoll
+            // as a fallback if _doublesAnimating was never set (very fast server round-trip).
             if (_isMyTurn && !_doublesAnimating)
                 GetNodeOrNull<CubileteController>("CubileteAndDice")?.ReadyForRoll();
             _doublesAnimating = false;
@@ -464,8 +465,9 @@ public partial class TableManager : Node3D
         }
 
         // Our roll — store pending dice and highlight moveable pieces.
-        _pendingDie1 = die1;
-        _pendingDie2 = die2;
+        _pendingDie1       = die1;
+        _pendingDie2       = die2;
+        _pendingBonusMoves = 0;
 
         // Server already computed moveable_pieces; use that if present.
         var moveableFromServer = new HashSet<int>();
@@ -487,6 +489,12 @@ public partial class TableManager : Node3D
             : localMoveable;
 
         HighlightMoveablePieces(ourColor, moveable);
+
+        // Only show counter when there are pieces to move (suppresses it on doubles-no-moves rerolls).
+        if (moveable.Count > 0)
+            MoveCounterHUD.Show(die1 + die2);
+        else if (!isDoubles)
+            DiceHUD.ShowNoMovesIcon();
 
         // Start returning dice after 1 s so the board is tidy before the player clicks a piece.
         if (isDoubles && ourColor.Length > 0)
@@ -516,7 +524,7 @@ public partial class TableManager : Node3D
         {
             var tcs = new System.Threading.Tasks.TaskCompletionSource<bool>();
             _lastMoveTask = tcs.Task;
-            await tablero.ApplyServerMove(color, pieceId, from, to);
+            await tablero.ApplyServerMove(color, pieceId, from, to, wasMyMove);
             tcs.SetResult(true);
         }
 
@@ -576,7 +584,7 @@ public partial class TableManager : Node3D
         GD.Print($"[TM] barrier_broken at square {sq} ({color})");
     }
 
-    private void OnExtraTurn(JsonElement root)
+    private async void OnExtraTurn(JsonElement root)
     {
         int    userId  = root.TryGetProperty("user_id", out var u)  ? u.GetInt32()  : -1;
         string reason  = root.TryGetProperty("reason",  out var r)  ? r.GetString() : "";
@@ -588,20 +596,14 @@ public partial class TableManager : Node3D
         if (reason == "doubles")
         {
             _doublesAnimating = true;
-            var cubilete = GetNodeOrNull<CubileteController>("CubileteAndDice");
-            if (cubilete != null)
-            {
-                if (isUs)
-                    cubilete.PlayDoublesReroll(_consecutiveDoubles);
-                else
-                    StartRemoteDoublesReroll(cubilete, _consecutiveDoubles);
-            }
+            DiceHUD.ShowRerollIcon(_consecutiveDoubles);
             return;
         }
 
         if (isUs && pending > 0)
         {
-            // Bonus move: highlight pieces that can move by pending_movements.
+            // Highlight immediately so the player sees selectable pieces.
+            _pendingBonusMoves = pending;
             string ourColor = _colorByUserId.TryGetValue(userId, out var oc) ? oc.ToLower() : "";
             if (ourColor.Length > 0)
             {
@@ -612,24 +614,24 @@ public partial class TableManager : Node3D
                         valid.Add(p);
                 HighlightMoveablePieces(ourColor, valid);
             }
+            // Wait for the current animation so leftover Step() callbacks don't corrupt the new counter value.
+            await _lastMoveTask;
+            if (!IsInsideTree()) return;
+            MoveCounterHUD.Show(pending);
         }
     }
 
-    // Awaits the move animation so the icon appears after the piece has landed,
-    // giving PlayRemoteThrow enough time to finish returning dice to the cup.
-    private async void StartRemoteDoublesReroll(CubileteController cubilete, int consecutiveDoubles)
-    {
-        await _lastMoveTask;
-        if (!IsInsideTree() || !IsInstanceValid(cubilete)) return;
-        cubilete.PlayRemoteDoublesReroll(consecutiveDoubles);
-    }
-
-    private void OnTurnEnd(JsonElement root)
+    private async void OnTurnEnd(JsonElement root)
     {
         ClearSelectables();
-        _pendingDie1 = 0;
-        _pendingDie2 = 0;
-        _isMyTurn    = false;
+        _pendingDie1       = 0;
+        _pendingDie2       = 0;
+        _pendingBonusMoves = 0;
+        _isMyTurn          = false;
+        // Wait for any in-progress piece animation so the counter reaches 0 before fading.
+        await _lastMoveTask;
+        if (!IsInsideTree()) return;
+        MoveCounterHUD.Hide();
     }
 
     private async void OnGoldenSquareEvent(JsonElement root)
@@ -786,14 +788,12 @@ public partial class TableManager : Node3D
     private void OnTimerWarning(JsonElement root)
     {
         int remaining = root.TryGetProperty("seconds_remaining", out var sr) ? sr.GetInt32() : 0;
-        ChatManager.AddLog($"[color=#ff8800][TIMER][/color] {remaining} seconds remaining!");
         _sword?.OnTimerWarning(remaining);
     }
 
     private void OnTimerExpired(JsonElement root)
     {
         _pendingSwordUserId = root.TryGetProperty("user_id", out var u) ? u.GetInt32() : -1;
-        ChatManager.AddLog("[color=#ff4400][TIMER][/color] Turn timer expired.");
 
         ClearSelectables();
         _isMyTurn = false;
@@ -865,42 +865,41 @@ public partial class TableManager : Node3D
 
     private void UpdatePieceHover()
     {
-        // Always fetch the active camera — FocusController may move or switch it.
         _hoverCamera = GetViewport().GetCamera3D();
         if (_hoverCamera == null) return;
 
-        var mousePos  = UndistortMousePos(GetViewport().GetMousePosition());
-        var rayOrigin = _hoverCamera.ProjectRayOrigin(mousePos);
-        var rayDir    = _hoverCamera.ProjectRayNormal(mousePos);
+        FichaNode hit = null;
 
-        FichaNode nearest  = null;
-        float     nearestT = float.MaxValue;
-
-        foreach (var piece in _selectablePieces)
+        if (_selectablePieces.Count > 0)
         {
-            if (!IsInstanceValid(piece)) continue;
-            // Sphere centre sits at the visual mid-height of the piece.
-            // Radius is generous so steep downward angles still register.
-            var   center  = piece.GlobalPosition + Vector3.Up * 0.09f;
-            float t       = (center - rayOrigin).Dot(rayDir);
-            if (t < 0f) continue;
-            float distSq  = (rayOrigin + rayDir * t - center).LengthSquared();
-            if (distSq < 0.10f * 0.10f && t < nearestT) { nearest = piece; nearestT = t; }
+            var mousePos  = UndistortMousePos(GetViewport().GetMousePosition());
+            var rayOrigin = _hoverCamera.ProjectRayOrigin(mousePos);
+            var rayEnd    = rayOrigin + _hoverCamera.ProjectRayNormal(mousePos) * 12f;
+
+            var query = PhysicsRayQueryParameters3D.Create(rayOrigin, rayEnd, FichaNode.HoverLayer);
+            var result = GetWorld3D().DirectSpaceState.IntersectRay(query);
+
+            if (result.Count > 0)
+            {
+                var parent = result["collider"].As<Node>()?.GetParent();
+                if (parent is FichaNode fn && _selectablePieces.Contains(fn))
+                    hit = fn;
+            }
         }
 
-        if (nearest == _hoveredPiece) return;
+        if (hit == _hoveredPiece) return;
 
         if (_hoveredPiece != null && IsInstanceValid(_hoveredPiece))
             _hoveredPiece.SetHovered(false);
 
         GetNodeOrNull<TableroController>("tablero")?.HidePathPreview();
 
-        _hoveredPiece = nearest;
+        _hoveredPiece = hit;
 
-        if (nearest != null)
+        if (hit != null)
         {
-            nearest.SetHovered(true);
-            ShowPiecePath(nearest);
+            hit.SetHovered(true);
+            ShowPiecePath(hit);
         }
     }
 
@@ -943,7 +942,7 @@ public partial class TableManager : Node3D
 
         string color = piece.PlayerColor.ToLower();
         int    from  = piece.BoardIndex;
-        int    total = _pendingDie1 + _pendingDie2;
+        int    total = _pendingBonusMoves > 0 ? _pendingBonusMoves : (_pendingDie1 + _pendingDie2);
 
         int to;
         if (from <= 0)

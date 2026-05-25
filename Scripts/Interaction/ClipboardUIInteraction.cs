@@ -21,6 +21,9 @@ public partial class ClipboardUIInteraction : Node3D
 	[Export] public MeshInstance3D Mesh;
 	/// <summary>Surface slot on <see cref="Mesh"/> that displays the viewport texture.</summary>
 	[Export] public int            SurfaceIndex = 0;
+	/// <summary>Drag the same ColorRect ShaderMaterial used by TableManager so raycasts
+	/// stay aligned with the fisheye distortion.</summary>
+	[Export] public ShaderMaterial FisheyeMaterial;
 
 	// Tracks whether the raycast hit the clipboard last frame to detect exit.
 	private bool _wasHittingLastFrame = false;
@@ -77,7 +80,7 @@ public partial class ClipboardUIInteraction : Node3D
 		var camera = GetViewport().GetCamera3D();
 		if (camera == null) return;
 
-		Vector2 mousePos = GetViewport().GetMousePosition();
+		Vector2 mousePos = UndistortMousePos(GetViewport().GetMousePosition());
 		var from = camera.ProjectRayOrigin(mousePos);
 		var to   = from + camera.ProjectRayNormal(mousePos) * 10.0f;
 
@@ -129,6 +132,33 @@ public partial class ClipboardUIInteraction : Node3D
 			Viewport.PushInput(exitEvent);
 			_wasHittingLastFrame = false;
 		}
+	}
+
+	/// <summary>
+	/// Applies the inverse of fisheye.gdshader so that raycasting operates on screen
+	/// coordinates that match what the player sees through the distortion.
+	/// Mirrors the implementation in TableManager.UndistortMousePos.
+	/// </summary>
+	private Vector2 UndistortMousePos(Vector2 mousePos)
+	{
+		if (FisheyeMaterial == null) return mousePos;
+
+		var   vp     = GetViewport().GetVisibleRect().Size;
+		float k1     = (float)FisheyeMaterial.GetShaderParameter("k1");
+		float k2     = (float)FisheyeMaterial.GetShaderParameter("k2");
+		float zoom   = (float)FisheyeMaterial.GetShaderParameter("zoom");
+		float aspect = vp.X / vp.Y;
+
+		Vector2 uv = (mousePos / vp - Vector2.One * 0.5f) / zoom;
+		uv.X *= aspect;
+
+		float   r2 = uv.Dot(uv);
+		float   r4 = r2 * r2;
+		Vector2 d  = uv * (1f + k1 * r2 + k2 * r4);
+
+		d.X /= aspect;
+		d   += Vector2.One * 0.5f;
+		return d * vp;
 	}
 
 	/// <summary>

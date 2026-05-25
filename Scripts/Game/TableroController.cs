@@ -131,7 +131,7 @@ public partial class TableroController : Node3D
 	/// Applies a server-authoritative move: moves piece from <paramref name="from"/> to
 	/// <paramref name="to"/>.  Awaitable — completes when the piece animation finishes.
 	/// </summary>
-	public async Task ApplyServerMove(string color, int pieceIndex, int from, int to)
+	public async Task ApplyServerMove(string color, int pieceIndex, int from, int to, bool notifyCounter = false)
 	{
 		var ficha = GetPiece(color, pieceIndex);
 		if (ficha == null) return;
@@ -144,12 +144,20 @@ public partial class TableroController : Node3D
 			var dest  = GetBoardWorldPosition(to, color);
 			var tween = CreateTween();
 			tween.TweenProperty(ficha, "global_position", dest, 0.35f);
+			if (notifyCounter) tween.TweenCallback(Callable.From(MoveCounterHUD.Step));
 			await ToSignal(tween, Tween.SignalName.Finished);
 			return;
 		}
 
 		var path = BuildPath(color, from, to);
-		await AnimatePath(ficha, path, color);
+		if (notifyCounter && from <= 0)
+		{
+			// Exiting base uses all dice at once — drain counter after animation rather than one Step.
+			await AnimatePath(ficha, path, color, false);
+			MoveCounterHUD.DrainAll();
+		}
+		else
+			await AnimatePath(ficha, path, color, notifyCounter);
 	}
 
 	/// <summary>Sends a piece back to its base slot (capture / triple-double).</summary>
@@ -246,7 +254,7 @@ public partial class TableroController : Node3D
 	private const float HopSpeed  = 0.08f;
 	private const float LandSpeed = 0.10f;
 
-	private async Task AnimatePath(FichaNode ficha, List<int> path, string color)
+	private async Task AnimatePath(FichaNode ficha, List<int> path, string color, bool notifyCounter = false)
 	{
 		if (path.Count == 0) return;
 
@@ -259,10 +267,14 @@ public partial class TableroController : Node3D
 		{
 			var wp = GetBoardWorldPosition(path[i], color);
 			tween.TweenProperty(ficha, "global_position", wp + Vector3.Up * HopHeight, HopSpeed);
+			if (notifyCounter)
+				tween.TweenCallback(Callable.From(MoveCounterHUD.Step));
 		}
 
 		var dest = GetBoardWorldPosition(destIndex, color);
 		tween.TweenProperty(ficha, "global_position", dest + Vector3.Up * HopHeight, HopSpeed);
+		if (notifyCounter)
+			tween.TweenCallback(Callable.From(MoveCounterHUD.Step));
 		tween.SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
 		tween.TweenProperty(ficha, "global_position", dest, LandSpeed);
 

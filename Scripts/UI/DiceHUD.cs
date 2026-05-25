@@ -43,6 +43,19 @@ public partial class DiceHUD : Control
     private RigidBody3D[] _activeDice;
     private Tween         _fadeTween;
 
+    private TextureRect   _rerollIcon;
+    private Tween         _rerollTween;
+    private bool          _rerollIconVisible;
+
+    private static volatile bool _pendingShowRerollIcon;
+    private static volatile bool _pendingHideRerollIcon;
+    private static int           _pendingRerollDoubles;
+
+    private TextureRect   _noMovesIcon;
+    private Tween         _noMovesTween;
+
+    private static volatile bool _pendingShowNoMovesIcon;
+
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
     public override void _Ready()
@@ -67,6 +80,42 @@ public partial class DiceHUD : Control
         var diceScene = GD.Load<PackedScene>("res://Assets/PlayingSet/General/dice.glb");
         for (int i = 0; i < 2; i++)
             BuildDieViewport(i, hbox, diceScene);
+
+        // Reroll icon — 64×64, centered above the dice tiles.
+        // Floats up into position when shown; does not cover the dice.
+        _rerollIcon = new TextureRect();
+        _rerollIcon.AnchorLeft   = 0.5f;
+        _rerollIcon.AnchorRight  = 0.5f;
+        _rerollIcon.AnchorTop    = 0f;
+        _rerollIcon.AnchorBottom = 0f;
+        _rerollIcon.OffsetLeft   = -32f;
+        _rerollIcon.OffsetRight  =  32f;
+        _rerollIcon.OffsetTop    =   5f;  // start: just inside panel top
+        _rerollIcon.OffsetBottom =  69f;
+        _rerollIcon.PivotOffset  = new Vector2(32f, 32f); // rotate around own center
+        _rerollIcon.ExpandMode   = TextureRect.ExpandModeEnum.FitWidth;
+        _rerollIcon.StretchMode  = TextureRect.StretchModeEnum.KeepAspectCentered;
+        _rerollIcon.Modulate     = new Color(1f, 1f, 1f, 0f);
+        var rerollTex = GD.Load<Texture2D>("res://Assets/Icons/reroll_icon.svg");
+        if (rerollTex != null) _rerollIcon.Texture = rerollTex;
+        AddChild(_rerollIcon);
+
+        _noMovesIcon = new TextureRect();
+        _noMovesIcon.AnchorLeft   = 0.5f;
+        _noMovesIcon.AnchorRight  = 0.5f;
+        _noMovesIcon.AnchorTop    = 0f;
+        _noMovesIcon.AnchorBottom = 0f;
+        _noMovesIcon.OffsetLeft   = -32f;
+        _noMovesIcon.OffsetRight  =  32f;
+        _noMovesIcon.OffsetTop    =   5f;
+        _noMovesIcon.OffsetBottom =  69f;
+        _noMovesIcon.PivotOffset  = new Vector2(32f, 32f);
+        _noMovesIcon.ExpandMode   = TextureRect.ExpandModeEnum.FitWidth;
+        _noMovesIcon.StretchMode  = TextureRect.StretchModeEnum.KeepAspectCentered;
+        _noMovesIcon.Modulate     = new Color(1f, 1f, 1f, 0f);
+        var noMovesTex = GD.Load<Texture2D>("res://Assets/Icons/exclamation.svg");
+        if (noMovesTex != null) _noMovesIcon.Texture = noMovesTex;
+        AddChild(_noMovesIcon);
 
         Modulate = new Color(1f, 1f, 1f, 0f);
         Visible  = false;
@@ -167,6 +216,24 @@ public partial class DiceHUD : Control
             _activeDice  = null;
             HideHUD();
         }
+
+        if (_pendingShowRerollIcon)
+        {
+            _pendingShowRerollIcon = false;
+            DoShowRerollIcon(_pendingRerollDoubles);
+        }
+
+        if (_pendingHideRerollIcon)
+        {
+            _pendingHideRerollIcon = false;
+            DoHideRerollIcon();
+        }
+
+        if (_pendingShowNoMovesIcon)
+        {
+            _pendingShowNoMovesIcon = false;
+            DoShowNoMovesIcon();
+        }
     }
 
     private void SetFaceValue(int dieIndex, int value)
@@ -180,9 +247,20 @@ public partial class DiceHUD : Control
 
     public static void AttachDice(RigidBody3D[] dice)
     {
-        _pendingDice   = dice;
-        _pendingAttach = true;
+        _pendingDice           = dice;
+        _pendingAttach         = true;
+        _pendingHideRerollIcon = true; // player grabbed cup → dismiss reroll icon
     }
+
+    /// <summary>Shows the reroll icon overlaid on the dice HUD panel.</summary>
+    public static void ShowRerollIcon(int consecutiveDoubles)
+    {
+        _pendingRerollDoubles  = consecutiveDoubles;
+        _pendingShowRerollIcon = true;
+    }
+
+    /// <summary>Shows the no-available-moves exclamation icon overlaid on the dice HUD panel.</summary>
+    public static void ShowNoMovesIcon() => _pendingShowNoMovesIcon = true;
 
     /// <summary>Shows the HUD with dice oriented to the given face values (no live physics tracking).</summary>
     public static void ShowStatic(int die1, int die2)
@@ -208,11 +286,110 @@ public partial class DiceHUD : Control
 
     private void HideHUD()
     {
+        if (_rerollIconVisible) return; // keep panel up while reroll icon is showing
         _fadeTween?.Kill();
         _fadeTween = CreateTween();
         _fadeTween.TweenProperty(this, "modulate:a", 0f, 0.5f)
                   .SetTrans(Tween.TransitionType.Cubic)
                   .SetEase(Tween.EaseType.In);
-        _fadeTween.TweenCallback(Callable.From(() => Visible = false));
+        _fadeTween.TweenCallback(Callable.From(() => {
+            Visible = false;
+            _noMovesIcon.Modulate = new Color(1f, 1f, 1f, 0f);
+            _noMovesIcon.Rotation = 0f;
+        }));
+    }
+
+    private void DoShowRerollIcon(int consecutiveDoubles)
+    {
+        string soundPath = consecutiveDoubles switch {
+            1 => "res://Assets/Sound FX/reroll_combo_1.wav",
+            2 => "res://Assets/Sound FX/reroll_combo_2.wav",
+            _ => null,
+        };
+        if (soundPath != null)
+        {
+            var clip = GD.Load<AudioStream>(soundPath);
+            if (clip != null)
+            {
+                var sfx = new AudioStreamPlayer { Stream = clip, VolumeDb = -3f };
+                AddChild(sfx);
+                sfx.Play();
+                sfx.Finished += () => sfx.QueueFree();
+            }
+        }
+
+        // Ensure the panel is visible (may have been fading when extra_turn arrived).
+        _fadeTween?.Kill();
+        Visible  = true;
+        Modulate = new Color(1f, 1f, 1f, 1f);
+
+        // Reset to spawn position before animating.
+        _rerollIcon.OffsetTop    =  5f;
+        _rerollIcon.OffsetBottom = 69f;
+        _rerollIcon.Rotation     =  0f;
+        _rerollIcon.Modulate     = new Color(1f, 1f, 1f, 0f);
+
+        _rerollIconVisible = true;
+        _rerollTween?.Kill();
+
+        const float dur = 0.7f;
+        _rerollTween = _rerollIcon.CreateTween();
+        _rerollTween.SetParallel(true);
+        _rerollTween.TweenProperty(_rerollIcon, "modulate:a", 1f, dur * 0.6f)
+                    .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
+        _rerollTween.TweenProperty(_rerollIcon, "rotation", -Mathf.Tau, dur)
+                    .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
+        _rerollTween.TweenProperty(_rerollIcon, "offset_top", -28f, dur)
+                    .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
+        _rerollTween.TweenProperty(_rerollIcon, "offset_bottom", 36f, dur)
+                    .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
+    }
+
+    private void DoHideRerollIcon()
+    {
+        if (!_rerollIconVisible) return;
+        _rerollIconVisible = false;
+        _rerollTween?.Kill();
+        _rerollTween = _rerollIcon.CreateTween();
+        _rerollTween.TweenProperty(_rerollIcon, "modulate:a", 0f, 0.3f)
+                    .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.In);
+        _rerollTween.TweenCallback(Callable.From(() => {
+            _rerollIcon.Rotation = 0f;
+            HideHUD();
+        }));
+    }
+
+    private void DoShowNoMovesIcon()
+    {
+        var clip = GD.Load<AudioStream>("res://Assets/Sound FX/warning_sound.wav");
+        if (clip != null)
+        {
+            var sfx = new AudioStreamPlayer { Stream = clip, VolumeDb = -3f };
+            AddChild(sfx);
+            sfx.Play();
+            sfx.Finished += () => sfx.QueueFree();
+        }
+
+        _fadeTween?.Kill();
+        Visible  = true;
+        Modulate = new Color(1f, 1f, 1f, 1f);
+
+        _noMovesIcon.OffsetTop    =  5f;
+        _noMovesIcon.OffsetBottom = 69f;
+        _noMovesIcon.Rotation     =  0f;
+        _noMovesIcon.Modulate     = new Color(1f, 1f, 1f, 0f);
+
+        _noMovesTween?.Kill();
+        const float dur = 0.7f;
+        _noMovesTween = _noMovesIcon.CreateTween();
+        _noMovesTween.SetParallel(true);
+        _noMovesTween.TweenProperty(_noMovesIcon, "modulate:a", 1f, dur * 0.6f)
+                     .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
+        _noMovesTween.TweenProperty(_noMovesIcon, "rotation", -Mathf.Tau, dur)
+                     .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
+        _noMovesTween.TweenProperty(_noMovesIcon, "offset_top", -28f, dur)
+                     .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
+        _noMovesTween.TweenProperty(_noMovesIcon, "offset_bottom", 36f, dur)
+                     .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
     }
 }
