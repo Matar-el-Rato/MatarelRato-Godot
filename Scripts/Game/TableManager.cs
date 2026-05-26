@@ -442,61 +442,76 @@ public partial class TableManager : Node3D
         }
     }
 
-    private void OnDiceResult(JsonElement root)
+    private async void OnDiceResult(JsonElement root)
     {
         _sword?.Dismiss();
-        int    userId     = root.TryGetProperty("user_id",    out var drU)   ? drU.GetInt32()   : -1;
-        int    die1       = root.TryGetProperty("die1",       out var dr1)   ? dr1.GetInt32()   : 0;
-        int    die2       = root.TryGetProperty("die2",       out var dr2)   ? dr2.GetInt32()   : 0;
-        int    total      = die1 + die2;
-        bool   isMyRoll   = userId == LiveConnectionManager.LocalUserId;
-        bool   isDoubles  = root.TryGetProperty("is_doubles",         out var idEl) && idEl.GetBoolean();
-        int    consec     = root.TryGetProperty("consecutive_doubles", out var cdEl) ? cdEl.GetInt32() : 0;
 
-        if (isDoubles) _consecutiveDoubles = consec;
+        // Extract all data from root BEFORE any await (JsonElement lifetime is tied to JsonDocument).
+        int  userId   = root.TryGetProperty("user_id",             out var drU) ? drU.GetInt32()   : -1;
+        int  die1     = root.TryGetProperty("die1",                out var dr1) ? dr1.GetInt32()   : 0;
+        int  die2     = root.TryGetProperty("die2",                out var dr2) ? dr2.GetInt32()   : 0;
+        bool isDoubles= root.TryGetProperty("is_doubles",          out var idEl) && idEl.GetBoolean();
+        int  consec   = root.TryGetProperty("consecutive_doubles", out var cdEl) ? cdEl.GetInt32() : 0;
 
-        string who = _usernameByUserId.TryGetValue(userId, out var dName) ? dName : $"#{userId}";
-
-        if (!isMyRoll)
-        {
-            ChatManager.AddLog($"[color=#aaaaff][DICE][/color] {who} rolled {die1}, {die2} (Total: {total})");
-            GetNodeOrNull<CubileteController>("CubileteAndDice")?.PlayRemoteThrow(1.5f);
-            return;
-        }
-
-        // Our roll — store pending dice and highlight moveable pieces.
-        _pendingDie1       = die1;
-        _pendingDie2       = die2;
-        _pendingBonusMoves = 0;
-
-        // Server already computed moveable_pieces; use that if present.
         var moveableFromServer = new HashSet<int>();
         if (root.TryGetProperty("moveable_pieces", out var mpEl))
             foreach (var el in mpEl.EnumerateArray())
                 moveableFromServer.Add(el.GetInt32());
+        // root no longer accessed past this point.
 
-        // Also compute locally as a fallback/confirmation.
+        bool isMyRoll = userId == LiveConnectionManager.LocalUserId;
+        if (isMyRoll) FocusController.IsBlocked = false; // dice landed — allow tablero focus
+        if (isDoubles) _consecutiveDoubles = consec;
+
+        if (!isMyRoll)
+        {
+            GetNodeOrNull<CubileteController>("CubileteAndDice")?.PlayRemoteThrow(1.5f);
+            DiceHUD.ShowRemote(die1, die2);
+            return;
+        }
+
+        // ── Our roll ──────────────────────────────────────────────────────────
+
         string ourColor = _colorByUserId.TryGetValue(LiveConnectionManager.LocalUserId, out var oc)
             ? oc.ToLower() : "";
 
         List<int> localMoveable = ourColor.Length > 0
             ? ParchisLogic.GetMoveablePieces(ourColor, die1, die2, _boardPositions)
             : new List<int>();
-
-        // Use server list if non-empty, else fallback to local.
         var moveable = moveableFromServer.Count > 0
             ? new List<int>(moveableFromServer)
             : localMoveable;
 
+        // die2 == 0 signals a second-move dice_result sent privately after a 5+X or 5+5 exit.
+        // In that case, await the exit animation so the counter is already at the right value,
+        // then just update pending dice and highlight — do NOT reset the counter.
+        bool isSecondMove = die2 == 0;
+        if (isSecondMove)
+        {
+            await _lastMoveTask;
+            if (!IsInsideTree()) return;
+
+            _pendingDie1       = die1;
+            _pendingDie2       = 0;
+            _pendingBonusMoves = 0;
+            HighlightMoveablePieces(ourColor, moveable);
+            if (moveable.Count == 0)
+                DiceHUD.ShowNoMovesIcon();
+            return;
+        }
+
+        // Normal first-roll for this turn.
+        _pendingDie1       = die1;
+        _pendingDie2       = die2;
+        _pendingBonusMoves = 0;
+
         HighlightMoveablePieces(ourColor, moveable);
 
-        // Only show counter when there are pieces to move (suppresses it on doubles-no-moves rerolls).
         if (moveable.Count > 0)
             MoveCounterHUD.Show(die1 + die2);
         else if (!isDoubles)
             DiceHUD.ShowNoMovesIcon();
 
-        // Start returning dice after 1 s so the board is tidy before the player clicks a piece.
         if (isDoubles && ourColor.Length > 0)
             GetNodeOrNull<CubileteController>("CubileteAndDice")?
                 .ReturnDiceEarly(GetCubiletePositionForColor(ourColor));
@@ -508,6 +523,7 @@ public partial class TableManager : Node3D
         int    pieceId  = root.TryGetProperty("piece_id", out var pid) ? pid.GetInt32(): -1;
         int    from     = root.TryGetProperty("from",     out var f)   ? f.GetInt32()  : 0;
         int    to       = root.TryGetProperty("to",       out var t)   ? t.GetInt32()  : 0;
+        int    steps    = root.TryGetProperty("steps",    out var st)  ? st.GetInt32() : 0;
 
         if (userId < 0 || pieceId < 0) return;
 
@@ -524,12 +540,10 @@ public partial class TableManager : Node3D
         {
             var tcs = new System.Threading.Tasks.TaskCompletionSource<bool>();
             _lastMoveTask = tcs.Task;
-            await tablero.ApplyServerMove(color, pieceId, from, to, wasMyMove);
+            await tablero.ApplyServerMove(color, pieceId, from, to, wasMyMove, steps);
             tcs.SetResult(true);
         }
 
-        if (wasMyMove)
-            FocusController.Instance?.ExitFocus();
     }
 
     private void OnCapture(JsonElement root)
@@ -558,29 +572,31 @@ public partial class TableManager : Node3D
 
     private async void OnBarrierFormed(JsonElement root)
     {
-        int userId = root.TryGetProperty("user_id", out var u) ? u.GetInt32() : -1;
         int sq     = root.TryGetProperty("square",  out var s) ? s.GetInt32() : -1;
-        if (sq < 0 || userId < 0 || !_colorByUserId.TryGetValue(userId, out var color)) return;
-        color = color.ToLower();
+        int userId = root.TryGetProperty("user_id", out var u) ? u.GetInt32() : -1;
+        if (sq < 0) return;
+
+        string color = userId >= 0 && _colorByUserId.TryGetValue(userId, out var c) ? c.ToLower() : "?";
 
         await _lastMoveTask;
         if (!IsInsideTree()) return;
 
-        GetNodeOrNull<TableroController>("tablero")?.ApplyBarrierPositions(color, sq);
+        GetNodeOrNull<TableroController>("tablero")?.ApplyBarrierPositions(sq);
         GD.Print($"[TM] barrier_formed at square {sq} ({color})");
     }
 
     private async void OnBarrierBroken(JsonElement root)
     {
-        int userId = root.TryGetProperty("user_id", out var u) ? u.GetInt32() : -1;
         int sq     = root.TryGetProperty("square",  out var s) ? s.GetInt32() : -1;
-        if (sq < 0 || userId < 0 || !_colorByUserId.TryGetValue(userId, out var color)) return;
-        color = color.ToLower();
+        int userId = root.TryGetProperty("user_id", out var u) ? u.GetInt32() : -1;
+        if (sq < 0) return;
+
+        string color = userId >= 0 && _colorByUserId.TryGetValue(userId, out var c) ? c.ToLower() : "?";
 
         await _lastMoveTask;
         if (!IsInsideTree()) return;
 
-        GetNodeOrNull<TableroController>("tablero")?.CenterPieceAt(color, sq);
+        GetNodeOrNull<TableroController>("tablero")?.CenterPieceAt(sq);
         GD.Print($"[TM] barrier_broken at square {sq} ({color})");
     }
 
@@ -591,12 +607,22 @@ public partial class TableManager : Node3D
         int    pending = root.TryGetProperty("pending_movements", out var pm) ? pm.GetInt32() : 0;
 
         bool isUs = userId == LiveConnectionManager.LocalUserId;
-        GD.Print($"[TM] extra_turn reason={reason} pending={pending} isUs={isUs}");
 
         if (reason == "doubles")
         {
             _doublesAnimating = true;
-            DiceHUD.ShowRerollIcon(_consecutiveDoubles);
+            // Wait for the piece to land before showing the reroll icon and returning focus.
+            await _lastMoveTask;
+            if (!IsInsideTree()) return;
+            if (isUs)
+            {
+                DiceHUD.ShowRerollIcon(_consecutiveDoubles);
+                FocusController.Instance?.ExitFocus();
+            }
+            else
+            {
+                DiceHUD.ShowRemoteRerollIcon(_consecutiveDoubles);
+            }
             return;
         }
 
@@ -623,15 +649,20 @@ public partial class TableManager : Node3D
 
     private async void OnTurnEnd(JsonElement root)
     {
+        FocusController.IsBlocked = false; // safety: clear any stale block from this turn
         ClearSelectables();
         _pendingDie1       = 0;
         _pendingDie2       = 0;
         _pendingBonusMoves = 0;
+        bool wasMyTurn     = _isMyTurn;
         _isMyTurn          = false;
         // Wait for any in-progress piece animation so the counter reaches 0 before fading.
         await _lastMoveTask;
         if (!IsInsideTree()) return;
         MoveCounterHUD.Hide();
+        DiceHUD.HideResult();
+        if (wasMyTurn)
+            FocusController.Instance?.ExitFocus();
     }
 
     private async void OnGoldenSquareEvent(JsonElement root)
@@ -955,7 +986,7 @@ public partial class TableManager : Node3D
             if (to < 0) return;
         }
 
-        var path = tablero.BuildPath(color, from, to);
+        var path = tablero.BuildPath(color, from, to, total);
         if (path.Count > 0)
             tablero.ShowPathPreview(path, color, piece.GlobalPosition);
     }
@@ -1011,6 +1042,10 @@ public partial class TableManager : Node3D
 
     private void OnRollCompleted(int die1, int die2)
     {
+        // Block tablero focus until the server's dice_result arrives — prevents
+        // the player from clicking pieces before knowing which ones are moveable.
+        FocusController.IsBlocked = true;
+
         string rollJson = $"{{\"action\":\"roll_dice\",\"die1\":{die1},\"die2\":{die2}}}";
         LiveConnectionManager.SendGameAction(
             LiveConnectionManager.CurrentMatchId,

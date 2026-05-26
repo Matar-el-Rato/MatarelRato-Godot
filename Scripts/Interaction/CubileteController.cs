@@ -27,7 +27,7 @@ public partial class CubileteController : Node3D
 
 	[ExportGroup("Positions")]
 	/// <summary>Local offset from the camera where the cup tweens when grabbed.</summary>
-	[Export] public Vector3 HoldOffset        = new Vector3(0, -0.4f, -0.4f);
+	[Export] public Vector3 HoldOffset        = new Vector3(0, -0.05f, -0.28f);
 	/// <summary>World offset from the camera where dice are spawned at throw time.</summary>
 	[Export] public Vector3 ThrowOriginOffset = new Vector3(0, -0.3f, -0.5f);
 

@@ -47,10 +47,14 @@ public static class ParchisLogic
         int corrBase = CorrBase[color];
 
         if (fromSq >= 100) {
-            // Already in corridor: corrStep = fromSq - corrBase + 1
             int corrStep = fromSq - corrBase + 1;
             int newStep  = corrStep + steps;
-            if (newStep > 8) return -1;
+            if (newStep > 8) {
+                int overshoot  = newStep - 8;
+                int bounceStep = 8 - overshoot;
+                if (bounceStep < 1) return -1;
+                return corrBase + bounceStep - 1;
+            }
             return corrBase + newStep - 1;
         }
 
@@ -65,7 +69,12 @@ public static class ParchisLogic
 
         // Enters corridor.
         int remaining = steps - stepsToEntry;
-        if (remaining > 8) return -1;
+        if (remaining > 8) {
+            int overshoot  = remaining - 8;
+            int bounceStep = 8 - overshoot;
+            if (bounceStep < 1) return -1;
+            return corrBase + bounceStep - 1;
+        }
         return corrBase + remaining - 1;
     }
 

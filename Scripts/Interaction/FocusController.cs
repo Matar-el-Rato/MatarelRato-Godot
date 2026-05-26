@@ -35,6 +35,12 @@ public partial class FocusController : Node
 	/// <summary>True while any target is being focused.</summary>
 	public bool IsFocused => _isFocused;
 
+	/// <summary>
+	/// When true, new focus requests are silently dropped.
+	/// Set by TableManager between roll_dice and dice_result to prevent focus spam.
+	/// </summary>
+	public static bool IsBlocked { get; set; } = false;
+
 	/// <summary>Fired with true when focus starts, false when it fully ends.</summary>
 	public static event Action<bool> FocusStateChanged;
 
@@ -86,7 +92,7 @@ public partial class FocusController : Node
 	public void FocusOn(Node3D focalPoint, Node3D target)
 	{
 		if (_playerCamera == null) SetupReferences();
-		if (_isFocused || focalPoint == null || _playerCamera == null) return;
+		if (_isFocused || focalPoint == null || _playerCamera == null || IsBlocked) return;
 
 		_isFocused              = true;
 		_currentFocusTarget     = target;
@@ -112,7 +118,7 @@ public partial class FocusController : Node
 	public void FocusOnModular(Node3D target, float distance = 0.4f, Vector3 positionOffset = default, float rotationOffset = 0f, float targetFOV = 75.0f)
 	{
 		if (_playerCamera == null) SetupReferences();
-		if (_isFocused || target == null || _playerCamera == null) return;
+		if (_isFocused || target == null || _playerCamera == null || IsBlocked) return;
 
 		_isFocused               = true;
 		_currentFocusTarget      = target;

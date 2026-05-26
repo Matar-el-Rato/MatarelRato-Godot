@@ -4,10 +4,14 @@
 //
 // POSITION MARKERS (place Marker3D children in the editor):
 //   Positions/Pos_01 … Pos_68          outer ring (1-indexed per rules)
-//   HomePositions/HomeYellow_1 … _8    yellow home corridor (step 8 = goal)
-//   HomePositions/HomeGreen_1  … _8    green  home corridor
-//   HomePositions/HomeRed_1    … _8    red    home corridor
-//   HomePositions/HomeBlue_1   … _8    blue   home corridor
+//   HomePositions/HomeYellow_1 … _7    yellow home corridor (steps 1-7)
+//   HomePositions/HomeGreen_1  … _7    green  home corridor
+//   HomePositions/HomeRed_1    … _7    red    home corridor
+//   HomePositions/HomeBlue_1   … _7    blue   home corridor
+//   BasePositions/GoalYellow              yellow goal marker
+//   BasePositions/GoalGreen               green  goal marker
+//   BasePositions/GoalRed                 red    goal marker
+//   BasePositions/GoalBlue                blue   goal marker
 //   BasePositions/BaseYellow_0 … _3    yellow base slots
 //   BasePositions/BaseGreen_0  … _3    green  base slots
 //   BasePositions/BaseRed_0    … _3    red    base slots
@@ -92,6 +96,7 @@ public partial class TableroController : Node3D
 	/// <summary>Spawns four pieces for <paramref name="color"/> and places them in base, hidden until revealed.</summary>
 	public void SpawnPlayer(string color)
 	{
+		_goalOccupancy.Remove(color); // reset goal state for this color on (re)spawn
 		for (int i = 0; i < 4; i++)
 		{
 			var ficha = FichaScene.Instantiate<FichaNode>();
@@ -131,7 +136,7 @@ public partial class TableroController : Node3D
 	/// Applies a server-authoritative move: moves piece from <paramref name="from"/> to
 	/// <paramref name="to"/>.  Awaitable — completes when the piece animation finishes.
 	/// </summary>
-	public async Task ApplyServerMove(string color, int pieceIndex, int from, int to, bool notifyCounter = false)
+	public async Task ApplyServerMove(string color, int pieceIndex, int from, int to, bool notifyCounter = false, int steps = 0)
 	{
 		var ficha = GetPiece(color, pieceIndex);
 		if (ficha == null) return;
@@ -139,22 +144,33 @@ public partial class TableroController : Node3D
 		RemoveFromOccupancy(ficha);
 		ficha.SetBoardIndex(to);
 
+		var path = BuildPath(color, from, to, steps);
+
 		if (IsGoal(to))
 		{
-			var dest  = GetBoardWorldPosition(to, color);
-			var tween = CreateTween();
-			tween.TweenProperty(ficha, "global_position", dest, 0.35f);
-			if (notifyCounter) tween.TweenCallback(Callable.From(MoveCounterHUD.Step));
-			await ToSignal(tween, Tween.SignalName.Finished);
+			// Register arrival order so we can assign a triangle slot.
+			if (!_goalOccupancy.ContainsKey(color))
+				_goalOccupancy[color] = new List<FichaNode>();
+			var goalList = _goalOccupancy[color];
+			if (!goalList.Contains(ficha))
+				goalList.Add(ficha);
+
+			var slotPos = GetGoalSlotPosition(color, goalList.IndexOf(ficha));
+
+			if (notifyCounter && from <= 0)
+			{
+				await AnimatePath(ficha, path, color, false, slotPos);
+				StepCounterByExit(steps);
+			}
+			else
+				await AnimatePath(ficha, path, color, notifyCounter, slotPos);
 			return;
 		}
 
-		var path = BuildPath(color, from, to);
 		if (notifyCounter && from <= 0)
 		{
-			// Exiting base uses all dice at once — drain counter after animation rather than one Step.
 			await AnimatePath(ficha, path, color, false);
-			MoveCounterHUD.DrainAll();
+			StepCounterByExit(steps);
 		}
 		else
 			await AnimatePath(ficha, path, color, notifyCounter);
@@ -180,10 +196,11 @@ public partial class TableroController : Node3D
 		Node3D marker;
 
 		if (index >= 100) {
-			// Corridor or goal: step = index % 10 (1-8 for HX1-Goal)
-			int    step = index % 10;
+			int    step = index % 10; // 1-7 = corridor, 8 = goal
 			string cap  = Capitalize(color);
-			marker = GetNodeOrNull<Node3D>($"HomePositions/Home{cap}_{step}");
+			marker = step == 8
+				? GetNodeOrNull<Node3D>($"BasePositions/Goal{cap}")
+				: GetNodeOrNull<Node3D>($"HomePositions/Home{cap}_{step}");
 		}
 		else {
 			marker = GetNodeOrNull<Node3D>($"Positions/Pos_{index:D2}");
@@ -215,53 +232,115 @@ public partial class TableroController : Node3D
 	/// <summary>
 	/// Builds the full list of intermediate board indices the piece travels through.
 	/// Used for visual animation only — not authoritative.
+	/// Pass <paramref name="steps"/> (die total) to enable accurate bounce detection;
+	/// without it, only corridor-backward bounces can be detected positionally.
+	/// For bounce paths the goal square appears in the list followed by the return squares.
 	/// </summary>
-	public List<int> BuildPath(string color, int from, int to)
+	public List<int> BuildPath(string color, int from, int to, int steps = 0)
 	{
 		var path = new List<int>();
 		if (from <= 0) { path.Add(to); return path; } // exiting home — direct
 
 		int entry    = HomeEntry[color];
 		int corrBase = CorridorBase[color];
+		int goalSq   = GoalSquare[color];
 
-		if (from >= 100) {
-			// Already in corridor
-			for (int sq = from + 1; sq <= to; sq++)
-				path.Add(sq);
+		// ── Bounce detection ──────────────────────────────────────────────────
+		bool isBounce = false;
+		if (steps > 0)
+		{
+			if (from >= 100)
+			{
+				int corrStep    = from - corrBase + 1;
+				int stepsToGoal = 8 - corrStep;
+				isBounce = steps > stepsToGoal;
+			}
+			else if (to >= 100) // ring → corridor, may overshoot
+			{
+				int stepsToEntry = entry >= from ? entry - from : (68 - from) + entry;
+				int stepsToGoal  = stepsToEntry + 8;
+				isBounce = steps > stepsToGoal;
+			}
+		}
+		else if (from >= 100 && to >= corrBase && to <= from)
+		{
+			// No steps provided: positional fallback — to ≤ from in corridor must be a bounce.
+			isBounce = true;
+		}
+
+		if (!isBounce)
+		{
+			// ── Normal forward path ──────────────────────────────────────────
+			if (from >= 100) {
+				for (int sq = from + 1; sq <= to; sq++)
+					path.Add(sq);
+				return path;
+			}
+			int pos = from;
+			while (true) {
+				if (pos == entry && to >= 100) {
+					for (int corrSq = corrBase; corrSq <= to; corrSq++)
+						path.Add(corrSq);
+					return path;
+				}
+				pos = pos == 68 ? 1 : pos + 1;
+				path.Add(pos);
+				if (pos == to) return path;
+				if (path.Count > 80) break;
+			}
 			return path;
 		}
 
-		// Ring walk
-		int pos = from;
-		while (true) {
-			if (pos == entry && to >= 100) {
-				// Enter corridor
-				for (int corrSq = corrBase; corrSq <= to; corrSq++)
-					path.Add(corrSq);
-				return path;
-			}
-			pos = pos == 68 ? 1 : pos + 1;
-			path.Add(pos);
-			if (pos == to) return path;
-			if (path.Count > 80) break; // safety guard
+		// ── Bounce path: forward to goal, then backward to `to` ──────────────
+		if (from >= 100)
+		{
+			for (int sq = from + 1; sq <= goalSq; sq++)
+				path.Add(sq);
 		}
+		else
+		{
+			// Walk ring to entry, then full corridor to goal.
+			int pos = from;
+			while (pos != entry) {
+				pos = pos == 68 ? 1 : pos + 1;
+				path.Add(pos);
+				if (path.Count > 80) break;
+			}
+			for (int corrSq = corrBase; corrSq <= goalSq; corrSq++)
+				path.Add(corrSq);
+		}
+		// Backward from goal-1 to destination.
+		for (int sq = goalSq - 1; sq >= to; sq--)
+			path.Add(sq);
+
 		return path;
 	}
 
 	// ── State mutation ────────────────────────────────────────────────────────
 
+	// Steps the counter by the exit cost so residual dice keep the right count.
+	// Falls back to DrainAll when steps is unknown (0).
+	private static void StepCounterByExit(int steps)
+	{
+		if (steps > 0)
+			for (int i = 0; i < steps; i++)
+				MoveCounterHUD.Step();
+		else
+			MoveCounterHUD.DrainAll();
+	}
+
 	private const float HopHeight = 0.04f;
 	private const float HopSpeed  = 0.08f;
 	private const float LandSpeed = 0.10f;
 
-	private async Task AnimatePath(FichaNode ficha, List<int> path, string color, bool notifyCounter = false)
+	private async Task AnimatePath(FichaNode ficha, List<int> path, string color, bool notifyCounter = false, Vector3? finalDest = null)
 	{
 		if (path.Count == 0) return;
 
 		var tween = CreateTween().SetTrans(Tween.TransitionType.Linear).SetEase(Tween.EaseType.InOut);
 
 		int destIndex = path[^1];
-		AddToOccupancy(ficha, destIndex);
+		AddToOccupancy(ficha, destIndex); // no-op for goal squares (AddToOccupancy skips them)
 
 		for (int i = 0; i < path.Count - 1; i++)
 		{
@@ -271,7 +350,7 @@ public partial class TableroController : Node3D
 				tween.TweenCallback(Callable.From(MoveCounterHUD.Step));
 		}
 
-		var dest = GetBoardWorldPosition(destIndex, color);
+		var dest = finalDest ?? GetBoardWorldPosition(destIndex, color);
 		tween.TweenProperty(ficha, "global_position", dest + Vector3.Up * HopHeight, HopSpeed);
 		if (notifyCounter)
 			tween.TweenCallback(Callable.From(MoveCounterHUD.Step));
@@ -309,6 +388,8 @@ public partial class TableroController : Node3D
 	/// <summary>
 	/// Draws dots along <paramref name="path"/> and a pulsing ring at the destination,
 	/// animating the reveal over ~1 second.
+	/// For bounce paths (goal square mid-path), the return portion is offset sideways
+	/// so the two legs of the path are visually distinct.
 	/// Call <see cref="HidePathPreview"/> to remove it.
 	/// </summary>
 	public void ShowPathPreview(List<int> path, string color, Vector3? pieceWorldPos = null)
@@ -319,10 +400,24 @@ public partial class TableroController : Node3D
 		const float yOff     = 0.03f;
 		const float totalDur = 0.9f;
 
+		// ── Bounce detection: everything after the goal square shifts sideways ─
+		int bounceIdx = -1;
+		for (int i = 0; i < path.Count; i++)
+			if (IsGoal(path[i])) { bounceIdx = i; break; }
+
+		// Returns the world position for path[pathIdx], offset laterally on the return leg.
+		Vector3 SquarePos(int sq, int pathIdx)
+		{
+			var p = GetBoardWorldPosition(sq, color);
+			if (bounceIdx >= 0 && pathIdx > bounceIdx)
+				p += GetLateralOffset(sq, color) * 2f;
+			return p + Vector3.Up * yOff;
+		}
+
 		// Origin: piece's actual visual position so barrier-offset meshes start from the right place.
 		Vector3 originPos = pieceWorldPos.HasValue
 			? pieceWorldPos.Value + Vector3.Up * yOff
-			: GetBoardWorldPosition(path[0], color) + Vector3.Up * yOff;
+			: SquarePos(path[0], 0);
 
 		// ── Connecting line (fade in over first 60 % of the animation) ────────
 		var lineMat = new StandardMaterial3D
@@ -334,13 +429,13 @@ public partial class TableroController : Node3D
 			RenderPriority = 5,
 		};
 
-		// Line: origin → every path square (always at least 2 vertices).
+		// Line: origin → every path square; return-leg squares are laterally offset.
 		{
 			var lineMesh = new ImmediateMesh();
 			lineMesh.SurfaceBegin(Mesh.PrimitiveType.LineStrip, lineMat);
 			lineMesh.SurfaceAddVertex(ToLocal(originPos));
-			foreach (int sq in path)
-				lineMesh.SurfaceAddVertex(ToLocal(GetBoardWorldPosition(sq, color) + Vector3.Up * yOff));
+			for (int i = 0; i < path.Count; i++)
+				lineMesh.SurfaceAddVertex(ToLocal(SquarePos(path[i], i)));
 			lineMesh.SurfaceEnd();
 
 			var lineInst = new MeshInstance3D { Mesh = lineMesh, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
@@ -368,7 +463,7 @@ public partial class TableroController : Node3D
 		// origin first, then all intermediate squares (path[0] … path[count-2])
 		var dotPositions = new List<Vector3> { originPos };
 		for (int i = 0; i < path.Count - 1; i++)
-			dotPositions.Add(GetBoardWorldPosition(path[i], color) + Vector3.Up * yOff);
+			dotPositions.Add(SquarePos(path[i], i));
 
 		int dotCount = dotPositions.Count;
 		for (int i = 0; i < dotCount; i++)
@@ -394,6 +489,8 @@ public partial class TableroController : Node3D
 		// ── Destination ring (scale in last, then pulse) ──────────────────────
 		// TorusMesh lies flat in the XZ plane by default — no rotation needed.
 		int destSq  = path[^1];
+		// Destination ring always at the centered square — that's where the piece lands.
+		// The return-leg offset is visual-only for the intermediate dots/line, not the landing spot.
 		var destPos = GetBoardWorldPosition(destSq, color);
 
 		var ringMat = new StandardMaterial3D
@@ -499,6 +596,70 @@ public partial class TableroController : Node3D
 		}));
 	}
 
+	// ── Goal triangle positioning ─────────────────────────────────────────────
+
+	// Offset for pieces accumulating at the goal — 2× the barrier spread.
+	private const float GoalPieceOffset = BarrierHalfOffset * 2f;
+
+	// Key: color → pieces in arrival order (max 4).
+	private readonly Dictionary<string, List<FichaNode>> _goalOccupancy = new();
+
+	/// <summary>
+	/// Returns the world position for the n-th piece (0-based) arriving at the goal.
+	/// Derives the corridor forward direction from the last two corridor markers so the
+	/// triangle always aligns with the actual corridor geometry.
+	/// Slots: 0 = goal + forward, 1 = goal + perp, 2 = goal − perp, 3 = goal center.
+	/// </summary>
+	private Vector3 GetGoalSlotPosition(string color, int slotIndex)
+	{
+		string cap   = Capitalize(color);
+		var goal8    = GetNodeOrNull<Node3D>($"BasePositions/Goal{cap}");
+		var step7    = GetNodeOrNull<Node3D>($"HomePositions/Home{cap}_7");
+		var step6    = GetNodeOrNull<Node3D>($"HomePositions/Home{cap}_6");
+
+		Vector3 goalPos;
+		Vector3 forward;
+
+		if (goal8 != null && step7 != null)
+		{
+			var seg  = goal8.GlobalPosition - step7.GlobalPosition;
+			var segH = new Vector3(seg.X, 0f, seg.Z);
+			forward  = segH.LengthSquared() > 0.0001f ? segH.Normalized() : GetDefaultCorridorForward(color);
+			goalPos  = goal8.GlobalPosition;
+		}
+		else if (step7 != null && step6 != null)
+		{
+			// Goal marker missing — extrapolate one step past marker 7.
+			var seg  = step7.GlobalPosition - step6.GlobalPosition;
+			var segH = new Vector3(seg.X, 0f, seg.Z);
+			forward  = segH.LengthSquared() > 0.0001f ? segH.Normalized() : GetDefaultCorridorForward(color);
+			goalPos  = step7.GlobalPosition + new Vector3(seg.X, 0f, seg.Z);
+		}
+		else
+		{
+			forward = GetDefaultCorridorForward(color);
+			goalPos = goal8?.GlobalPosition ?? step7?.GlobalPosition ?? GlobalPosition;
+			if (goalPos == GlobalPosition)
+				GD.PushWarning($"[TableroController] No corridor markers found for {color} goal — pieces may appear at origin.");
+		}
+
+		// Perpendicular in the XZ plane (90° CCW rotation of forward).
+		var perp = new Vector3(-forward.Z, 0f, forward.X);
+
+		return slotIndex switch
+		{
+			0 => goalPos + forward * GoalPieceOffset,
+			1 => goalPos + perp    * GoalPieceOffset,
+			2 => goalPos - perp    * GoalPieceOffset,
+			_ => goalPos,                              // slot 3 and 4th piece: center
+		};
+	}
+
+	private static Vector3 GetDefaultCorridorForward(string color) =>
+		(color == "yellow" || color == "red")
+			? new Vector3(1f, 0f, 0f)
+			: new Vector3(0f, 0f, 1f);
+
 	// ── Barrier positioning ───────────────────────────────────────────────────
 
 	private const float BarrierHalfOffset = 0.026f;
@@ -508,6 +669,10 @@ public partial class TableroController : Node3D
 	// Landscape squares (longitudinal axis = X): pieces run along X, so offset along X.
 	private static Vector3 GetLateralOffset(int boardIndex, string color)
 	{
+		// Trapezoid squares (first of each corner pair) are flipped relative to their arm.
+		if (boardIndex == 8  || boardIndex == 42) return new Vector3(0f, 0f, BarrierHalfOffset); // X→Z
+		if (boardIndex == 25 || boardIndex == 59) return new Vector3(BarrierHalfOffset, 0f, 0f); // Z→X
+
 		bool portrait;
 		if (boardIndex >= 100) {
 			// Corridor orientation follows its arm: yellow/red corridors are portrait, blue/green are landscape.
@@ -521,29 +686,41 @@ public partial class TableroController : Node3D
 						: new Vector3(BarrierHalfOffset, 0f, 0f);
 	}
 
-	/// <summary>Slides the two same-color pieces at <paramref name="square"/> apart into a visible barrier.</summary>
-	public void ApplyBarrierPositions(string color, int square)
+	/// <summary>
+	/// Slides the two pieces at <paramref name="square"/> apart into a visible barrier.
+	/// Works for same-color barriers and mixed-color barriers on safe squares.
+	/// </summary>
+	public void ApplyBarrierPositions(int square)
 	{
-		var center = GetBoardWorldPosition(square, color);
-		var offset = GetLateralOffset(square, color);
-		int placed = 0;
-		for (int p = 0; p < 4 && placed < 2; p++) {
-			var ficha = GetPiece(color, p);
-			if (ficha == null || ficha.BoardIndex != square) continue;
-			var target = center + (placed == 0 ? -offset : offset);
+		var atSquare = new List<FichaNode>();
+		foreach (var ficha in _pieces.Values)
+			if (ficha != null && ficha.BoardIndex == square)
+				atSquare.Add(ficha);
+
+		if (atSquare.Count < 2) return;
+
+		string posColor = atSquare[0].PlayerColor;
+		var center = GetBoardWorldPosition(square, posColor);
+		var offset = GetLateralOffset(square, posColor);
+
+		for (int i = 0; i < 2; i++)
+		{
+			var target = center + (i == 0 ? -offset : offset);
 			var tw = CreateTween().SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
-			tw.TweenProperty(ficha, "global_position", target, 0.25f);
-			placed++;
+			tw.TweenProperty(atSquare[i], "global_position", target, 0.25f);
 		}
 	}
 
-	/// <summary>Slides the lone remaining piece at <paramref name="square"/> back to the square center after a barrier breaks.</summary>
-	public void CenterPieceAt(string color, int square)
+	/// <summary>
+	/// Slides the lone remaining piece at <paramref name="square"/> back to center after a barrier breaks.
+	/// Works regardless of which color's piece remains.
+	/// </summary>
+	public void CenterPieceAt(int square)
 	{
-		var center = GetBoardWorldPosition(square, color);
-		for (int p = 0; p < 4; p++) {
-			var ficha = GetPiece(color, p);
+		foreach (var ficha in _pieces.Values)
+		{
 			if (ficha == null || ficha.BoardIndex != square) continue;
+			var center = GetBoardWorldPosition(square, ficha.PlayerColor);
 			var tw = CreateTween().SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
 			tw.TweenProperty(ficha, "global_position", center, 0.25f);
 			break;

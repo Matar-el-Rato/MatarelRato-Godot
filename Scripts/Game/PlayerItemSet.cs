@@ -55,6 +55,23 @@ public partial class PlayerItemSet : Node3D
 
     // ── Public API ────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Immediately makes all Node3D children visible at their original scale.
+    /// For use in DummyGameSetup — call via CallDeferred so it queues after HideAndDisableAll.
+    /// </summary>
+    public void RevealAll()
+    {
+        foreach (Node child in GetChildren())
+        {
+            if (child is Node3D node3d)
+            {
+                if (_originalScales.TryGetValue(child.Name, out var origScale))
+                    node3d.Scale = origScale;
+                node3d.Visible = true;
+            }
+        }
+    }
+
     /// <summary>Enables or disables all interactions. True when the local player owns this set.</summary>
     public void SetOwned(bool owned)
     {
