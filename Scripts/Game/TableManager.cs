@@ -465,7 +465,8 @@ public partial class TableManager : Node3D
 
         if (!isMyRoll)
         {
-            GetNodeOrNull<CubileteController>("CubileteAndDice")?.PlayRemoteThrow(1.5f);
+            bool hasMoves = moveableFromServer.Count > 0;
+            GetNodeOrNull<CubileteController>("CubileteAndDice")?.PlayRemoteThrow(1.5f, hasMoves);
             DiceHUD.ShowRemote(die1, die2);
             return;
         }

@@ -21,6 +21,8 @@ script = ExtResource("1_controller")
 CubileteMeshPath = NodePath("cubilete")
 DicePaths = [NodePath("Dice1"), NodePath("Dice2")]
 InteractablePath = NodePath("cubilete/Interactable")
+HoldOffset = Vector3(0, 0, 0)
+ViewOffset = Vector3(0, -0.19, -0.24)
 
 [node name="cubilete" parent="." unique_id=1098885438 instance=ExtResource("2_cubilete")]
 

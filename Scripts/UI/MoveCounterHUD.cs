@@ -40,10 +40,13 @@ public partial class MoveCounterHUD : Control
         OffsetBottom =  -16f;
         PivotOffset  = new Vector2(90f, 42f); // scale from center
 
+        MouseFilter = MouseFilterEnum.Ignore; // never block 3-D piece raycasts
+
         _label = new Label();
         _label.HorizontalAlignment = HorizontalAlignment.Center;
         _label.VerticalAlignment   = VerticalAlignment.Center;
         _label.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        _label.MouseFilter = MouseFilterEnum.Ignore;
 
         var font = GD.Load<FontFile>("res://Assets/Fonts/Jersey10-Regular.ttf");
         if (font != null) _label.AddThemeFontOverride("font", font);

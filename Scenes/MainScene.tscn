@@ -866,6 +866,12 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.05903244, 0.6661848, -5.17
 script = ExtResource("51_ywy86")
 TableroScene = ExtResource("9_0iob3")
 ItemSetScene = ExtResource("52_pitemset")
+CubileteScene = ExtResource("17_mymud")
 
-[node name="mesa_poker" parent="." unique_id=1847385829 instance=ExtResource("8_f140w")]
+[node name="dummy_mesa" parent="." unique_id=1847385829 instance=ExtResource("8_f140w")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.05955839, 0.3337862, -5.1890163)
+
+[node name="dummy_light" type="OmniLight3D" parent="." unique_id=665700066]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.012196958, 1.7791717, -5.2062078)
+light_color = Color(1, 1, 0.58431375, 1)
+light_energy = 0.5

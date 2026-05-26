@@ -72,6 +72,7 @@ public partial class DiceHUD : Control
         AnchorRight  = 1f;
         AnchorTop    = 1f;
         AnchorBottom = 1f;
+        MouseFilter  = MouseFilterEnum.Ignore; // never block 3-D piece raycasts
 
         var diceScene = GD.Load<PackedScene>("res://Assets/PlayingSet/General/dice.glb");
 
@@ -80,11 +81,11 @@ public partial class DiceHUD : Control
             _remoteInstance = this;
             // Smaller panel docked very close to the corner.
             OffsetRight  = -12f;
-            OffsetLeft   = -166f;  // 154 px wide
-            OffsetTop    = -88f;   // 76 px tall
+            OffsetLeft   = -206f;  // 194 px wide  (2×90 + 8 sep + 6 margin)
+            OffsetTop    = -108f;  // 96 px tall   (90 + 6 margin)
             OffsetBottom = -12f;
 
-            BuildLayout(70f, diceScene);
+            BuildLayout(90f, diceScene, 0.065f);
             _rerollIcon = BuildRerollIcon(26f, 52f);
         }
         else
@@ -95,7 +96,7 @@ public partial class DiceHUD : Control
             OffsetTop    = -142f;  // 130 px tall
             OffsetBottom = -12f;
 
-            BuildLayout(110f, diceScene);
+            BuildLayout(110f, diceScene, 0.085f);
             _rerollIcon  = BuildRerollIcon(32f, 64f);
             _noMovesIcon = BuildNoMovesIcon();
         }
@@ -104,20 +105,22 @@ public partial class DiceHUD : Control
         Visible  = false;
     }
 
-    private void BuildLayout(float containerSize, PackedScene diceScene)
+    private void BuildLayout(float containerSize, PackedScene diceScene, float cameraSize)
     {
         var hbox = new HBoxContainer();
         hbox.SetAnchorsPreset(LayoutPreset.FullRect);
         hbox.AddThemeConstantOverride("separation", 8);
+        hbox.MouseFilter = MouseFilterEnum.Ignore;
         AddChild(hbox);
 
         for (int i = 0; i < 2; i++)
-            BuildDieViewport(i, hbox, diceScene, containerSize);
+            BuildDieViewport(i, hbox, diceScene, containerSize, cameraSize);
     }
 
     private TextureRect BuildRerollIcon(float half, float size)
     {
         var icon = new TextureRect();
+        icon.MouseFilter  = MouseFilterEnum.Ignore;
         icon.AnchorLeft   = 0.5f;
         icon.AnchorRight  = 0.5f;
         icon.AnchorTop    = 0f;
@@ -139,6 +142,7 @@ public partial class DiceHUD : Control
     private TextureRect BuildNoMovesIcon()
     {
         var icon = new TextureRect();
+        icon.MouseFilter  = MouseFilterEnum.Ignore;
         icon.AnchorLeft   = 0.5f;
         icon.AnchorRight  = 0.5f;
         icon.AnchorTop    = 0f;
@@ -157,7 +161,7 @@ public partial class DiceHUD : Control
         return icon;
     }
 
-    private void BuildDieViewport(int index, HBoxContainer row, PackedScene diceScene, float containerSize)
+    private void BuildDieViewport(int index, HBoxContainer row, PackedScene diceScene, float containerSize, float cameraSize)
     {
         var container = new SubViewportContainer();
         container.CustomMinimumSize   = new Vector2(containerSize, containerSize);
@@ -165,6 +169,7 @@ public partial class DiceHUD : Control
         container.Stretch             = true;
         container.StretchShrink       = 3;
         container.TextureFilter       = TextureFilterEnum.Nearest;
+        container.MouseFilter         = MouseFilterEnum.Ignore;
         row.AddChild(container);
 
         var viewport = new SubViewport();
@@ -187,7 +192,7 @@ public partial class DiceHUD : Control
         cam.Position        = new Vector3(0f, 0.15f, 0f);
         cam.RotationDegrees = new Vector3(-90f, 0f, 0f);
         cam.Projection      = Camera3D.ProjectionType.Orthogonal;
-        cam.Size            = 0.085f;
+        cam.Size            = cameraSize;
         viewport.AddChild(cam);
 
         var keyLight = new DirectionalLight3D();

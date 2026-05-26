@@ -30,6 +30,10 @@ public partial class CubileteController : Node3D
 	[Export] public Vector3 HoldOffset        = new Vector3(0, -0.05f, -0.28f);
 	/// <summary>World offset from the camera where dice are spawned at throw time.</summary>
 	[Export] public Vector3 ThrowOriginOffset = new Vector3(0, -0.3f, -0.5f);
+	/// <summary>Camera-local position where the cup mesh floats while held (lower-screen view).</summary>
+	[Export] public Vector3 ViewOffset          = new Vector3(0f, -0.22f, -0.38f);
+	/// <summary>Rotation (degrees) of the cup in the lower-screen view.</summary>
+	[Export] public Vector3 ViewRotationDegrees = new Vector3(0f, 0f, 0f);
 
 	// ── Signals ───────────────────────────────────────────────────────────────
 	/// <summary>Emitted after dice results are displayed, carrying the face values of each die.</summary>
@@ -51,6 +55,15 @@ public partial class CubileteController : Node3D
 	private Interactable  _interactable;
 	private Node3D        _playerCamera;
 
+	private Node3D      _meshOriginalParent;
+	private Transform3D _meshOriginalLocalTransform;
+	private bool        _meshReparentedToCamera = false;
+
+	private ShaderMaterial           _glowMaterial;
+	private List<MeshInstance3D>     _glowShells  = new();
+	private bool                     _glowActive  = false;
+	private bool                     _glowVisible = false;
+
 	// Completed when ExecuteReturnDiceEarly finishes.
 	private System.Threading.Tasks.Task _earlyReturnTask =
 		System.Threading.Tasks.Task.CompletedTask;
@@ -64,7 +77,9 @@ public partial class CubileteController : Node3D
 
 	public override void _Ready()
 	{
-		_cubileteMesh = GetNode<Node3D>(CubileteMeshPath);
+		_cubileteMesh               = GetNode<Node3D>(CubileteMeshPath);
+		_meshOriginalParent         = _cubileteMesh.GetParent<Node3D>();
+		_meshOriginalLocalTransform = _cubileteMesh.Transform;
 		_interactable = GetNode<Interactable>(InteractablePath);
 
 		_dice = new RigidBody3D[DicePaths.Length];
@@ -90,6 +105,7 @@ public partial class CubileteController : Node3D
 		_interactable.Enabled     = false;
 
 		CallDeferred(MethodName.FindPlayerCamera);
+		CallDeferred(MethodName.InitGlow);
 	}
 
 	/// <summary>
@@ -102,11 +118,56 @@ public partial class CubileteController : Node3D
 			_playerCamera = player.FindChild("Camera3D", true, false) as Node3D;
 	}
 
+	private void InitGlow()
+	{
+		var shader = GD.Load<Shader>("res://Shaders/outline_vertex.gdshader");
+		if (shader == null) { GD.PushWarning("[Cubilete] outline_vertex.gdshader not found"); return; }
+
+		_glowMaterial = new ShaderMaterial { Shader = shader };
+		_glowMaterial.SetShaderParameter("outline_color", new Color(1f, 1f, 1f, 0f));
+		_glowMaterial.SetShaderParameter("thickness",     0.003f);
+
+		BuildGlowShells(_cubileteMesh);
+	}
+
+	private void BuildGlowShells(Node node)
+	{
+		// Snapshot children BEFORE adding the shell — otherwise we'd recurse into
+		// the shell we just added, creating an infinite loop → stack overflow.
+		var children = node.GetChildren();
+
+		if (node is MeshInstance3D mi && mi.Mesh != null)
+		{
+			var shell              = new MeshInstance3D();
+			shell.Mesh             = mi.Mesh;
+			shell.MaterialOverride = _glowMaterial;
+			shell.CastShadow       = GeometryInstance3D.ShadowCastingSetting.Off;
+			shell.Transform        = Transform3D.Identity;
+			shell.Visible          = false;
+			mi.AddChild(shell);
+			_glowShells.Add(shell);
+		}
+
+		foreach (Node child in children)
+			BuildGlowShells(child);
+	}
+
 	// ── Input ─────────────────────────────────────────────────────────────────
 
 	public override void _Process(double delta)
 	{
-		// Roll timing is handled entirely inside StartRoll(); nothing to do per frame.
+		if (_glowMaterial == null) return;
+		if (_glowActive != _glowVisible)
+		{
+			_glowVisible = _glowActive;
+			foreach (var shell in _glowShells)
+				if (IsInstanceValid(shell)) shell.Visible = _glowVisible;
+		}
+		if (_glowActive)
+		{
+			float pulse = 0.55f + 0.45f * Mathf.Sin((float)(Time.GetTicksMsec()) * 0.0025f);
+			_glowMaterial.SetShaderParameter("outline_color", new Color(1f, 1f, 1f, pulse));
+		}
 	}
 
 	public override void _Input(InputEvent @event)
@@ -134,6 +195,7 @@ public partial class CubileteController : Node3D
 	public void SetInteractionEnabled(bool enabled)
 	{
 		_interactable.Enabled = enabled;
+		_glowActive           = enabled;
 	}
 
 	// ── State machine ─────────────────────────────────────────────────────────
@@ -148,42 +210,33 @@ public partial class CubileteController : Node3D
 	/// Tweens the cup and dice toward the camera's "hold" position, then switches
 	/// to <see cref="State.Held"/> and hides the meshes (they reappear on throw).
 	/// </summary>
-	private async void Grab()
+	private void Grab()
 	{
-		// Use Resetting as a transition guard to prevent double-grabs.
-		_currentState = State.Resetting;
-		_interactable.PromptText    = "Picking up...";
-		_interactable.ProcessMode   = ProcessModeEnum.Disabled;
-
-		if (_playerCamera != null)
-		{
-			var targetTransform = _playerCamera.GlobalTransform.TranslatedLocal(HoldOffset);
-
-			var tween = CreateTween();
-			tween.SetParallel(true);
-			tween.SetTrans(Tween.TransitionType.Back);
-			tween.SetEase(Tween.EaseType.In);
-
-			tween.TweenProperty(this, "global_transform", targetTransform, 0.5f);
-
-			foreach (var die in _dice)
-			{
-				die.Freeze = true;
-				tween.TweenProperty(die, "global_position", targetTransform.Origin, 0.5f);
-			}
-
-			await ToSignal(tween, "finished");
-		}
-
+		_glowActive                = false;
 		_currentState              = State.Held;
 		_interactable.PromptText   = "Roll Dice";
 		_interactable.ProcessMode  = ProcessModeEnum.Inherit;
 		Interactor.IsLocked        = true;
 
-		// Hide cup and dice until the throw — they reappear when launched.
 		SetCubileteVisible(false);
 		foreach (var die in _dice)
+		{
+			die.Freeze  = true;
 			die.Visible = false;
+		}
+
+		// Slide cup up from below-screen into the lower-screen holding position.
+		if (_playerCamera != null)
+		{
+			_meshReparentedToCamera       = true;
+			_cubileteMesh.Reparent(_playerCamera, false);
+			_cubileteMesh.Position        = ViewOffset + new Vector3(0f, -0.18f, 0f);
+			_cubileteMesh.RotationDegrees = ViewRotationDegrees;
+			_cubileteMesh.Visible         = true;
+			CreateTween()
+				.TweenProperty(_cubileteMesh, "position", ViewOffset, 0.4f)
+				.SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
+		}
 	}
 
 	/// <summary>
@@ -195,6 +248,39 @@ public partial class CubileteController : Node3D
 		_currentState              = State.Rolling;
 		_interactable.PromptText   = "Waiting...";
 		_interactable.ProcessMode  = ProcessModeEnum.Disabled;
+
+		// Wind-up: dip → lunge up → brief hang.  Dice launch as soon as this finishes,
+		// concurrent with the slide-out so the cup exits while dice are already mid-air.
+		if (_meshReparentedToCamera)
+		{
+			var windUp = CreateTween();
+			windUp.TweenProperty(_cubileteMesh, "position",
+				ViewOffset + new Vector3(0f, -0.04f, 0f), 0.13f)
+				.SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
+			windUp.TweenProperty(_cubileteMesh, "position",
+				ViewOffset + new Vector3(0f, 0.09f, 0f), 0.10f)
+				.SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
+			windUp.TweenInterval(0.10f);
+			await ToSignal(windUp, Tween.SignalName.Finished);
+			if (!IsInsideTree()) return;
+
+			// Fire slide-out without awaiting — dice launch runs in parallel.
+			// Capture fields for the closure since the tween fires after this frame.
+			_meshReparentedToCamera = false;
+			var mesh          = _cubileteMesh;
+			var origParent    = _meshOriginalParent;
+			var origTransform = _meshOriginalLocalTransform;
+			var slideOut = CreateTween();
+			slideOut.TweenProperty(mesh, "position",
+				ViewOffset + new Vector3(0f, -0.18f, 0f), 0.20f)
+				.SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.In);
+			slideOut.TweenCallback(Callable.From(() => {
+				mesh.Visible = false;
+				mesh.Reparent(origParent, false);
+				mesh.Transform = origTransform;
+			}));
+		}
+		RestoreMeshToParent(); // no-op when _meshReparentedToCamera was cleared above
 
 		Vector3 camForward = -_playerCamera.GlobalTransform.Basis.Z;
 		Vector3 camRight   =  _playerCamera.GlobalTransform.Basis.X;
@@ -368,6 +454,7 @@ public partial class CubileteController : Node3D
 		await ToSignal(GetTree().CreateTimer(1.0f), SceneTreeTimer.SignalName.Timeout);
 		if (!IsInsideTree()) { tcs.TrySetResult(true); return; }
 
+		RestoreMeshToParent();
 		SetCubileteVisible(true);
 		GlobalRotation = Vector3.Zero;
 		var returnTween = CreateTween().SetParallel(true)
@@ -383,6 +470,7 @@ public partial class CubileteController : Node3D
 		_currentState             = State.Stationary;
 		_interactable.ProcessMode = ProcessModeEnum.Inherit;
 		_interactable.PromptText  = "Grab Cubilete";
+		_glowActive               = true;
 		tcs.SetResult(true);
 	}
 
@@ -424,10 +512,12 @@ public partial class CubileteController : Node3D
 	{
 		foreach (var die in _dice) { die.Freeze = true; die.Visible = false; }
 		GlobalRotation = Vector3.Zero;
+		RestoreMeshToParent();
 		SetCubileteVisible(true);
 		_currentState             = State.Stationary;
 		_interactable.ProcessMode = ProcessModeEnum.Inherit;
 		_interactable.PromptText  = "Grab Cubilete";
+		_glowActive               = true;
 	}
 
 	/// <summary>
@@ -496,16 +586,15 @@ public partial class CubileteController : Node3D
 	}
 
 	/// <summary>
-	/// Cosmetic throw for remote players: briefly launches the local dice with random impulses,
-	/// then snaps them back inside the cup after <paramref name="throwDuration"/> seconds.
-	/// Does not change state — the cup stays Stationary for the local player.
+	/// Cosmetic-only throw animation for remote players.
+	/// No physics — tween-driven cup shake + dice arc so there's no conflict
+	/// with server-authoritative results. State does not change.
 	/// </summary>
-	public async void PlayRemoteThrow(float throwDuration = 1.0f)
+	public async void PlayRemoteThrow(float throwDuration = 1.0f, bool withDiceArc = true)
 	{
 		if (_currentState == State.Hidden) return;
 
-		// If the cubilete is still arcing to this player's position, wait for it to settle.
-		// This happens when a remote player rolls immediately after their turn_start fires.
+		// Wait for the cup to finish arcing to this player's position if needed.
 		int waited = 0;
 		while (_currentState == State.Moving && waited < 25)
 		{
@@ -515,39 +604,74 @@ public partial class CubileteController : Node3D
 		}
 		if (_currentState == State.Hidden) return;
 
-		Vector3 launchPos = GlobalPosition;
+		Vector3 origin = GlobalPosition;
+
+		// ── Cup shake ─────────────────────────────────────────────────────────
+		var shake = CreateTween();
+		shake.TweenProperty(this, "rotation:z",  Mathf.DegToRad( 7f), 0.055f);
+		shake.TweenProperty(this, "rotation:z",  Mathf.DegToRad(-7f), 0.110f);
+		shake.TweenProperty(this, "rotation:z",  Mathf.DegToRad( 5f), 0.080f);
+		shake.TweenProperty(this, "rotation:z",  Mathf.DegToRad(-5f), 0.090f);
+		shake.TweenProperty(this, "rotation:z",  0f,                   0.065f);
+		await ToSignal(shake, Tween.SignalName.Finished);
+		if (!IsInsideTree()) return;
+
+		if (!withDiceArc) return;
+
+		PlayClack(pitch: 1.05f);
+
+		// ── Dice arc (tween only, frozen RigidBodies) ─────────────────────────
+		float arcTime = throwDuration * 0.85f;
 		for (int i = 0; i < _dice.Length; i++)
 		{
-			_dice[i].Freeze          = false;
-			_dice[i].LinearVelocity  = Vector3.Zero;
-			_dice[i].AngularVelocity = Vector3.Zero;
-			_dice[i].GlobalPosition  = launchPos + new Vector3(
-				(float)GD.RandRange(-0.06f, 0.06f), 0.04f + 0.04f * i, (float)GD.RandRange(-0.06f, 0.06f));
-			_dice[i].Visible = true;
-			_dice[i].ApplyCentralImpulse(new Vector3(
-				(float)GD.RandRange(-0.5f, 0.5f),
-				(float)GD.RandRange(1.8f,  2.8f),
-				(float)GD.RandRange(-0.5f, 0.5f)) * ThrowForce);
-			_dice[i].ApplyTorqueImpulse(new Vector3(
+			float side = i == 0 ? -1f : 1f;
+			var   die  = _dice[i];
+
+			die.Freeze         = true;
+			die.GlobalPosition = origin + new Vector3(side * 0.04f, 0.02f, 0f);
+			die.Visible        = true;
+
+			Vector3 peak = origin + new Vector3(side * 0.10f, 0.30f, 0.08f);
+
+			// Position: arc up then back to origin
+			var posTween = die.CreateTween();
+			posTween.TweenProperty(die, "global_position", peak,
+				arcTime * 0.45f).SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.Out);
+			posTween.TweenProperty(die, "global_position",
+				origin + new Vector3(side * 0.04f, 0.02f, 0f),
+				arcTime * 0.55f).SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.In);
+
+			// Rotation: tumble across all three axes
+			var rotTarget = die.GlobalRotation + new Vector3(
 				(float)GD.RandRange(-1f, 1f),
 				(float)GD.RandRange(-1f, 1f),
-				(float)GD.RandRange(-1f, 1f)) * RandomRotationForce);
+				(float)GD.RandRange(-1f, 1f)) * Mathf.Tau * 1.5f;
+			die.CreateTween()
+				.TweenProperty(die, "global_rotation", rotTarget, arcTime)
+				.SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.InOut);
 		}
 
 		await ToSignal(GetTree().CreateTimer(throwDuration), SceneTreeTimer.SignalName.Timeout);
 		if (!IsInsideTree()) return;
 
+		PlayClack(pitch: 0.95f);
 		for (int i = 0; i < _dice.Length; i++)
 		{
-			_dice[i].Freeze          = true;
-			_dice[i].LinearVelocity  = Vector3.Zero;
-			_dice[i].AngularVelocity = Vector3.Zero;
-			_dice[i].GlobalPosition  = launchPos + new Vector3(0f, 0.02f + 0.02f * i, 0f);
+			_dice[i].GlobalPosition  = origin + new Vector3(0f, 0.02f + 0.02f * i, 0f);
 			_dice[i].Visible         = false;
 		}
 	}
 
 	// ── Visibility + collision ────────────────────────────────────────────────
+
+	private void RestoreMeshToParent()
+	{
+		if (!_meshReparentedToCamera) return;
+		_meshReparentedToCamera = false;
+		_cubileteMesh.Visible   = false;
+		_cubileteMesh.Reparent(_meshOriginalParent, false);
+		_cubileteMesh.Transform = _meshOriginalLocalTransform;
+	}
 
 	private void SetCubileteVisible(bool visible)
 	{
@@ -572,6 +696,7 @@ public partial class CubileteController : Node3D
 	private void ResetPosition()
 	{
 		_currentState = State.Resetting;
+		RestoreMeshToParent();
 		SetCubileteVisible(true);
 
 		// Recompute world target from the parent's CURRENT global transform so the
@@ -613,6 +738,16 @@ public partial class CubileteController : Node3D
 	}
 
 	// ── Audio ─────────────────────────────────────────────────────────────────
+
+	private void PlayClack(float pitch = 1.0f)
+	{
+		var clip = GD.Load<AudioStream>("res://Assets/Sound FX/clack.wav");
+		if (clip == null) return;
+		var sfx = new AudioStreamPlayer { Stream = clip, VolumeDb = -6f, PitchScale = pitch };
+		AddChild(sfx);
+		sfx.Play();
+		sfx.Finished += () => sfx.QueueFree();
+	}
 
 	/// <summary>
 	/// Plays the collision sound on a die scaled to impact velocity.
