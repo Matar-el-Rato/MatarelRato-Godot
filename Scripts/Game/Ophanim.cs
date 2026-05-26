@@ -85,6 +85,9 @@ public partial class Ophanim : Node3D
 	[Export] public float  GoldenDescentDuration = 1.5f;
 	[Export] public float  GoldenHoldDuration    = 2.8f;
 	[Export] public string GoldenLuckyMessage    = "LUCKY YOU...";
+	[Export] public float  VibrateDuration       = 1.0f;
+	[Export] public float  VibrateAmplitude      = 0.09f;
+	[Export] public float  VibrateFrequency      = 20f;
 
 	// ── Signals ───────────────────────────────────────────────────────────────
 	/// <summary>Fired after the initiative gun sequence ends and the gun despawns.</summary>
@@ -118,6 +121,12 @@ public partial class Ophanim : Node3D
 	private float   _swayMultiplier = 1f;
 	private bool    _hasActivated;
 	private Vector3 _boardCenterWorld;
+
+	// ── Vibrate ───────────────────────────────────────────────────────────────
+	private float _vibrateStartTime = -1f;
+	private float _vibrateDuration  = 0f;
+
+	public float CurrentDescendOffset => _descendYOffset;
 
 	// ── Initiative Gun ────────────────────────────────────────────────────────
 	private Vector3 _redChairWorldPos;
@@ -178,7 +187,29 @@ public partial class Ophanim : Node3D
 		_swayMultiplier  = Mathf.Lerp(_swayMultiplier, targetMult, (float)delta * 2f);
 
 		float t = (float)Time.GetTicksMsec() / 1000.0f * HoverSpeed;
-		Position = _visibleBasePosition + new Vector3(0f, _descendYOffset, 0f) + new Vector3(
+
+		Vector3 vibratePos = Vector3.Zero;
+		if (_vibrateDuration > 0f)
+		{
+			float elapsed = (float)(Time.GetTicksMsec() / 1000.0) - _vibrateStartTime;
+			if (elapsed < _vibrateDuration)
+			{
+				float fadeIn  = Mathf.Clamp(elapsed / 0.25f, 0f, 1f);
+				float fadeOut = Mathf.Clamp(1f - (elapsed - _vibrateDuration + 0.25f) / 0.25f, 0f, 1f);
+				float amp = VibrateAmplitude * fadeIn * fadeOut;
+				vibratePos = new Vector3(
+					Mathf.Sin(elapsed * VibrateFrequency * Mathf.Tau) * amp,
+					Mathf.Abs(Mathf.Sin(elapsed * VibrateFrequency * 0.5f * Mathf.Tau)) * amp * 0.4f,
+					Mathf.Cos(elapsed * VibrateFrequency * 0.7f * Mathf.Tau) * amp * 0.6f
+				);
+			}
+			else
+			{
+				_vibrateDuration = 0f;
+			}
+		}
+
+		Position = _visibleBasePosition + new Vector3(0f, _descendYOffset, 0f) + vibratePos + new Vector3(
 			Mathf.Sin(t * 0.53f) * HoverSwayAmplitude * _swayMultiplier,
 			Mathf.Sin(t * 0.80f) * HoverBobAmplitude  * _swayMultiplier,
 			Mathf.Sin(t * 0.37f) * HoverSwayAmplitude * 0.6f * _swayMultiplier
@@ -282,6 +313,35 @@ public partial class Ophanim : Node3D
 	{
 		if (holdDuration < 0f) holdDuration = GoldenHoldDuration;
 		await RunDecodeSequenceAsync(message, holdDuration);
+	}
+
+	/// <summary>Rapidly shake the angel for VibrateDuration seconds as if deciding, then settle.</summary>
+	public async System.Threading.Tasks.Task VibrateDecidingAsync()
+	{
+		_vibrateStartTime = (float)(Time.GetTicksMsec() / 1000.0);
+		_vibrateDuration  = VibrateDuration;
+
+		AudioStreamPlayer3D vibrateAudio = null;
+		var vibrateClip = GD.Load<AudioStream>("res://Assets/Sound FX/gear_vibrating.wav");
+		if (vibrateClip != null)
+		{
+			vibrateAudio = new AudioStreamPlayer3D { Stream = vibrateClip, VolumeDb = -6f };
+			AddChild(vibrateAudio);
+			vibrateAudio.Play();
+		}
+
+		await ToSignal(GetTree().CreateTimer(VibrateDuration), SceneTreeTimer.SignalName.Timeout);
+		_vibrateDuration = 0f;
+
+		if (vibrateAudio != null)
+		{
+			const float fadeTime = 1.0f;
+			var fadeTween = vibrateAudio.CreateTween();
+			fadeTween.TweenProperty(vibrateAudio, "volume_db", -80f, fadeTime);
+			await ToSignal(GetTree().CreateTimer(fadeTime), SceneTreeTimer.SignalName.Timeout);
+			vibrateAudio.Stop();
+			vibrateAudio.QueueFree();
+		}
 	}
 
 	/// <summary>Say the grant announcement while simultaneously shooting the item ray, then ascend and hide.

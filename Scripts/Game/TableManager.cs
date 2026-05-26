@@ -15,8 +15,7 @@ public partial class TableManager : Node3D
     [Export] public PackedScene        ChairScene;
     [Export] public PackedScene        PlayerItemSetScene;
     [Export] public Ophanim            OphanimNode;
-    [Export] public RouletteController RouletteNode;
-    // Drag the ColorRect's ShaderMaterial here so raycast undistortion stays in sync with the shader.
+// Drag the ColorRect's ShaderMaterial here so raycast undistortion stays in sync with the shader.
     [Export] public ShaderMaterial     FisheyeMaterial;
     // Drag the room's AudioStreamPlayer3D node here so it can be crossfaded when the game starts.
     [Export] public AudioStreamPlayer3D RoomMusicPlayer;
@@ -100,8 +99,6 @@ public partial class TableManager : Node3D
     private FichaNode _hoveredPiece = null;
     private Camera3D  _hoverCamera  = null;
 
-    // Tracks when the current piece-move animation finishes so golden_square_event
-    // can wait for the piece to actually arrive before starting the roulette sequence.
     private System.Threading.Tasks.Task _lastMoveTask =
         System.Threading.Tasks.Task.CompletedTask;
 
@@ -680,8 +677,6 @@ public partial class TableManager : Node3D
         await _lastMoveTask;
         if (!IsInsideTree()) return;
 
-        _sword?.Dismiss();
-
         // ── Play arrival sound ────────────────────────────────────────────────
         var comboClip = GD.Load<AudioStream>("res://Assets/Sound FX/combosound.wav");
         if (comboClip != null)
@@ -692,33 +687,42 @@ public partial class TableManager : Node3D
             sfx.Finished += () => sfx.QueueFree();
         }
 
-        // ── Reveal roulette + re-descend Ophanim simultaneously ──────────────
-        RouletteNode?.Reveal();
+        // ── Re-descend Ophanim + shorten rope so sword doesn't clip tablero ─────
+        float descentAmount    = OphanimNode?.CurrentDescendOffset ?? 0f;
+        float descentDuration  = OphanimNode?.GoldenDescentDuration ?? 1.5f;
+        float origHangDistance = _sword?.HangDistance ?? 0f;
+
         OphanimNode?.ReDescend();
 
-        float waitTime = OphanimNode != null ? OphanimNode.GoldenDescentDuration : 1.5f;
+        if (_sword != null && _sword.IsInsideTree() && descentAmount > 0f)
+        {
+            var ropeTween = _sword.CreateTween();
+            ropeTween.TweenMethod(
+                Callable.From((float v) => _sword.HangDistance = v),
+                origHangDistance, origHangDistance - descentAmount, descentDuration)
+                .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
+        }
+
+        float waitTime = descentDuration;
         await ToSignal(GetTree().CreateTimer(waitTime), SceneTreeTimer.SignalName.Timeout);
         if (!IsInsideTree()) return;
 
-        // ── Ophanim taunts before the ball is thrown ─────────────────────────
+        // ── Ophanim taunts ────────────────────────────────────────────────────
         if (OphanimNode != null)
         {
             await OphanimNode.SayAsync(OphanimNode.GoldenLuckyMessage, 1.5f);
             if (!IsInsideTree()) return;
         }
 
-        // ── Throw ball ───────────────────────────────────────────────────────
-        RouletteNode?.BeginSpin();
-
-        // ── Wait for ball to settle ──────────────────────────────────────────
-        if (RouletteNode != null)
+        // ── Ophanim vibrates as if deciding ──────────────────────────────────
+        if (OphanimNode != null)
         {
-            await ToSignal(RouletteNode, RouletteController.SignalName.BallSettled);
+            await OphanimNode.VibrateDecidingAsync();
             if (!IsInsideTree()) return;
         }
         else
         {
-            await ToSignal(GetTree().CreateTimer(4.0f), SceneTreeTimer.SignalName.Timeout);
+            await ToSignal(GetTree().CreateTimer(1.0f), SceneTreeTimer.SignalName.Timeout);
             if (!IsInsideTree()) return;
         }
 
@@ -744,10 +748,15 @@ public partial class TableManager : Node3D
         else
             onGrant?.Invoke();
 
-        if (!IsInsideTree()) return;
-
-        // ── Hide roulette (concurrent with Ophanim ascending) ────────────────
-        RouletteNode?.HideAgain();
+        // ── Restore rope length as Ophanim ascends back up ───────────────────
+        if (_sword != null && _sword.IsInsideTree() && descentAmount > 0f)
+        {
+            var restoreTween = _sword.CreateTween();
+            restoreTween.TweenMethod(
+                Callable.From((float v) => _sword.HangDistance = v),
+                _sword.HangDistance, origHangDistance, descentDuration)
+                .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.In);
+        }
     }
 
     private static string GoldenItemDisplayName(string itemName) => itemName switch

@@ -225,12 +225,13 @@ public partial class CubileteController : Node3D
 			die.Visible = false;
 		}
 
-		// Slide cup up from below-screen into the lower-screen holding position.
+		// Tween cup from its resting world position into the lower-screen holding position.
 		if (_playerCamera != null)
 		{
+			Vector3 worldPosBefore        = _cubileteMesh.GlobalPosition;
 			_meshReparentedToCamera       = true;
 			_cubileteMesh.Reparent(_playerCamera, false);
-			_cubileteMesh.Position        = ViewOffset + new Vector3(0f, -0.18f, 0f);
+			_cubileteMesh.Position        = _playerCamera.ToLocal(worldPosBefore);
 			_cubileteMesh.RotationDegrees = ViewRotationDegrees;
 			_cubileteMesh.Visible         = true;
 			CreateTween()

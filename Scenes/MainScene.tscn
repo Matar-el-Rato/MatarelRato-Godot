@@ -3,7 +3,6 @@
 [ext_resource type="Texture2D" uid="uid://bdow7xpjm0o3" path="res://Assets/Textures/moon_sky.png" id="1_qxria"]
 [ext_resource type="AudioStream" uid="uid://d35ykscrkw14f" path="res://Assets/Music/Portal Radio Tune.mp3" id="4_hx8n4"]
 [ext_resource type="PackedScene" uid="uid://b8bnktsbevaar" path="res://Assets/Environment/MainScene/SceneTest.glb" id="6_scene_test"]
-[ext_resource type="PackedScene" uid="uid://gmbeacpp0km6" path="res://Scenes/Game/Roulette.tscn" id="6_usjqs"]
 [ext_resource type="PackedScene" uid="uid://bpd6m0lb3j2ls" path="res://Scenes/Player.tscn" id="6_y4jh7"]
 [ext_resource type="Script" uid="uid://ct45xk2s628kn" path="res://Scripts/Environment/EnvironmentCollision.cs" id="7_env_collision"]
 [ext_resource type="PackedScene" uid="uid://b7105h1f46xpg" path="res://Assets/PlayingSet/General/mesa_poker.glb" id="8_f140w"]
@@ -622,13 +621,12 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13.980343, 0, -5.9173303)
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9.452879, 1.5272827, 0.31794596)
 shape = SubResource("BoxShape3D_ergw4")
 
-[node name="PlayingSetup" type="Node3D" parent="Room1" unique_id=1885415639 node_paths=PackedStringArray("OphanimNode", "RouletteNode", "RoomMusicPlayer")]
+[node name="PlayingSetup" type="Node3D" parent="Room1" unique_id=1885415639 node_paths=PackedStringArray("OphanimNode", "RoomMusicPlayer")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.1901207, 0, -0.09963226)
 script = ExtResource("50_tablemgr")
 ChairScene = ExtResource("51_chair_scene")
 PlayerItemSetScene = ExtResource("52_pitemset")
 OphanimNode = NodePath("../Ophanim")
-RouletteNode = NodePath("../Roulette")
 FisheyeMaterial = SubResource("ShaderMaterial_hkvke")
 RoomMusicPlayer = NodePath("../AudioStreamPlayer3D")
 
@@ -651,8 +649,6 @@ InitiativeGunScene = ExtResource("43_jkhus")
 GunRestYAboveTable = 0.4
 BrimstoneRaySound = ExtResource("45_xot12")
 
-[node name="Roulette" parent="Room1" unique_id=1714169080 instance=ExtResource("6_usjqs")]
-transform = Transform3D(1.0000001, -1.5529405e-22, 0, 0, -1.0000001, -8.742278e-08, 0, 8.742278e-08, -1, -15.255946, 3.5341876, -5.342228)
 
 [node name="damocles" parent="Room1" unique_id=1517889442 instance=ExtResource("28_8um71")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.262368, 0.69990087, -5.344487)
