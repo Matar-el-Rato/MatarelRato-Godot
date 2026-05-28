@@ -227,6 +227,125 @@ public partial class TableroController : Node3D
 	public static bool IsGoal(int index) =>
 		index == 108 || index == 118 || index == 128 || index == 138;
 
+	// ── Gun misfire retreat ───────────────────────────────────────────────────
+
+	/// <summary>
+	/// Moves <paramref name="color"/>'s piece directly to <paramref name="toSq"/> with a
+	/// short hop arc — used for the gun misfire step-back so we never use BuildPath
+	/// (which would animate 67 steps forward around the ring).
+	/// </summary>
+	public async System.Threading.Tasks.Task ApplyPieceRetreat(string color, int pieceIndex, int toSq)
+	{
+		var ficha = GetPiece(color, pieceIndex);
+		if (ficha == null) return;
+
+		RemoveFromOccupancy(ficha);
+		ficha.SetBoardIndex(toSq);
+		AddToOccupancy(ficha, toSq);
+
+		var dest = GetBoardWorldPosition(toSq, color);
+		var mid  = (ficha.GlobalPosition + dest) * 0.5f + Vector3.Up * 0.08f;
+
+		var tween = ficha.CreateTween().SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
+		tween.TweenProperty(ficha, "global_position", mid,  0.14f);
+		tween.TweenProperty(ficha, "global_position", dest, 0.14f);
+		await ToSignal(tween, Tween.SignalName.Finished);
+	}
+
+	// ── Fire axe: barrier discovery & visual highlights ───────────────────────
+
+	// Pieces currently pulsing red for axe targeting (cleared on hide).
+	private readonly List<FichaNode> _axeTargetedPieces = new();
+
+	/// <summary>
+	/// Returns the ring squares (1–68) that contain exactly two pieces forming an axeable
+	/// barrier. Same-color barriers always count; mixed-color barriers count only on safe
+	/// squares (where they form a real block). The previous and next ring squares must be
+	/// empty — the axe splits the pair onto those, so we mirror the server's validation.
+	/// </summary>
+	public List<int> GetAxeableBarriers()
+	{
+		var result = new List<int>();
+		foreach (var (sq, pieces) in _occupancy)
+		{
+			if (sq < 1 || sq > 68) continue;
+			if (pieces == null || pieces.Count != 2) continue;
+
+			bool sameColor = pieces[0].PlayerColor == pieces[1].PlayerColor;
+			bool onSafe    = SafeSquares.Contains(sq);
+			if (!sameColor && !onSafe) continue;
+
+			int prev = sq == 1  ? 68 : sq - 1;
+			int next = sq == 68 ? 1  : sq + 1;
+			if (OccupantCount(prev) > 0 || OccupantCount(next) > 0) continue;
+
+			result.Add(sq);
+		}
+		return result;
+	}
+
+	/// <summary>Makes the pieces at each barrier square pulse red to signal they're targetable.</summary>
+	public void ShowAxeBarrierHighlights(List<int> squares)
+	{
+		HideAxeBarrierHighlights();
+		foreach (int sq in squares)
+		{
+			foreach (var ficha in _pieces.Values)
+			{
+				if (ficha == null || ficha.BoardIndex != sq) continue;
+				ficha.SetAxeTargeted(true);
+				_axeTargetedPieces.Add(ficha);
+			}
+		}
+	}
+
+	public void HideAxeBarrierHighlights()
+	{
+		foreach (var ficha in _axeTargetedPieces)
+			if (IsInstanceValid(ficha)) ficha.SetAxeTargeted(false);
+		_axeTargetedPieces.Clear();
+	}
+
+	/// <summary>
+	/// Applies a fire-axe split: arcs <paramref name="forwardPieceColor"/>'s piece to
+	/// <paramref name="forwardTo"/> and <paramref name="backwardPieceColor"/>'s to
+	/// <paramref name="backwardTo"/>. Awaitable — completes when both pieces have landed.
+	/// </summary>
+	public async Task ApplyFireAxeSplit(
+		string forwardPieceColor,  int forwardPieceIndex,  int forwardTo,
+		string backwardPieceColor, int backwardPieceIndex, int backwardTo)
+	{
+		var fwdFicha = GetPiece(forwardPieceColor,  forwardPieceIndex);
+		var bwdFicha = GetPiece(backwardPieceColor, backwardPieceIndex);
+
+		if (fwdFicha != null) { RemoveFromOccupancy(fwdFicha); fwdFicha.SetBoardIndex(forwardTo); }
+		if (bwdFicha != null) { RemoveFromOccupancy(bwdFicha); bwdFicha.SetBoardIndex(backwardTo); }
+
+		const float arcTime = 0.20f;
+		Tween last = null;
+
+		void Arc(FichaNode ficha, int destIndex, string color)
+		{
+			if (ficha == null) return;
+			var dest = GetBoardWorldPosition(destIndex, color);
+			var mid  = (ficha.GlobalPosition + dest) * 0.5f + Vector3.Up * 0.07f;
+			var t = ficha.CreateTween()
+				.SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
+			t.TweenProperty(ficha, "global_position", mid,  arcTime);
+			t.TweenProperty(ficha, "global_position", dest, arcTime);
+			last = t;
+		}
+
+		Arc(fwdFicha, forwardTo,  forwardPieceColor);
+		Arc(bwdFicha, backwardTo, backwardPieceColor);
+
+		if (fwdFicha != null) AddToOccupancy(fwdFicha, forwardTo);
+		if (bwdFicha != null) AddToOccupancy(bwdFicha, backwardTo);
+
+		if (last != null)
+			await ToSignal(last, Tween.SignalName.Finished);
+	}
+
 	// ── Movement resolution ───────────────────────────────────────────────────
 
 	/// <summary>

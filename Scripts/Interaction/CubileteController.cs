@@ -39,6 +39,9 @@ public partial class CubileteController : Node3D
 	/// <summary>Emitted after dice results are displayed, carrying the face values of each die.</summary>
 	[Signal] public delegate void RollCompletedEventHandler(int die1, int die2);
 
+	/// <summary>Emitted when the player grabs the cup (state enters Held). Closes the pre-roll item window.</summary>
+	[Signal] public delegate void CubileteGrabbedEventHandler();
+
 	[ExportGroup("Turn Arc")]
 	/// <summary>How far below the table the cup starts (hidden until the starter is chosen).</summary>
 	[Export] public float HiddenDepth = 0.175f;
@@ -67,6 +70,10 @@ public partial class CubileteController : Node3D
 	// Completed when ExecuteReturnDiceEarly finishes.
 	private System.Threading.Tasks.Task _earlyReturnTask =
 		System.Threading.Tasks.Task.CompletedTask;
+
+	// Pre-determined values from a magnifying-glass peek; 0 = no lock.
+	private int _lockedDie1 = 0;
+	private int _lockedDie2 = 0;
 
 	// Saved on _Ready so the cup can return after a throw.
 	// Stored as LOCAL transform so the reset target is correct even after the
@@ -198,6 +205,127 @@ public partial class CubileteController : Node3D
 		_glowActive           = enabled;
 	}
 
+	/// <summary>
+	/// Stores die values from a magnifying-glass peek.  On the next physical roll,
+	/// dice are oriented to show these faces and the values are reported to the server.
+	/// </summary>
+	public void LockNextRollValues(int die1, int die2)
+	{
+		_lockedDie1 = die1;
+		_lockedDie2 = die2;
+	}
+
+	/// <summary>
+	/// Temporarily floats the dice in front of the cup, facing the camera, so the
+	/// player reads the peeked values from the side (like looking at dice on a table).
+	/// Dice return to the cup and are hidden when done.
+	/// </summary>
+	public async System.Threading.Tasks.Task PeekDiceAsync(int die1, int die2)
+	{
+		if (_currentState != State.Stationary) return;
+
+		_interactable.Enabled = false;
+		_glowActive           = false;
+
+		Vector3 cupPos  = GlobalPosition;
+		Vector3 camPos  = _playerCamera?.GlobalPosition ?? (cupPos + Vector3.Up * 1.5f);
+		Vector3 camRight = _playerCamera != null
+			? _playerCamera.GlobalTransform.Basis.X
+			: Vector3.Right;
+
+		// Step slightly toward the player so the dice sit between the cup and the camera.
+		var toCupHoriz = new Vector3(cupPos.X - camPos.X, 0f, cupPos.Z - camPos.Z).Normalized();
+		Vector3 center = cupPos + Vector3.Up * 0.15f - toCupHoriz * 0.05f;
+
+		// Tight spread so both dice fit inside the magnifying glass circle.
+		Vector3 pos0 = center + camRight * -0.032f;
+		Vector3 pos1 = center + camRight *  0.032f;
+
+		int[]     faces   = { die1, die2 };
+		Vector3[] targets = { pos0, pos1 };
+
+		for (int i = 0; i < _dice.Length && i < 2; i++)
+		{
+			_dice[i].Freeze         = true;
+			_dice[i].GlobalPosition = cupPos + Vector3.Up * 0.02f;
+			_dice[i].Visible        = true;
+		}
+
+		// Float up and orient faces toward the camera.
+		var popTween = CreateTween().SetParallel()
+			.SetTrans(Tween.TransitionType.Back).SetEase(Tween.EaseType.Out);
+		for (int i = 0; i < _dice.Length && i < 2; i++)
+			popTween.TweenProperty(_dice[i], "global_position", targets[i], 0.35f);
+		await ToSignal(popTween, Tween.SignalName.Finished);
+		if (!IsInsideTree()) return;
+
+		// Orient after arriving so the face is aimed precisely at the camera.
+		for (int i = 0; i < _dice.Length && i < 2; i++)
+		{
+			Vector3 toCam = (camPos - targets[i]).Normalized();
+			_dice[i].GlobalRotation = BasisFromTo(LocalAxisForFace(faces[i]), toCam).GetEuler();
+		}
+
+		await ToSignal(GetTree().CreateTimer(2.5f), SceneTreeTimer.SignalName.Timeout);
+		if (!IsInsideTree()) return;
+
+		// Return to cup.
+		var returnTween = CreateTween().SetParallel()
+			.SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.In);
+		for (int i = 0; i < _dice.Length && i < 2; i++)
+			returnTween.TweenProperty(_dice[i], "global_position",
+				cupPos + Vector3.Up * 0.02f, 0.22f);
+		await ToSignal(returnTween, Tween.SignalName.Finished);
+		if (!IsInsideTree()) return;
+
+		foreach (var die in _dice) die.Visible = false;
+
+		_interactable.Enabled = true;
+		_glowActive           = true;
+	}
+
+	// Returns the die's local axis that corresponds to each face.
+	// Face mapping (matches GetDiceValue): +X=4  -X=3  +Y=2  -Y=5  +Z=6  -Z=1
+	private static Vector3 LocalAxisForFace(int face) => face switch
+	{
+		1 => new Vector3( 0f,  0f, -1f),
+		2 => new Vector3( 0f,  1f,  0f),
+		3 => new Vector3(-1f,  0f,  0f),
+		4 => new Vector3( 1f,  0f,  0f),
+		5 => new Vector3( 0f, -1f,  0f),
+		6 => new Vector3( 0f,  0f,  1f),
+		_ => Vector3.Up,
+	};
+
+	// Returns the global Euler rotation that places face <paramref name="face"/> upward.
+	// Used when locking peek values for the actual physical roll.
+	private static Vector3 RotationForFace(int face) => face switch
+	{
+		1 => new Vector3( Mathf.Pi / 2f, 0f, 0f),
+		2 => Vector3.Zero,
+		3 => new Vector3(0f, 0f, -Mathf.Pi / 2f),
+		4 => new Vector3(0f, 0f,  Mathf.Pi / 2f),
+		5 => new Vector3( Mathf.Pi,      0f, 0f),
+		6 => new Vector3(-Mathf.Pi / 2f, 0f, 0f),
+		_ => Vector3.Zero,
+	};
+
+	// Builds a Basis that rotates unit vector <paramref name="from"/> onto <paramref name="to"/>.
+	private static Basis BasisFromTo(Vector3 from, Vector3 to)
+	{
+		from = from.Normalized();
+		to   = to.Normalized();
+		float dot = from.Dot(to);
+		if (dot >  0.9999f) return Basis.Identity;
+		if (dot < -0.9999f)
+		{
+			var perp = from.Cross(Vector3.Up);
+			if (perp.LengthSquared() < 1e-4f) perp = from.Cross(Vector3.Right);
+			return new Basis(perp.Normalized(), Mathf.Pi);
+		}
+		return new Basis(from.Cross(to).Normalized(), Mathf.Acos(dot));
+	}
+
 	// ── State machine ─────────────────────────────────────────────────────────
 
 	private void OnInteracted()
@@ -214,6 +342,7 @@ public partial class CubileteController : Node3D
 	{
 		_glowActive                = false;
 		_currentState              = State.Held;
+		EmitSignal(SignalName.CubileteGrabbed);
 		_interactable.PromptText   = "Roll Dice";
 		_interactable.ProcessMode  = ProcessModeEnum.Inherit;
 		Interactor.IsLocked        = true;
@@ -356,9 +485,17 @@ public partial class CubileteController : Node3D
 			}
 		}
 
-		// Freeze FIRST so no additional physics step can change orientation between
-		// the read and the freeze.
+		// Freeze FIRST so no additional physics step can change orientation.
 		foreach (var die in _dice) die.Freeze = true;
+
+		// If peeked values are locked, orient dice to those faces before reading —
+		// this makes the physical result match the peek exactly.
+		if (_lockedDie1 > 0)
+		{
+			if (_dice.Length > 0) _dice[0].GlobalRotation = RotationForFace(_lockedDie1);
+			if (_dice.Length > 1) _dice[1].GlobalRotation = RotationForFace(_lockedDie2);
+			_lockedDie1 = _lockedDie2 = 0;
+		}
 
 		// Now read face values from the frozen (authoritative) transforms.
 		var (die1, die2) = CalculateResults();

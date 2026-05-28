@@ -121,11 +121,16 @@ public partial class SeatToken : Node3D
 		}
 	}
 
+	/// <summary>Shows or hides a "Shoot {name}" billboard prompt (gun targeting).</summary>
+	public void ShowGunPrompt(bool show) => ShowActionPrompt("Shoot", show);
+
 	/// <summary>
 	/// Shows or hides a "Handcuff {name}" billboard prompt above this seat's head,
 	/// used while the local player is aiming the Handcuffs item at this player.
 	/// </summary>
-	public void ShowHandcuffPrompt(bool show)
+	public void ShowHandcuffPrompt(bool show) => ShowActionPrompt("Handcuff", show);
+
+	private void ShowActionPrompt(string action, bool show)
 	{
 		if (show)
 		{
@@ -142,7 +147,7 @@ public partial class SeatToken : Node3D
 					OutlineSize     = 10,
 					OutlineModulate = new Color(0f, 0f, 0f, 1f),
 					NoDepthTest     = true,
-					Text            = $"Handcuff {_username}",
+					Text            = $"{action} {_username}",
 					Position        = new Vector3(0f, _headLocalY + 0.35f, 0f),
 				};
 				AddChild(_promptLabel);

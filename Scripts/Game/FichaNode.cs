@@ -28,7 +28,8 @@ public partial class FichaNode : Node3D
 	private const string BorderSurface = "border";
 	private StandardMaterial3D _borderMat;
 	private Tween               _pulseTween;
-	private bool _selectable = false;
+	private bool  _selectable  = false;
+	private Tween _hoverTween;
 
 	// ── Init ──────────────────────────────────────────────────────────────────
 
@@ -97,7 +98,7 @@ public partial class FichaNode : Node3D
 		else
 		{
 			if (_selectable)
-				BeginPulse();
+				BeginPulse(Colors.White, 0.0f, 0.4f, 0.7f);
 			else
 			{
 				_borderMat.EmissionEnabled          = false;
@@ -114,7 +115,7 @@ public partial class FichaNode : Node3D
 		if (_pulseTween != null) { _pulseTween.Kill(); _pulseTween = null; }
 		if (_borderMat == null) return;
 		if (on)
-			BeginPulse();
+			BeginPulse(Colors.White, 0.0f, 0.4f, 0.7f);
 		else
 		{
 			_borderMat.EmissionEnabled          = false;
@@ -122,22 +123,55 @@ public partial class FichaNode : Node3D
 		}
 	}
 
-	private void BeginPulse()
+	/// <summary>Red pulsing highlight used by the fire axe to mark barrier pieces.</summary>
+	public void SetAxeTargeted(bool on)
+	{
+		if (_pulseTween != null) { _pulseTween.Kill(); _pulseTween = null; }
+		if (_borderMat == null) return;
+		if (on)
+			BeginPulse(new Color(1f, 0.08f, 0.08f), 0.8f, 3.5f, 0.45f);
+		else
+		{
+			_borderMat.EmissionEnabled          = false;
+			_borderMat.EmissionEnergyMultiplier = 1.0f;
+		}
+	}
+
+	private void BeginPulse(Color color, float minEnergy, float maxEnergy, float halfPeriod)
 	{
 		if (_borderMat == null) return;
 		_pulseTween?.Kill();
 		_borderMat.EmissionEnabled          = true;
-		_borderMat.Emission                 = Colors.White;
-		_borderMat.EmissionEnergyMultiplier = 0.0f;
+		_borderMat.Emission                 = color;
+		_borderMat.EmissionEnergyMultiplier = minEnergy;
 		_pulseTween = CreateTween().SetLoops();
 		_pulseTween.TweenMethod(
 			Callable.From((float v) => _borderMat.EmissionEnergyMultiplier = v),
-			0.0f, 0.4f, 0.7f)
+			minEnergy, maxEnergy, halfPeriod)
 			.SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
 		_pulseTween.TweenMethod(
 			Callable.From((float v) => _borderMat.EmissionEnergyMultiplier = v),
-			0.4f, 0.0f, 0.7f)
+			maxEnergy, minEnergy, halfPeriod)
 			.SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
+	}
+
+	/// <summary>
+	/// Makes the piece bob up and down to signal a pending interaction (gun decision).
+	/// Stopping it snaps the piece back to its board-level Y.
+	/// </summary>
+	public void SetHovering(bool on)
+	{
+		_hoverTween?.Kill();
+		_hoverTween = null;
+		if (on)
+		{
+			float baseY = GlobalPosition.Y;
+			_hoverTween = CreateTween().SetLoops();
+			_hoverTween.TweenProperty(this, "global_position:y", baseY + 0.07f, 0.45f)
+			           .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
+			_hoverTween.TweenProperty(this, "global_position:y", baseY, 0.45f)
+			           .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
+		}
 	}
 
 	// ── State helpers ─────────────────────────────────────────────────────────

@@ -4,13 +4,13 @@
 [ext_resource type="PackedScene" uid="uid://c1o0e0sm5icp" path="res://Assets/PlayingSet/PerPlayer/axe.glb" id="2_model"]
 [ext_resource type="Script" uid="uid://bk7ngt4ktf6i6" path="res://Scripts/Interaction/Interactable.cs" id="3_interactable"]
 
-[node name="FireAxe" type="Node3D"]
+[node name="FireAxe" type="Node3D" unique_id=1450273584]
 script = ExtResource("1_script")
 InteractablePath = NodePath("Interactable")
 
-[node name="axe_model" parent="." instance=ExtResource("2_model")]
+[node name="axe_model" parent="." unique_id=1366487549 instance=ExtResource("2_model")]
 
-[node name="Interactable" type="Node3D" parent="."]
+[node name="Interactable" type="Node3D" parent="." unique_id=1579540753]
 script = ExtResource("3_interactable")
 PromptText = "Use Fire Axe"
 TooltipText = "Smash a barrier blocking your path on the board."

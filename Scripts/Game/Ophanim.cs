@@ -93,6 +93,9 @@ public partial class Ophanim : Node3D
 	/// <summary>Fired after the initiative gun sequence ends and the gun despawns.</summary>
 	[Signal] public delegate void InitiativeSequenceCompletedEventHandler();
 
+	/// <summary>Fired when the player interacts with Ophanim during the gun decision window (skip = eat for free).</summary>
+	[Signal] public delegate void GunSkipRequestedEventHandler();
+
 	// ── Character pools ────────────────────────────────────────────────────────
 	private static readonly char[] _blockChars = { '█', '▓', '▒', '░' };
 	private static readonly char[] _symbolChars =
@@ -114,6 +117,8 @@ public partial class Ophanim : Node3D
 	private int                 _decodeSequenceId;
 	private bool                _inGreeting;
 	private bool                _garbledShouldLoop;
+	private bool                _gunDecisionActive = false;
+	private Label3D             _gunDecisionLabel  = null;
 
 	// ── Descent ───────────────────────────────────────────────────────────────
 	private Vector3 _visibleBasePosition;
@@ -264,6 +269,11 @@ public partial class Ophanim : Node3D
 
 	private async void OnInteracted()
 	{
+		if (_gunDecisionActive)
+		{
+			EmitSignal(SignalName.GunSkipRequested);
+			return;
+		}
 		if (_isDecoding || _inGreeting) return;
 		await RunDecodeSequenceAsync(DecodeText, HoldDuration);
 	}
@@ -649,7 +659,7 @@ public partial class Ophanim : Node3D
 		AscendAndHide();
 	}
 
-	private void AscendAndHide()
+	public void AscendAndHide()
 	{
 		if (_interactable != null) _interactable.Enabled = false;
 		StopGarbledAudio();
@@ -661,6 +671,62 @@ public partial class Ophanim : Node3D
 			.SetTrans(Tween.TransitionType.Cubic)
 			.SetEase(Tween.EaseType.In);
 		tween.Finished += () => _descendYOffset = RestingOffset;
+	}
+
+	// ── Gun decision prompt ───────────────────────────────────────────────────
+
+	/// <summary>Shows a bobbing "!" and routes Ophanim interactions to GunSkipRequested until hidden.</summary>
+	public void ShowGunDecisionPrompt()
+	{
+		_gunDecisionActive = true;
+		SpawnGunDecisionLabel();
+	}
+
+	/// <summary>Removes the gun decision "!" and restores normal interaction behaviour.</summary>
+	public void HideGunDecisionPrompt()
+	{
+		_gunDecisionActive = false;
+		DespawnGunDecisionLabel();
+	}
+
+	/// <summary>Immediately hides the dialog bubble and cancels any pending hold timer.</summary>
+	public void DismissBubble()
+	{
+		++_decodeSequenceId;
+		_isDecoding = false;
+		_dialogBubble?.HideDialog();
+	}
+
+	private void SpawnGunDecisionLabel()
+	{
+		if (_gunDecisionLabel != null && IsInstanceValid(_gunDecisionLabel)) return;
+		var font = ResourceLoader.Load<Font>("res://Assets/Fonts/Jersey10-Regular.ttf");
+		_gunDecisionLabel = new Label3D
+		{
+			Text            = "!",
+			Font            = font,
+			FontSize        = 72,
+			PixelSize       = 0.004f,
+			Billboard       = BaseMaterial3D.BillboardModeEnum.Enabled,
+			NoDepthTest     = true,
+			Modulate        = new Color(1f, 0.88f, 0f),
+			OutlineSize     = 12,
+			OutlineModulate = new Color(0f, 0f, 0f, 1f),
+			Position        = Vector3.Up * 0.40f,
+		};
+		AddChild(_gunDecisionLabel);
+		var bob = _gunDecisionLabel.CreateTween().SetLoops();
+		bob.TweenProperty(_gunDecisionLabel, "position:y", 0.47f, 0.5f)
+		   .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
+		bob.TweenProperty(_gunDecisionLabel, "position:y", 0.33f, 0.5f)
+		   .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
+	}
+
+	private void DespawnGunDecisionLabel()
+	{
+		if (_gunDecisionLabel != null && IsInstanceValid(_gunDecisionLabel))
+			_gunDecisionLabel.QueueFree();
+		_gunDecisionLabel = null;
 	}
 
 	/// <summary>Fires a red life-drain ray from Ophanim toward the given world position (fire and forget).</summary>

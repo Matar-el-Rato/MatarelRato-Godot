@@ -111,8 +111,11 @@ public partial class TableManager : Node3D
 
     // ── Item mechanics ────────────────────────────────────────────────────────
     // Local player's item script references (null until WireLocalItemEvents is called).
-    private Handcuffs _localHandcuffs;
-    private Cigarette _localCigarette;
+    private Handcuffs       _localHandcuffs;
+    private Cigarette       _localCigarette;
+    private FireAxe         _localFireAxe;
+    private Gun             _localGun;
+    private MagnifyingGlass _localMagnifyingGlass;
     // Maps handcuffed userId → Handcuffs instance currently on their head.
     private readonly Dictionary<int, Handcuffs> _activeHandcuffs = new();
     // Set by OnCigaretteResult; polled by the async OnSmokingComplete before showing HUD.
@@ -164,8 +167,20 @@ public partial class TableManager : Node3D
         foreach (var row in _boardPositions)
             Array.Clear(row, 0, row.Length);
         ClearSelectables();
-        _localHandcuffs = null;
-        _localCigarette = null;
+        FocusController.FocusStateChanged -= OnFireAxeFocusChanged;
+        _localHandcuffs       = null;
+        _localCigarette       = null;
+        _localFireAxe         = null;
+        _localGun             = null;
+        _localMagnifyingGlass = null;
+        _pendingGunTargetUserId = -1;
+        _gunAwaitingGrab        = false;
+        if (OphanimNode != null) OphanimNode.GunSkipRequested -= OnOphanimGunSkipRequested;
+        OphanimNode?.HideGunDecisionPrompt();
+        OphanimNode?.DismissBubble();
+        _gunSwordOrigHangDistance = 0f;
+        _gunHoveringPiece?.SetHovering(false);
+        _gunHoveringPiece = null;
         _activeHandcuffs.Clear();
         _cigaretteResultReady = false;
     }
@@ -225,6 +240,10 @@ public partial class TableManager : Node3D
                 case "triple_double_penalty": OnTripleDouble(root);       break;
                 case "handcuff_skip":        OnHandcuffSkip(root);        break;
                 case "handcuffs_applied":    OnHandcuffsApplied(root);    break;
+                case "gun_available":           OnGunAvailable(root);           break;
+                case "gun_result":              OnGunResult(root);              break;
+                case "magnifying_glass_result": OnMagnifyingGlassResult(root);  break;
+                case "fire_axe_used":        OnFireAxeUsed(root);         break;
                 case "cigarette_result":     OnCigaretteResult(root);     break;
                 case "life_lost":            OnLifeLost(root);            break;
                 case "game_over":            OnGameOver(root);            break;
@@ -432,8 +451,13 @@ public partial class TableManager : Node3D
         GD.Print($"[TM] turn_start user_id={userId} isMyTurn={_isMyTurn}");
 
         GetNodeOrNull<CubileteController>("CubileteAndDice")?.SetInteractionEnabled(_isMyTurn);
-        // Handcuffs are available the whole turn; cigarette only opens after dice_result.
-        if (_isMyTurn) EnableHandcuffs(true);
+        // Handcuffs + fire axe are available the whole turn; cigarette only opens after dice_result.
+        if (_isMyTurn)
+        {
+            EnableHandcuffs(true);
+            EnableFireAxe(true);
+            EnableMagnifyingGlass(true);
+        }
 
         if (_initiativeInProgress) return;
 
@@ -468,7 +492,6 @@ public partial class TableManager : Node3D
 
     private async void OnDiceResult(JsonElement root)
     {
-        _sword?.Dismiss();
 
         // Extract all data from root BEFORE any await (JsonElement lifetime is tied to JsonDocument).
         int  userId   = root.TryGetProperty("user_id",             out var drU) ? drU.GetInt32()   : -1;
@@ -621,6 +644,9 @@ public partial class TableManager : Node3D
 
         GetNodeOrNull<TableroController>("tablero")?.ApplyBarrierPositions(sq);
         GD.Print($"[TM] barrier_formed at square {sq} ({color})");
+
+        // A new barrier may make the axe usable for the first time this turn.
+        if (_isMyTurn) EnableFireAxe(true);
     }
 
     private async void OnBarrierBroken(JsonElement root)
@@ -636,6 +662,9 @@ public partial class TableManager : Node3D
 
         GetNodeOrNull<TableroController>("tablero")?.CenterPieceAt(sq);
         GD.Print($"[TM] barrier_broken at square {sq} ({color})");
+
+        // The last barrier may have just been destroyed — re-evaluate axe availability.
+        if (_isMyTurn) EnableFireAxe(true);
     }
 
     private async void OnExtraTurn(JsonElement root)
@@ -687,13 +716,17 @@ public partial class TableManager : Node3D
 
     private async void OnTurnEnd(JsonElement root)
     {
+        _sword?.Dismiss();
         FocusController.IsBlocked = false; // safety: clear any stale block from this turn
         ClearSelectables();
         EnableCigarette(false);
-        // Cancel any in-progress handcuff targeting and disable until next turn.
+        FocusController.FocusStateChanged -= OnFireAxeFocusChanged;
+        // Cancel any in-progress handcuff/fire-axe targeting and disable until next turn.
         // (?. only guards null — the node may be freed after the item is consumed.)
         if (IsInstanceValid(_localHandcuffs)) _localHandcuffs.CancelTargeting();
+        if (IsInstanceValid(_localFireAxe))   _localFireAxe.CancelTargeting();
         EnableHandcuffs(false);
+        EnableFireAxe(false);
         _pendingDie1       = 0;
         _pendingDie2       = 0;
         _pendingBonusMoves = 0;
@@ -793,6 +826,7 @@ public partial class TableManager : Node3D
                 if (userId == LiveConnectionManager.LocalUserId)
                 {
                     if (finalItem == "handcuffs")      EnableHandcuffs(_isMyTurn); // usable the whole turn, if it's still ours
+                    else if (finalItem == "fire_axe")  EnableFireAxe(_isMyTurn);   // same gate as handcuffs
                     else if (finalItem == "cigarette") EnableCigarette(false);     // only opens in the post-roll window
                 }
             }
@@ -965,9 +999,11 @@ public partial class TableManager : Node3D
 
     private void OnLifeLost(JsonElement root)
     {
-        int userId = root.TryGetProperty("user_id",         out var u) ? u.GetInt32() : -1;
-        int lives  = root.TryGetProperty("lives_remaining", out var l) ? l.GetInt32() : 0;
-        string who = _usernameByUserId.TryGetValue(userId, out var n) ? n : $"#{userId}";
+        int userId    = root.TryGetProperty("user_id",         out var u) ? u.GetInt32() : -1;
+        int lives     = root.TryGetProperty("lives_remaining", out var l) ? l.GetInt32() : 0;
+        string reason = root.TryGetProperty("reason",          out var r) ? r.GetString() : "";
+        string who    = _usernameByUserId.TryGetValue(userId, out var n) ? n : $"#{userId}";
+
         GD.Print($"[TM] life_lost: {who} now has {lives} lives");
 
         if (!_colorByUserId.TryGetValue(userId, out var color)) return;
@@ -1110,6 +1146,16 @@ public partial class TableManager : Node3D
 
     public override void _UnhandledInput(InputEvent @event)
     {
+        // While the gun prompt is active and the player hasn't grabbed it yet,
+        // Escape skips the gun and takes the free capture instead.
+        if (_gunAwaitingGrab
+            && @event is InputEventKey escKey && escKey.Pressed && escKey.Keycode == Key.Escape)
+        {
+            GetViewport().SetInputAsHandled();
+            SendGunSkip();
+            return;
+        }
+
         if (_hoveredPiece == null) return;
         if (FocusController.Instance?.IsFocused != true) return;
         if (@event is InputEventMouseButton mb && mb.ButtonIndex == MouseButton.Left && mb.Pressed)
@@ -1215,6 +1261,11 @@ public partial class TableManager : Node3D
         _sword?.SpawnFromOphanim(OphanimNode, tableroY);
     }
 
+    private void OnCubileteGrabbed()
+    {
+        EnableMagnifyingGlass(false);
+    }
+
     private void OnRollCompleted(int die1, int die2)
     {
         // Block tablero focus until the server's dice_result arrives — prevents
@@ -1298,7 +1349,8 @@ public partial class TableManager : Node3D
 
         if (cubilete != null && !_rollConnected)
         {
-            cubilete.RollCompleted += OnRollCompleted;
+            cubilete.RollCompleted   += OnRollCompleted;
+            cubilete.CubileteGrabbed += OnCubileteGrabbed;
             _rollConnected = true;
         }
     }
@@ -1364,8 +1416,25 @@ public partial class TableManager : Node3D
     /// </summary>
     private void WireLocalItemEvents(PlayerItemSet itemSet)
     {
-        _localHandcuffs = itemSet.GetNodeOrNull<Handcuffs>("Handcuffs");
-        _localCigarette = itemSet.GetNodeOrNull<Cigarette>("CigaretteInteraction");
+        _localHandcuffs       = itemSet.GetNodeOrNull<Handcuffs>("Handcuffs");
+        _localCigarette       = itemSet.GetNodeOrNull<Cigarette>("CigaretteInteraction");
+        _localFireAxe         = itemSet.GetNodeOrNull<FireAxe>("FireAxe");
+        _localGun             = itemSet.GetNodeOrNull<Gun>("Gun");
+        _localMagnifyingGlass = itemSet.GetNodeOrNull<MagnifyingGlass>("MagnifyingGlass");
+
+        if (_localMagnifyingGlass != null)
+        {
+            _localMagnifyingGlass.Used += OnMagnifyingGlassUsed;
+            _localMagnifyingGlass.SetInteractionEnabled(false);
+        }
+
+        if (_localGun != null)
+        {
+            _localGun.Grabbed        += OnGunGrabbed;
+            _localGun.TargetSelected += OnGunTargetSelected;
+            _localGun.Cancelled      += OnGunCancelled;
+            _localGun.SetInteractionEnabled(false);
+        }
 
         if (_localHandcuffs != null)
         {
@@ -1379,6 +1448,12 @@ public partial class TableManager : Node3D
             _localCigarette.SmokingComplete += OnSmokingComplete;
             // Gate: cigarette disabled until dice_result opens the window.
             _localCigarette.SetInteractionEnabled(false);
+        }
+        if (_localFireAxe != null)
+        {
+            _localFireAxe.Grabbed         += OnFireAxeGrabbed;
+            _localFireAxe.BarrierSelected += OnFireAxeBarrierSelected;
+            _localFireAxe.SetInteractionEnabled(false);
         }
     }
 
@@ -1484,16 +1559,69 @@ public partial class TableManager : Node3D
         }
     }
 
-    /// <summary>
-    /// Enables/disables the local cigarette, but only if it is currently visible (owned).
-    /// </summary>
     private void EnableCigarette(bool enabled)
     {
-        // The node is freed when the item is consumed (BurnDisappear → QueueFree),
-        // so guard against a stale reference before touching it.
         if (!IsInstanceValid(_localCigarette)) return;
-        if (enabled && !_localCigarette.Visible) return; // not granted yet
+        if (enabled && !_localCigarette.Visible) return;
         _localCigarette.SetInteractionEnabled(enabled);
+    }
+
+    private void EnableMagnifyingGlass(bool enabled)
+    {
+        if (!IsInstanceValid(_localMagnifyingGlass)) return;
+        if (enabled && !_localMagnifyingGlass.Visible) return;
+        _localMagnifyingGlass.SetInteractionEnabled(enabled);
+    }
+
+    // ── Magnifying glass handlers ─────────────────────────────────────────────
+
+    private void OnMagnifyingGlassUsed()
+    {
+        EnableMagnifyingGlass(false);
+        string json = "{\"action\":\"use_magnifying_glass\"}";
+        LiveConnectionManager.SendGameAction(
+            LiveConnectionManager.CurrentMatchId,
+            LiveConnectionManager.LocalUserId,
+            json);
+        GD.Print("[TM] use_magnifying_glass sent");
+    }
+
+    private async void OnMagnifyingGlassResult(JsonElement root)
+    {
+        int die1 = root.TryGetProperty("die1", out var d1) ? d1.GetInt32() : 0;
+        int die2 = root.TryGetProperty("die2", out var d2) ? d2.GetInt32() : 0;
+        if (die1 < 1 || die2 < 1) return;
+
+        GD.Print($"[TM] magnifying_glass_result die1={die1} die2={die2}");
+
+        var cubilete = GetNodeOrNull<CubileteController>("CubileteAndDice");
+        if (cubilete == null) return;
+
+        // Store values — used to orient dice during the actual roll.
+        cubilete.LockNextRollValues(die1, die2);
+
+        // Place glass between the camera and the dice so the player looks through it.
+        if (IsInstanceValid(_localMagnifyingGlass))
+        {
+            var camera      = GetViewport().GetCamera3D();
+            Vector3 diceCenter = cubilete.GlobalPosition + Vector3.Up * 0.15f;
+            Vector3 glassTarget = camera != null
+                ? diceCenter.Lerp(camera.GlobalPosition, 0.38f)
+                : diceCenter + Vector3.Up * 0.22f;
+            var glassTween = _localMagnifyingGlass.CreateTween();
+            glassTween.TweenProperty(_localMagnifyingGlass, "global_position", glassTarget, 0.4f)
+                .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.Out);
+        }
+
+        // Dice pop up showing the peeked values; HUD confirms them.
+        DiceHUD.ShowStatic(die1, die2);
+        await cubilete.PeekDiceAsync(die1, die2);
+        if (!IsInsideTree()) return;
+
+        DiceHUD.HideResult();
+
+        if (IsInstanceValid(_localMagnifyingGlass))
+            _localMagnifyingGlass.BurnDisappear();
     }
 
     /// <summary>
@@ -1506,6 +1634,394 @@ public partial class TableManager : Node3D
         if (!IsInstanceValid(_localHandcuffs)) return;
         if (enabled && !_localHandcuffs.Visible) return; // not granted yet
         _localHandcuffs.SetInteractionEnabled(enabled);
+    }
+
+    // ── Gun handlers ──────────────────────────────────────────────────────────
+
+    // Stored from gun_available so OnGunGrabbed can find the target's SeatToken.
+    private int      _pendingGunTargetUserId   = -1;
+    // True between gun_available and the grab (or a skip), so Escape can skip.
+    private bool     _gunAwaitingGrab          = false;
+    // The attacker's piece that is hovering while the decision is pending.
+    private FichaNode _gunHoveringPiece        = null;
+    // Sword rope length captured in OnGunAvailable; restored in OnGunResult.
+    private float    _gunSwordOrigHangDistance = 0f;
+
+    /// <summary>
+    /// Private message: local player landed on an enemy while holding the gun.
+    /// Show a "!" exclamation on the gun and make it grabbable. The server will
+    /// decide kill/misfire once the player fires.
+    /// </summary>
+    private async void OnGunAvailable(JsonElement root)
+    {
+        int targetUserId  = root.TryGetProperty("target_user_id",  out var tu) ? tu.GetInt32() : -1;
+        int targetPieceId = root.TryGetProperty("target_piece_id", out var tp) ? tp.GetInt32() : -1;
+        int square        = root.TryGetProperty("square",          out var sq) ? sq.GetInt32() : -1;
+
+        _pendingGunTargetUserId = targetUserId;
+
+        string targetName = _usernameByUserId.TryGetValue(targetUserId, out var n) ? n : $"#{targetUserId}";
+        GD.Print($"[TM] gun_available: target={targetName} piece={targetPieceId} sq={square}");
+
+        _gunAwaitingGrab = true;
+
+        // Block other items during the decision — only the gun matters now.
+        if (IsInstanceValid(_localHandcuffs)) _localHandcuffs.CancelTargeting();
+        EnableHandcuffs(false);
+        EnableFireAxe(false);
+
+        if (_localGun != null && IsInstanceValid(_localGun))
+            _localGun.SetAvailable(true);
+
+        // Ophanim descends close to the board — shorten sword rope so it doesn't clip the table.
+        float gunDescentAmount   = OphanimNode?.CurrentDescendOffset ?? 0f;
+        float gunDescentDuration = OphanimNode?.GoldenDescentDuration ?? 1.5f;
+        _gunSwordOrigHangDistance = _sword?.HangDistance ?? 0f;
+
+        OphanimNode?.ReDescend();
+        // Hold the bubble open indefinitely — dismissed when the decision resolves.
+        _ = OphanimNode?.SayAsync("GRAB THE GUN AND GAMBLE 50/50... OR INTERACT WITH ME TO EAT FOR FREE.", 300f);
+
+        if (OphanimNode != null)
+        {
+            OphanimNode.GunSkipRequested -= OnOphanimGunSkipRequested;
+            OphanimNode.GunSkipRequested += OnOphanimGunSkipRequested;
+            OphanimNode.ShowGunDecisionPrompt();
+        }
+
+        if (_sword != null && _sword.IsInsideTree() && gunDescentAmount > 0f)
+        {
+            var ropeTween = _sword.CreateTween();
+            ropeTween.TweenMethod(
+                Callable.From((float v) => _sword.HangDistance = v),
+                _gunSwordOrigHangDistance, _gunSwordOrigHangDistance - gunDescentAmount, gunDescentDuration)
+                .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
+        }
+
+        // Wait for the landing move animation to finish before starting the hover,
+        // otherwise the hover tween and the move tween fight over global_position.
+        await _lastMoveTask;
+        if (!IsInsideTree()) return;
+
+        var tablero = GetNodeOrNull<TableroController>("tablero");
+        _gunHoveringPiece = null;
+        if (tablero != null && _colorByUserId.TryGetValue(LiveConnectionManager.LocalUserId, out var myCol))
+        {
+            for (int p = 0; p < 4; p++)
+            {
+                var ficha = tablero.GetPiece(myCol.ToLower(), p);
+                if (ficha != null && IsInstanceValid(ficha) && ficha.BoardIndex == square)
+                {
+                    _gunHoveringPiece = ficha;
+                    ficha.SetHovering(true);
+                    break;
+                }
+            }
+        }
+    }
+
+    private void OnGunGrabbed()
+    {
+        _gunAwaitingGrab = false;
+        if (_gunHoveringPiece != null && IsInstanceValid(_gunHoveringPiece))
+            _gunHoveringPiece.SetHovering(false);
+        _gunHoveringPiece = null;
+        // Gun grabbed — hide Ophanim prompt (Interactor.IsLocked prevents interaction anyway).
+        if (OphanimNode != null) OphanimNode.GunSkipRequested -= OnOphanimGunSkipRequested;
+        OphanimNode?.HideGunDecisionPrompt();
+        // Player picked up the gun — begin targeting the opponent that was landed on.
+        int targetUserId = _pendingGunTargetUserId;
+        _pendingGunTargetUserId = -1;
+
+        var targets = new System.Collections.Generic.List<SeatToken>();
+        if (targetUserId >= 0 && _colorByUserId.TryGetValue(targetUserId, out var tColor)
+            && _seatTokensByColor.TryGetValue(tColor.ToLower(), out var token)
+            && IsInstanceValid(token))
+        {
+            targets.Add(token);
+        }
+
+        _localGun?.BeginTargeting(targets);
+    }
+
+    private void OnGunTargetSelected(SeatToken token)
+    {
+        // Player fired — gun animation already played locally. Send to server.
+        string json = "{\"action\":\"use_gun\",\"choice\":\"fire\"}";
+        LiveConnectionManager.SendGameAction(
+            LiveConnectionManager.CurrentMatchId,
+            LiveConnectionManager.LocalUserId,
+            json);
+        GD.Print("[TM] use_gun → fire");
+    }
+
+    private void OnGunCancelled()
+    {
+        _gunAwaitingGrab = false;
+        SendGunSkip();
+    }
+
+    private void OnOphanimGunSkipRequested() => SendGunSkip();
+
+    private void SendGunSkip()
+    {
+        _gunAwaitingGrab        = false;
+        _pendingGunTargetUserId = -1;
+        if (_gunHoveringPiece != null && IsInstanceValid(_gunHoveringPiece))
+            _gunHoveringPiece.SetHovering(false);
+        _gunHoveringPiece = null;
+        if (_localGun != null && IsInstanceValid(_localGun))
+            _localGun.SetAvailable(false);
+        if (OphanimNode != null) OphanimNode.GunSkipRequested -= OnOphanimGunSkipRequested;
+        OphanimNode?.HideGunDecisionPrompt();
+        OphanimNode?.DismissBubble();
+        if (_isMyTurn) { EnableHandcuffs(true); EnableFireAxe(true); }
+        string json = "{\"action\":\"use_gun\",\"choice\":\"skip\"}";
+        LiveConnectionManager.SendGameAction(
+            LiveConnectionManager.CurrentMatchId,
+            LiveConnectionManager.LocalUserId,
+            json);
+        GD.Print("[TM] use_gun → skip");
+    }
+
+    /// <summary>
+    /// Broadcast: gun was fired (kill or misfire). For the local player the gun already
+    /// animated (optimistic); for remote players play FireInitiativeShot then burn.
+    /// </summary>
+    private async void OnGunResult(JsonElement root)
+    {
+        int attackerUserId  = root.TryGetProperty("attacker_user_id",  out var aEl) ? aEl.GetInt32() : -1;
+        int attackerPieceId = root.TryGetProperty("attacker_piece_id", out var apEl) ? apEl.GetInt32() : -1;
+        int targetUserId    = root.TryGetProperty("target_user_id",    out var tEl) ? tEl.GetInt32() : -1;
+        string result       = root.TryGetProperty("result",            out var rEl) ? rEl.GetString() : "";
+        bool kill           = result == "kill";
+
+        _gunAwaitingGrab  = false;
+        _gunHoveringPiece?.SetHovering(false);
+        _gunHoveringPiece = null;
+        GD.Print($"[TM] gun_result attacker={attackerUserId} result={result}");
+
+        if (OphanimNode != null) OphanimNode.GunSkipRequested -= OnOphanimGunSkipRequested;
+        OphanimNode?.HideGunDecisionPrompt();
+
+        bool isLocalAttacker = attackerUserId == LiveConnectionManager.LocalUserId;
+        if (isLocalAttacker) { EnableHandcuffs(_isMyTurn); EnableFireAxe(_isMyTurn); }
+
+        // ── Misfire: send the attacker's piece back to base ───────────────────
+        if (!kill && attackerPieceId >= 0 && attackerUserId >= 0)
+        {
+            if (_colorByUserId.TryGetValue(attackerUserId, out var aCol))
+            {
+                aCol = aCol.ToLower();
+                int aSlot = ParchisLogic.ColorToSlot(aCol);
+                if (aSlot >= 0 && aSlot < 4) _boardPositions[aSlot][attackerPieceId] = 0;
+                var tablero = GetNodeOrNull<TableroController>("tablero");
+                if (tablero != null)
+                {
+                    await _lastMoveTask;
+                    if (!IsInsideTree()) return;
+                    tablero.ReturnToBase(aCol, attackerPieceId);
+                }
+            }
+        }
+
+        // ── Find and play gun animation ───────────────────────────────────────
+        Gun gun = null;
+        if (isLocalAttacker)
+            gun = _localGun;
+        else if (_colorByUserId.TryGetValue(attackerUserId, out var gunColor))
+        {
+            int aSlot = ColorToSlot(gunColor.ToLower());
+            if (_itemSetsBySlot.TryGetValue(aSlot, out var aItemSet))
+                gun = aItemSet.GetNodeOrNull<Gun>("Gun");
+        }
+
+        if (gun != null && IsInstanceValid(gun))
+        {
+            gun.FireInitiativeShot(kill);
+            GetTree().CreateTimer(0.65f).Timeout += () => { if (IsInstanceValid(gun)) gun.BurnDisappear(); };
+        }
+
+        // ── Kill extras: Ophanim ray + hitmarker ─────────────────────────────
+        if (kill)
+        {
+            if (OphanimNode != null && targetUserId >= 0
+                && _colorByUserId.TryGetValue(targetUserId, out var tColor))
+            {
+                Vector3 rayTarget = _seatTokensByColor.TryGetValue(tColor.ToLower(), out var tok)
+                                    && IsInstanceValid(tok)
+                    ? tok.HeadWorldPosition
+                    : GetCubiletePositionForColor(tColor.ToLower());
+                OphanimNode.ShootLifeLostRay(rayTarget);
+            }
+
+            var hitClip = GD.Load<AudioStream>("res://Assets/Sound FX/hitmarker.wav");
+            if (hitClip != null)
+            {
+                var sfx = new AudioStreamPlayer { Stream = hitClip, VolumeDb = -2f };
+                AddChild(sfx);
+                sfx.Play();
+                sfx.Finished += () => sfx.QueueFree();
+            }
+        }
+
+        // ── Ophanim reacts then ascends; sword rope restores in sync ─────────────
+        if (OphanimNode != null)
+        {
+            await OphanimNode.SayAsync(kill ? "GOOD..." : "HAPPENS TO THE BEST OF US", 2.0f);
+            if (!IsInsideTree()) return;
+            OphanimNode.AscendAndHide();
+        }
+
+        if (_sword != null && _sword.IsInsideTree() && _gunSwordOrigHangDistance > 0f)
+        {
+            var restoreTween = _sword.CreateTween();
+            restoreTween.TweenMethod(
+                Callable.From((float v) => _sword.HangDistance = v),
+                _sword.HangDistance, _gunSwordOrigHangDistance, OphanimNode?.GoldenDescentDuration ?? 1.5f)
+                .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.In);
+        }
+        _gunSwordOrigHangDistance = 0f;
+    }
+
+    /// <summary>
+    /// Enables the local fire axe only when there are actual breakable barriers.
+    /// If disabling, always applies regardless of board state.
+    /// </summary>
+    private void EnableFireAxe(bool enabled)
+    {
+        if (!IsInstanceValid(_localFireAxe)) return;
+        if (enabled && !_localFireAxe.Visible) return;
+        if (enabled)
+        {
+            var tablero = GetNodeOrNull<TableroController>("tablero");
+            enabled = tablero != null && tablero.GetAxeableBarriers().Count > 0;
+        }
+        _localFireAxe.SetInteractionEnabled(enabled);
+    }
+
+    private void OnFireAxeGrabbed()
+    {
+        // Don't call BeginTargeting immediately — wait for the player to click the
+        // tablero to enter focus. FocusController fires FocusStateChanged which we listen to.
+        FocusController.FocusStateChanged -= OnFireAxeFocusChanged;
+        FocusController.FocusStateChanged += OnFireAxeFocusChanged;
+
+        // Edge case: tablero was already focused when the axe was grabbed.
+        if (FocusController.Instance?.IsFocused == true)
+            OnFireAxeFocusChanged(true);
+    }
+
+    private void OnFireAxeFocusChanged(bool focused)
+    {
+        if (!IsInstanceValid(_localFireAxe))
+        {
+            FocusController.FocusStateChanged -= OnFireAxeFocusChanged;
+            return;
+        }
+
+        if (focused)
+        {
+            var tablero = GetNodeOrNull<TableroController>("tablero");
+            if (tablero == null) return;
+
+            // Recalculate barriers at the moment the player enters focus (freshest data).
+            var squares = tablero.GetAxeableBarriers();
+            if (squares.Count == 0)
+            {
+                _ = OphanimNode?.SayAsync("NOTHING TO BREAK.", 1.2f);
+                FocusController.Instance?.ExitFocus();
+                return;
+            }
+            _localFireAxe.BeginTargeting(tablero, squares);
+        }
+        else
+        {
+            // Focus exited (Escape / right-click) — return axe to camera hand.
+            _localFireAxe.ReturnToHand();
+        }
+    }
+
+    private void OnFireAxeBarrierSelected(int square)
+    {
+        // Unsubscribe now — FireAxe will call ExitFocus from ResetToFresh after the
+        // full strike + burn animation, so we don't want FocusStateChanged to fire
+        // OnFireAxeFocusChanged(false) in the middle of the animation.
+        FocusController.FocusStateChanged -= OnFireAxeFocusChanged;
+
+        var tablero = GetNodeOrNull<TableroController>("tablero");
+        if (tablero == null || _localFireAxe == null) return;
+
+        // Send the action — server will validate and broadcast fire_axe_used.
+        string json = $"{{\"action\":\"use_fire_axe\",\"target_square\":{square}}}";
+        LiveConnectionManager.SendGameAction(
+            LiveConnectionManager.CurrentMatchId,
+            LiveConnectionManager.LocalUserId,
+            json);
+        GD.Print($"[TM] use_fire_axe → target_square={square}");
+
+        // Optimistically swing onto the barrier; the fire_axe_used broadcast confirms.
+        Vector3 impactPos = tablero.GetBoardWorldPosition(square);
+        _localFireAxe.StrikeBarrier(impactPos);
+    }
+
+    private async void OnFireAxeUsed(JsonElement root)
+    {
+        int attackerUserId = root.TryGetProperty("attacker_user_id", out var aEl) ? aEl.GetInt32() : -1;
+        int targetSquare   = root.TryGetProperty("target_square",    out var sEl) ? sEl.GetInt32() : -1;
+        if (targetSquare < 1) return;
+
+        int    fwdUser = -1, fwdPiece = -1, fwdTo = -1;
+        int    bwdUser = -1, bwdPiece = -1, bwdTo = -1;
+        if (root.TryGetProperty("forward", out var fEl) && fEl.ValueKind == JsonValueKind.Object)
+        {
+            if (fEl.TryGetProperty("user_id",   out var fu)) fwdUser  = fu.GetInt32();
+            if (fEl.TryGetProperty("piece_id",  out var fp)) fwdPiece = fp.GetInt32();
+            if (fEl.TryGetProperty("to_square", out var ft)) fwdTo    = ft.GetInt32();
+        }
+        if (root.TryGetProperty("backward", out var bEl) && bEl.ValueKind == JsonValueKind.Object)
+        {
+            if (bEl.TryGetProperty("user_id",   out var bu)) bwdUser  = bu.GetInt32();
+            if (bEl.TryGetProperty("piece_id",  out var bp)) bwdPiece = bp.GetInt32();
+            if (bEl.TryGetProperty("to_square", out var bt)) bwdTo    = bt.GetInt32();
+        }
+        if (fwdUser < 0 || bwdUser < 0 || fwdPiece < 0 || bwdPiece < 0 || fwdTo < 0 || bwdTo < 0)
+            return;
+
+        _colorByUserId.TryGetValue(fwdUser, out var fwdColor);
+        _colorByUserId.TryGetValue(bwdUser, out var bwdColor);
+        if (fwdColor == null || bwdColor == null) return;
+        fwdColor = fwdColor.ToLower();
+        bwdColor = bwdColor.ToLower();
+
+        // Update our local board state first so subsequent barrier checks see the new positions.
+        int fwdSlot = ParchisLogic.ColorToSlot(fwdColor);
+        int bwdSlot = ParchisLogic.ColorToSlot(bwdColor);
+        if (fwdSlot >= 0 && fwdSlot < 4) _boardPositions[fwdSlot][fwdPiece] = fwdTo;
+        if (bwdSlot >= 0 && bwdSlot < 4) _boardPositions[bwdSlot][bwdPiece] = bwdTo;
+
+        var tablero = GetNodeOrNull<TableroController>("tablero");
+        if (tablero == null) return;
+
+        // Remote attacker: descend a copy of their axe onto the barrier so everyone sees the hit.
+        if (attackerUserId != LiveConnectionManager.LocalUserId)
+        {
+            if (_colorByUserId.TryGetValue(attackerUserId, out var aColor))
+            {
+                int aSlot = ColorToSlot(aColor.ToLower());
+                if (_itemSetsBySlot.TryGetValue(aSlot, out var aItemSet))
+                {
+                    var axe = aItemSet.GetNodeOrNull<FireAxe>("FireAxe");
+                    axe?.ApplyRemoteStrike(tablero.GetBoardWorldPosition(targetSquare));
+                }
+            }
+        }
+
+        // Slight delay so the impact reads visually before the pieces split apart.
+        await ToSignal(GetTree().CreateTimer(0.25f), SceneTreeTimer.SignalName.Timeout);
+        if (!IsInsideTree()) return;
+
+        await tablero.ApplyFireAxeSplit(fwdColor, fwdPiece, fwdTo, bwdColor, bwdPiece, bwdTo);
     }
 
     // ── Music crossfade ───────────────────────────────────────────────────────
