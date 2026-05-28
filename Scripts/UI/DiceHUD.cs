@@ -240,6 +240,8 @@ public partial class DiceHUD : Control
         if (_pendingRemoteShow)
         {
             _pendingRemoteShow   = false;
+            // A newer result always wins: fade the local panel so the two never overlap.
+            _instance?.ForceDismiss();
             _autoHideTween?.Kill();
             _rerollTween?.Kill();
             _rerollIconVisible   = false;
@@ -255,7 +257,14 @@ public partial class DiceHUD : Control
         if (_pendingRemoteRerollIcon)
         {
             _pendingRemoteRerollIcon = false;
+            _instance?.ForceDismiss();
             DoShowRerollIcon(_pendingRemoteRerollDoubles);
+            // Remote reroll icons must never linger — give them a hard auto-hide too.
+            // (HideHUD always hides the remote panel; it clears the reroll flag on fade-out.)
+            _autoHideTween?.Kill();
+            _autoHideTween = CreateTween();
+            _autoHideTween.TweenInterval(3.5f);
+            _autoHideTween.TweenCallback(Callable.From(() => HideHUD()));
         }
     }
 
@@ -273,6 +282,8 @@ public partial class DiceHUD : Control
         {
             _pendingAttach = false;
             _activeDice    = _pendingDice;
+            // Dismiss the remote HUD so both panels don't overlap in the corner.
+            _remoteInstance?.ForceDismiss();
             ShowHUD();
         }
 
@@ -282,6 +293,8 @@ public partial class DiceHUD : Control
             _activeDice        = null;
             SetFaceValue(0, _pendingStatic1);
             SetFaceValue(1, _pendingStatic2);
+            // Dismiss the remote HUD so both panels don't overlap in the corner.
+            _remoteInstance?.ForceDismiss();
             ShowHUD();
         }
 
@@ -300,6 +313,7 @@ public partial class DiceHUD : Control
         if (_pendingShowRerollIcon)
         {
             _pendingShowRerollIcon = false;
+            _remoteInstance?.ForceDismiss();
             DoShowRerollIcon(_pendingRerollDoubles);
         }
 
@@ -312,6 +326,7 @@ public partial class DiceHUD : Control
         if (_pendingShowNoMovesIcon)
         {
             _pendingShowNoMovesIcon = false;
+            _remoteInstance?.ForceDismiss();
             DoShowNoMovesIcon();
         }
     }
@@ -368,6 +383,20 @@ public partial class DiceHUD : Control
 
     // ── Internal ──────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Immediately cancels any ongoing show/auto-hide and fades out.
+    /// Called by the local HUD when it shows new dice so the remote panel doesn't overlap.
+    /// </summary>
+    private void ForceDismiss()
+    {
+        if (!Visible) return;
+        _autoHideTween?.Kill();
+        _rerollTween?.Kill();
+        _rerollIconVisible   = false;
+        _rerollIcon.Modulate = new Color(1f, 1f, 1f, 0f);
+        HideHUD();
+    }
+
     private void ShowHUD()
     {
         Visible = true;
@@ -380,7 +409,10 @@ public partial class DiceHUD : Control
 
     private void HideHUD()
     {
-        if (_rerollIconVisible) return; // keep panel up while reroll icon is showing
+        // The local panel stays up while its reroll icon shows (it's an actionable prompt:
+        // "you can roll again"). The remote panel is purely informational, so it must always
+        // be allowed to time out — otherwise a remote reroll icon can stick forever.
+        if (!IsRemote && _rerollIconVisible) return;
         _fadeTween?.Kill();
         _fadeTween = CreateTween();
         _fadeTween.TweenProperty(this, "modulate:a", 0f, 0.5f)
@@ -388,6 +420,12 @@ public partial class DiceHUD : Control
                   .SetEase(Tween.EaseType.In);
         _fadeTween.TweenCallback(Callable.From(() => {
             Visible = false;
+            _rerollIconVisible = false;
+            if (_rerollIcon != null)
+            {
+                _rerollIcon.Modulate = new Color(1f, 1f, 1f, 0f);
+                _rerollIcon.Rotation = 0f;
+            }
             if (_noMovesIcon != null)
             {
                 _noMovesIcon.Modulate = new Color(1f, 1f, 1f, 0f);

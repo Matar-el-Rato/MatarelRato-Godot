@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://bpgnypppa3vyh"
+path="res://.godot/imported/petrify.wav-d28450fe8abe9ac40fd517e9e203c909.sample"
+
+[deps]
+
+source_file="res://Assets/Sound FX/petrify.wav"
+dest_files=["res://.godot/imported/petrify.wav-d28450fe8abe9ac40fd517e9e203c909.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2

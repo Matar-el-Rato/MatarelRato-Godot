@@ -13,6 +13,22 @@ public partial class SeatToken : Node3D
 
 	private Label3D _label;
 
+	// ── Targeting API ─────────────────────────────────────────────────────────
+
+	/// <summary>User ID of the seated player. Set by TableManager after spawning.</summary>
+	public int UserId { get; private set; } = -1;
+
+	/// <summary>World position roughly at the seated player's head.</summary>
+	public Vector3 HeadWorldPosition =>
+		GlobalPosition + GlobalBasis * new Vector3(0f, _headLocalY, 0f);
+
+	private float          _headLocalY  = 1.8f;
+	private StaticBody3D   _targetBody;
+	private string         _username    = "";
+	private Label3D        _promptLabel;
+	private Tween          _promptTween;
+	private static readonly Color _promptColor = new Color(1f, 0.85f, 0.2f);
+
 	public override void _Ready()
 	{
 		Visible = false;
@@ -21,6 +37,8 @@ public partial class SeatToken : Node3D
 
 	// ── Public API ────────────────────────────────────────────────────────────
 
+	public void SetUserId(int id) => UserId = id;
+
 	/// <summary>
 	/// Sets username label and spawns the character model at the sitting position.
 	/// Call before Appear(). Token must already be positioned at chair.GlobalPosition
@@ -28,6 +46,8 @@ public partial class SeatToken : Node3D
 	/// </summary>
 	public void SetPlayerInfo(string username, string colorKey, int skinId, Chair chair)
 	{
+		_username = username;
+
 		var font = ResourceLoader.Load<Font>("res://Assets/Fonts/Jersey10-Regular.ttf");
 		_label = new Label3D
 		{
@@ -58,6 +78,7 @@ public partial class SeatToken : Node3D
 
 	public void Disappear()
 	{
+		SetTargetable(false);
 		AddBurnFlash();
 		AddEmbers();
 		var tween = CreateTween();
@@ -66,6 +87,91 @@ public partial class SeatToken : Node3D
 			 .SetEase(Tween.EaseType.InOut);
 		tween.Finished += () => { if (IsInsideTree()) QueueFree(); };
 	}
+
+	/// <summary>
+	/// Adds (or removes) the collision body that lets this seat be raycast-targeted by
+	/// the Handcuffs item. Safe to call multiple times; no-ops if already active.
+	/// </summary>
+	public void SetTargetable(bool active)
+	{
+		if (active)
+		{
+			if (_targetBody != null) return;
+
+			// Capsule collision centred on the torso/head area.
+			// Adding a StaticBody3D to the scene tree during _process / tween callbacks
+			// causes a Jolt crash. Defer it so it enters the tree at the safe deferred point.
+			_targetBody = new StaticBody3D { Name = "TargetBody" };
+			var shape = new CollisionShape3D();
+			shape.Shape = new CapsuleShape3D { Radius = 0.45f, Height = 1.8f };
+			_targetBody.AddChild(shape);
+			_targetBody.Position = new Vector3(0f, _headLocalY - 0.55f, 0f);
+			var bodyToAdd = _targetBody;
+			Callable.From(() => { if (IsInsideTree() && IsInstanceValid(bodyToAdd)) AddChild(bodyToAdd); })
+			        .CallDeferred();
+		}
+		else
+		{
+			ShowHandcuffPrompt(false);
+			if (_targetBody != null)
+			{
+				_targetBody.QueueFree();
+				_targetBody = null;
+			}
+		}
+	}
+
+	/// <summary>
+	/// Shows or hides a "Handcuff {name}" billboard prompt above this seat's head,
+	/// used while the local player is aiming the Handcuffs item at this player.
+	/// </summary>
+	public void ShowHandcuffPrompt(bool show)
+	{
+		if (show)
+		{
+			if (_promptLabel == null)
+			{
+				var font = ResourceLoader.Load<Font>("res://Assets/Fonts/Jersey10-Regular.ttf");
+				_promptLabel = new Label3D
+				{
+					Font            = font,
+					FontSize        = 56,
+					PixelSize       = 0.003f,
+					Billboard       = BaseMaterial3D.BillboardModeEnum.Enabled,
+					Modulate        = new Color(_promptColor.R, _promptColor.G, _promptColor.B, 0f),
+					OutlineSize     = 10,
+					OutlineModulate = new Color(0f, 0f, 0f, 1f),
+					NoDepthTest     = true,
+					Text            = $"Handcuff {_username}",
+					Position        = new Vector3(0f, _headLocalY + 0.35f, 0f),
+				};
+				AddChild(_promptLabel);
+			}
+
+			// Fade in, like the standard interactable prompt.
+			_promptLabel.Visible = true;
+			_promptTween?.Kill();
+			_promptTween = CreateTween();
+			_promptTween.TweenProperty(_promptLabel, "modulate:a", 1f, 0.15f)
+			            .SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.Out);
+		}
+		else if (_promptLabel != null)
+		{
+			// Fade out, then hide.
+			_promptTween?.Kill();
+			_promptTween = CreateTween();
+			_promptTween.TweenProperty(_promptLabel, "modulate:a", 0f, 0.12f)
+			            .SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.In);
+			_promptTween.TweenCallback(Callable.From(() =>
+			{
+				if (IsInstanceValid(_promptLabel)) _promptLabel.Visible = false;
+			}));
+		}
+	}
+
+	/// <summary>Returns true if the given physics body is this token's targeting collision.</summary>
+	public bool IsHitBy(Node body) =>
+		_targetBody != null && (body == _targetBody || _targetBody.IsAncestorOf(body));
 
 	// ── Character spawning ────────────────────────────────────────────────────
 
@@ -86,7 +192,6 @@ public partial class SeatToken : Node3D
 		var orientFix = player?.GetNodeOrNull<Node3D>("character/OrientationFix");
 
 		// Container sits at the same local offset the player body would use when seated.
-		// Scale and rotation must both match OrientationFix (0.38 uniform + -90° Y).
 		var container = new Node3D();
 		container.Position = chair.SitOffset + entry.SittingOffset;
 		if (orientFix != null)
@@ -95,6 +200,9 @@ public partial class SeatToken : Node3D
 			container.Scale    = orientFix.Scale;
 		}
 		AddChild(container);
+
+		// Store approximate head height for targeting/handcuffs.
+		_headLocalY = container.Position.Y + 1.5f;
 
 		// Instantiate the character model under the orientation container.
 		var model = entry.ModelScene.Instantiate<Node3D>();
@@ -106,7 +214,6 @@ public partial class SeatToken : Node3D
 
 		if (animPlayer != null)
 		{
-			// Apply idle rotation to root bone (compensates Blender export offset).
 			var root = animPlayer.GetNodeOrNull<Node3D>(animPlayer.RootNode);
 			if (root != null)
 				root.RotationDegrees = new Vector3(root.RotationDegrees.X, entry.IdleRotation, root.RotationDegrees.Z);
@@ -120,8 +227,6 @@ public partial class SeatToken : Node3D
 		}
 
 		// Position label just above the seated character's head.
-		// Container origin is at (SitOffset + SittingOffset) local to the token.
-		// Seated head is roughly 1.5 units above the container origin.
 		if (_label != null)
 			_label.Position = new Vector3(0, container.Position.Y + 1.5f, 0);
 	}

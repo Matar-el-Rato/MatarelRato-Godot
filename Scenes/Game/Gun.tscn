@@ -20,7 +20,7 @@ MisfireClickSound = ExtResource("2_dwjyx")
 [node name="Interactable" type="Node3D" parent="." unique_id=540061889]
 script = ExtResource("3_interactable_script")
 PromptText = "Pick up Makarov"
-TooltipText = "A loaded Makarov pistol. Fire it at another player — or yourself. One chamber may be live."
+TooltipText = "A loaded Makarov pistol. Fire it at another player, might come back to bite your ass."
 UseLeftClick = true
 HighlightTargetMesh = NodePath("../makarov")
 UseShellHighlight = true

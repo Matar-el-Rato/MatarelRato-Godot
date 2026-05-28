@@ -4,16 +4,16 @@
 [ext_resource type="PackedScene" uid="uid://cmrj85xoh8t1j" path="res://Assets/PlayingSet/PerPlayer/magnifying_glass.glb" id="2_model"]
 [ext_resource type="Script" uid="uid://bk7ngt4ktf6i6" path="res://Scripts/Interaction/Interactable.cs" id="3_interactable"]
 
-[node name="MagnifyingGlass" type="Node3D"]
+[node name="MagnifyingGlass" type="Node3D" unique_id=17345759]
 script = ExtResource("1_script")
 InteractablePath = NodePath("Interactable")
 
-[node name="mag_model" parent="." instance=ExtResource("2_model")]
+[node name="mag_model" parent="." unique_id=816643436 instance=ExtResource("2_model")]
 
-[node name="Interactable" type="Node3D" parent="."]
+[node name="Interactable" type="Node3D" parent="." unique_id=1826609086]
 script = ExtResource("3_interactable")
 PromptText = "Inspect"
-TooltipText = "Examine the barrel. Reveals whether the next chamber is live or blank."
+TooltipText = "Peek into the next die results, you might not like it."
 UseLeftClick = true
 HighlightTargetMesh = NodePath("../mag_model")
 UseShellHighlight = true

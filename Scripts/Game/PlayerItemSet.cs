@@ -104,6 +104,11 @@ public partial class PlayerItemSet : Node3D
             GD.PrintErr($"[PIS] SpawnItem: '{nodeName}' not found in {Name}");
             return;
         }
+        if (item.Visible)
+        {
+            GD.Print($"[PIS] SpawnItem: '{nodeName}' already visible — skipping duplicate grant");
+            return;
+        }
 
         Vector3 origScale = _originalScales.TryGetValue(nodeName, out var s) ? s : item.Scale;
 

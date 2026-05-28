@@ -109,6 +109,15 @@ public partial class TableManager : Node3D
     // Plays the game music track; started on initiative_sequence and cleaned up on reset.
     private AudioStreamPlayer _gameMusicPlayer;
 
+    // ── Item mechanics ────────────────────────────────────────────────────────
+    // Local player's item script references (null until WireLocalItemEvents is called).
+    private Handcuffs _localHandcuffs;
+    private Cigarette _localCigarette;
+    // Maps handcuffed userId → Handcuffs instance currently on their head.
+    private readonly Dictionary<int, Handcuffs> _activeHandcuffs = new();
+    // Set by OnCigaretteResult; polled by the async OnSmokingComplete before showing HUD.
+    private bool _cigaretteResultReady = false;
+
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
     public override void _Ready()
@@ -155,6 +164,10 @@ public partial class TableManager : Node3D
         foreach (var row in _boardPositions)
             Array.Clear(row, 0, row.Length);
         ClearSelectables();
+        _localHandcuffs = null;
+        _localCigarette = null;
+        _activeHandcuffs.Clear();
+        _cigaretteResultReady = false;
     }
 
     public override void _Process(double delta)
@@ -211,6 +224,8 @@ public partial class TableManager : Node3D
                 case "golden_square_event":  OnGoldenSquareEvent(root);   break;
                 case "triple_double_penalty": OnTripleDouble(root);       break;
                 case "handcuff_skip":        OnHandcuffSkip(root);        break;
+                case "handcuffs_applied":    OnHandcuffsApplied(root);    break;
+                case "cigarette_result":     OnCigaretteResult(root);     break;
                 case "life_lost":            OnLifeLost(root);            break;
                 case "game_over":            OnGameOver(root);            break;
                 case "turn_timer_warning":   OnTimerWarning(root);        break;
@@ -240,11 +255,17 @@ public partial class TableManager : Node3D
         if (_chairsByColor.TryGetValue(color, out var chair))
         {
             if (color == Chair.LocalChosenKey)
+            {
                 _localChosenColor = color;
+                // Wire item events now that we know our own slot.
+                int localSlot = ColorToSlot(color.ToLower());
+                if (localSlot >= 0 && _itemSetsBySlot.TryGetValue(localSlot, out var localSet))
+                    WireLocalItemEvents(localSet);
+            }
 
             if (color != _localChosenColor) {
                 chair.SetTaken();
-                SpawnSeatToken(chair, color, username, skinId);
+                SpawnSeatToken(chair, color, username, skinId, userId);
             }
         }
 
@@ -411,6 +432,8 @@ public partial class TableManager : Node3D
         GD.Print($"[TM] turn_start user_id={userId} isMyTurn={_isMyTurn}");
 
         GetNodeOrNull<CubileteController>("CubileteAndDice")?.SetInteractionEnabled(_isMyTurn);
+        // Handcuffs are available the whole turn; cigarette only opens after dice_result.
+        if (_isMyTurn) EnableHandcuffs(true);
 
         if (_initiativeInProgress) return;
 
@@ -422,9 +445,13 @@ public partial class TableManager : Node3D
 
         if (userId == _cubileteAtUserId)
         {
-            // Doubles: cup was already reset by ReturnDiceEarly; only call ReadyForRoll
-            // as a fallback if _doublesAnimating was never set (very fast server round-trip).
-            if (_isMyTurn && !_doublesAnimating)
+            // Same player keeps the turn (doubles / 5+5 / extra roll). Always force the cup
+            // back to a grabbable Stationary state. Previously this skipped ReadyForRoll when
+            // _doublesAnimating was set and relied on ReturnDiceEarly — but after a physical
+            // roll the cup mesh is hidden and in State.Moving, and if that animation hadn't
+            // finished the cup stayed hidden/ungrabbable, so the player timed out unable to
+            // roll. ReadyForRoll is idempotent and re-shows the cup, so it's safe to always run.
+            if (_isMyTurn)
                 GetNodeOrNull<CubileteController>("CubileteAndDice")?.ReadyForRoll();
             _doublesAnimating = false;
             return;
@@ -505,6 +532,9 @@ public partial class TableManager : Node3D
 
         HighlightMoveablePieces(ourColor, moveable);
 
+        // Enable the cigarette during this window (dice rolled, piece not yet moved).
+        EnableCigarette(true);
+
         if (moveable.Count > 0)
             MoveCounterHUD.Show(die1 + die2);
         else if (!isDoubles)
@@ -558,6 +588,16 @@ public partial class TableManager : Node3D
         var tablero = GetNodeOrNull<TableroController>("tablero");
         tablero?.ReturnToBase(victimColor, victimPieceId);
         GD.Print($"[TM] capture: {victimColor} piece {victimPieceId} sent home");
+
+        // Hitmarker on every capture (broadcast event, so every client hears it).
+        var hitClip = GD.Load<AudioStream>("res://Assets/Sound FX/hitmarker.wav");
+        if (hitClip != null)
+        {
+            var sfx = new AudioStreamPlayer { Stream = hitClip, VolumeDb = -2f };
+            AddChild(sfx);
+            sfx.Play();
+            sfx.Finished += () => sfx.QueueFree();
+        }
     }
 
     private void OnGoalScored(JsonElement root)
@@ -649,6 +689,11 @@ public partial class TableManager : Node3D
     {
         FocusController.IsBlocked = false; // safety: clear any stale block from this turn
         ClearSelectables();
+        EnableCigarette(false);
+        // Cancel any in-progress handcuff targeting and disable until next turn.
+        // (?. only guards null — the node may be freed after the item is consumed.)
+        if (IsInstanceValid(_localHandcuffs)) _localHandcuffs.CancelTargeting();
+        EnableHandcuffs(false);
         _pendingDie1       = 0;
         _pendingDie2       = 0;
         _pendingBonusMoves = 0;
@@ -735,8 +780,22 @@ public partial class TableManager : Node3D
             ? itemSet.GetItemWorldPosition(finalItem)
             : OphanimNode?.GlobalPosition ?? GlobalPosition;
 
+        // SpawnItem eagerly enables interaction the instant the item is revealed. Re-gate
+        // it to the CURRENT turn state in the same step, because by the time the item
+        // appears the long grant animation has usually outlasted our turn (the cubilete
+        // has already moved to the next player) — or this may be a remote player's grant.
+        // Doing it inside onGrant (rather than after the animation) leaves no window where
+        // the item is interactable out of turn.
         System.Action onGrant = finalItem != null && itemSet != null
-            ? () => itemSet.SpawnItem(finalItem)
+            ? () =>
+            {
+                itemSet.SpawnItem(finalItem);
+                if (userId == LiveConnectionManager.LocalUserId)
+                {
+                    if (finalItem == "handcuffs")      EnableHandcuffs(_isMyTurn); // usable the whole turn, if it's still ours
+                    else if (finalItem == "cigarette") EnableCigarette(false);     // only opens in the post-roll window
+                }
+            }
             : (System.Action)null;
 
         // ── Ophanim announces + shoots ray ───────────────────────────────────
@@ -797,6 +856,111 @@ public partial class TableManager : Node3D
         int userId = root.TryGetProperty("user_id", out var u) ? u.GetInt32() : -1;
         string who = _usernameByUserId.TryGetValue(userId, out var n) ? n : $"#{userId}";
         GD.Print($"[TM] handcuff_skip: {who} loses their turn");
+
+        // Ophanim taunts the skipped player — broadcast event, so every client sees it.
+        // Hold the line long enough to register before the next turn starts.
+        if (OphanimNode != null) _ = OphanimNode.SayAsync("TOO BAD...", 2.0f);
+
+        if (_activeHandcuffs.TryGetValue(userId, out var handcuffs))
+        {
+            if (IsInstanceValid(handcuffs))
+                handcuffs.BurnDisappear();
+            _activeHandcuffs.Remove(userId);
+        }
+    }
+
+    private void OnHandcuffsApplied(JsonElement root)
+    {
+        int attackerUserId = root.TryGetProperty("attacker_user_id", out var aEl) ? aEl.GetInt32() : -1;
+        int targetUserId   = root.TryGetProperty("target_user_id",   out var tEl) ? tEl.GetInt32() : -1;
+        if (attackerUserId < 0 || targetUserId < 0) return;
+
+        // Resolve target's head world position. Remote players are represented by a
+        // SeatToken on our client; the LOCAL player has no SeatToken (they are the
+        // first-person camera), so derive the head pos from the camera in that case —
+        // otherwise we'd silently bail out and the cuffs would never be shown on us.
+        Vector3 headPos;
+        if (targetUserId == LiveConnectionManager.LocalUserId)
+        {
+            var cam = GetViewport().GetCamera3D();
+            if (cam == null) return;
+            headPos = cam.GlobalPosition + Vector3.Up * 0.25f;
+        }
+        else
+        {
+            if (!_colorByUserId.TryGetValue(targetUserId, out var tColor)) return;
+            if (!_seatTokensByColor.TryGetValue(tColor.ToLower(), out var targetToken)) return;
+            if (!IsInstanceValid(targetToken)) return;
+            headPos = targetToken.HeadWorldPosition;
+        }
+
+        if (attackerUserId == LiveConnectionManager.LocalUserId)
+        {
+            // Local player already placed their handcuffs optimistically in OnHandcuffsPlayerSelected.
+            // Just register the tracking entry.
+            if (_localHandcuffs != null)
+                _activeHandcuffs[targetUserId] = _localHandcuffs;
+            return;
+        }
+
+        // Remote attacker — fly their Handcuffs to the target's head.
+        if (!_colorByUserId.TryGetValue(attackerUserId, out var aColor)) return;
+        int aSlot = ColorToSlot(aColor.ToLower());
+        if (!_itemSetsBySlot.TryGetValue(aSlot, out var aItemSet)) return;
+
+        var handcuffs = aItemSet.GetNodeOrNull<Handcuffs>("Handcuffs");
+        if (handcuffs == null) return;
+
+        handcuffs.ApplyRemoteToHead(headPos);
+        _activeHandcuffs[targetUserId] = handcuffs;
+    }
+
+    private void OnCigaretteResult(JsonElement root)
+    {
+        int userId = root.TryGetProperty("user_id", out var u) ? u.GetInt32() : -1;
+        int die1   = root.TryGetProperty("die1",    out var d1) ? d1.GetInt32() : 0;
+        int die2   = root.TryGetProperty("die2",    out var d2) ? d2.GetInt32() : 0;
+
+        var moveableFromServer = new HashSet<int>();
+        if (root.TryGetProperty("moveable_pieces", out var mpEl))
+            foreach (var el in mpEl.EnumerateArray())
+                moveableFromServer.Add(el.GetInt32());
+
+        bool isMyReroll = userId == LiveConnectionManager.LocalUserId;
+        GD.Print($"[TM] cigarette_result user={userId} die1={die1} die2={die2}");
+
+        // Burn the cigarette for the player who used it (on all clients).
+        if (userId >= 0 && _colorByUserId.TryGetValue(userId, out var color))
+        {
+            int slot = ColorToSlot(color.ToLower());
+            if (_itemSetsBySlot.TryGetValue(slot, out var itemSet))
+                itemSet.GetNodeOrNull<Cigarette>("CigaretteInteraction")?.BurnDisappear();
+        }
+
+        if (!isMyReroll)
+        {
+            DiceHUD.ShowRemote(die1, die2);
+            return;
+        }
+
+        // Our reroll — update pending dice and re-highlight moveable pieces.
+        // HUD is intentionally NOT shown here; OnSmokingComplete shows it after the vibration sequence.
+        _pendingDie1       = die1;
+        _pendingDie2       = die2;
+        _pendingBonusMoves = 0;
+
+        string ourColor = _colorByUserId.TryGetValue(LiveConnectionManager.LocalUserId, out var oc)
+            ? oc.ToLower() : "";
+
+        var moveable = moveableFromServer.Count > 0
+            ? new System.Collections.Generic.List<int>(moveableFromServer)
+            : (ourColor.Length > 0 ? ParchisLogic.GetMoveablePieces(ourColor, die1, die2, _boardPositions)
+                                   : new System.Collections.Generic.List<int>());
+
+        HighlightMoveablePieces(ourColor, moveable);
+
+        // Signal the async OnSmokingComplete that the result is ready.
+        _cigaretteResultReady = true;
     }
 
     private void OnLifeLost(JsonElement root)
@@ -1024,6 +1188,7 @@ public partial class TableManager : Node3D
     private void OnPieceClicked(FichaNode ficha)
     {
         ClearSelectables(); // prevent double-send
+        EnableCigarette(false); // committed to a move — can't smoke anymore
         string moveJson = $"{{\"action\":\"move_piece\",\"piece_id\":{ficha.PieceIndex}}}";
         LiveConnectionManager.SendGameAction(
             LiveConnectionManager.CurrentMatchId,
@@ -1138,7 +1303,7 @@ public partial class TableManager : Node3D
         }
     }
 
-    private void SpawnSeatToken(Chair chair, string color, string username, int skinId)
+    private void SpawnSeatToken(Chair chair, string color, string username, int skinId, int userId)
     {
         if (_seatTokensByColor.TryGetValue(color, out var old) && IsInstanceValid(old))
             old.QueueFree();
@@ -1146,6 +1311,7 @@ public partial class TableManager : Node3D
         AddChild(token);
         token.GlobalPosition = chair.GlobalPosition;
         token.GlobalRotation = chair.GlobalRotation;
+        token.SetUserId(userId);
         token.SetPlayerInfo(username, color, skinId, chair);
         token.Appear();
         _seatTokensByColor[color] = token;
@@ -1188,6 +1354,158 @@ public partial class TableManager : Node3D
         for (int i = 0; i < SlotColorNames.Length; i++)
             if (SlotColorNames[i].ToLower() == colorLower) return i;
         return -1;
+    }
+
+    // ── Item event wiring ─────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Called once when the local player's chair_taken event arrives.
+    /// Caches item references and connects signals for local-player item mechanics.
+    /// </summary>
+    private void WireLocalItemEvents(PlayerItemSet itemSet)
+    {
+        _localHandcuffs = itemSet.GetNodeOrNull<Handcuffs>("Handcuffs");
+        _localCigarette = itemSet.GetNodeOrNull<Cigarette>("CigaretteInteraction");
+
+        if (_localHandcuffs != null)
+        {
+            _localHandcuffs.Grabbed        += OnHandcuffsGrabbed;
+            _localHandcuffs.PlayerSelected += OnHandcuffsPlayerSelected;
+            // Gate: handcuffs disabled until it's our turn.
+            _localHandcuffs.SetInteractionEnabled(false);
+        }
+        if (_localCigarette != null)
+        {
+            _localCigarette.SmokingComplete += OnSmokingComplete;
+            // Gate: cigarette disabled until dice_result opens the window.
+            _localCigarette.SetInteractionEnabled(false);
+        }
+    }
+
+    private void OnHandcuffsGrabbed()
+    {
+        // Build the list of opponent SeatTokens to highlight.
+        var targets = new System.Collections.Generic.List<SeatToken>();
+        foreach (var kvp in _seatTokensByColor)
+        {
+            if (kvp.Key.ToLower() == _localChosenColor.ToLower()) continue;
+            if (IsInstanceValid(kvp.Value)) targets.Add(kvp.Value);
+        }
+        _localHandcuffs?.BeginTargeting(targets);
+    }
+
+    private void OnHandcuffsPlayerSelected(SeatToken token)
+    {
+        if (token == null) return;
+        int targetUserId = token.UserId;
+
+        // Send server action.
+        string json = $"{{\"action\":\"use_handcuffs\",\"target_user_id\":{targetUserId}}}";
+        LiveConnectionManager.SendGameAction(
+            LiveConnectionManager.CurrentMatchId,
+            LiveConnectionManager.LocalUserId,
+            json);
+        GD.Print($"[TM] use_handcuffs → target_user_id={targetUserId}");
+
+        // Optimistically fly handcuffs to target's head (server will confirm via handcuffs_applied).
+        _localHandcuffs?.PlaceOnPlayerHead(token.HeadWorldPosition);
+
+        // Track so we can BurnDisappear on handcuff_skip.
+        if (_localHandcuffs != null)
+            _activeHandcuffs[targetUserId] = _localHandcuffs;
+    }
+
+    private async void OnSmokingComplete()
+    {
+        if (!IsInsideTree()) return;
+
+        // Disable the cigarette — it's been consumed.
+        _localCigarette?.SetInteractionEnabled(false);
+
+        // Hide HUDs and block piece interaction for the duration of the reroll sequence.
+        ClearSelectables();
+        MoveCounterHUD.Hide();
+        DiceHUD.HideResult();
+        FocusController.Instance?.ExitFocus();
+        FocusController.IsBlocked = true;
+
+        // Arc dice back into the cup so there's no stale physics dice on screen.
+        var cubilete = GetNodeOrNull<CubileteController>("CubileteAndDice");
+        Vector3 cupPos = Vector3.Zero;
+        if (cubilete != null)
+        {
+            cupPos = GetCubiletePositionForColor(_localChosenColor.ToLower());
+            cubilete.ReturnDiceForReroll(cupPos);
+        }
+
+        // Request a reroll from the server.
+        _cigaretteResultReady = false;
+        string json = "{\"action\":\"use_cigarette\"}";
+        LiveConnectionManager.SendGameAction(
+            LiveConnectionManager.CurrentMatchId,
+            LiveConnectionManager.LocalUserId,
+            json);
+        GD.Print("[TM] use_cigarette sent");
+
+        // Ophanim acknowledges the smoke with a line before re-rolling, so it doesn't feel abrupt.
+        if (OphanimNode != null) await OphanimNode.SayAsync("FAIR ENOUGH.", 0.8f);
+        if (!IsInsideTree()) return;
+
+        // Wait for cigarette_result (up to 3 extra seconds as a safety net).
+        float waitedExtra = 0f;
+        while (!_cigaretteResultReady && waitedExtra < 3.0f)
+        {
+            await ToSignal(GetTree().CreateTimer(0.1f), SceneTreeTimer.SignalName.Timeout);
+            if (!IsInsideTree()) return;
+            waitedExtra += 0.1f;
+        }
+
+        // Shoot a small cream ray toward the cup to telegraph the result.
+        if (OphanimNode != null && cupPos != Vector3.Zero)
+            OphanimNode.ShootRerollRay(cupPos);
+
+        // The dice change without a physical throw, so fake the clack of them landing.
+        cubilete?.PlayThrowClacks();
+
+        // Brief pause so the ray is visible before the HUD pops in.
+        await ToSignal(GetTree().CreateTimer(0.2f), SceneTreeTimer.SignalName.Timeout);
+        if (!IsInsideTree()) return;
+
+        // Unblock input and show the updated HUD with the server's new roll.
+        FocusController.IsBlocked = false;
+
+        if (_pendingDie1 > 0)
+        {
+            DiceHUD.ShowStatic(_pendingDie1, _pendingDie2);
+            if (_selectablePieces.Count > 0)
+                MoveCounterHUD.Show(_pendingDie1 + _pendingDie2);
+            else
+                DiceHUD.ShowNoMovesIcon();
+        }
+    }
+
+    /// <summary>
+    /// Enables/disables the local cigarette, but only if it is currently visible (owned).
+    /// </summary>
+    private void EnableCigarette(bool enabled)
+    {
+        // The node is freed when the item is consumed (BurnDisappear → QueueFree),
+        // so guard against a stale reference before touching it.
+        if (!IsInstanceValid(_localCigarette)) return;
+        if (enabled && !_localCigarette.Visible) return; // not granted yet
+        _localCigarette.SetInteractionEnabled(enabled);
+    }
+
+    /// <summary>
+    /// Enables/disables the local handcuffs, but only if the node is still visible (owned).
+    /// </summary>
+    private void EnableHandcuffs(bool enabled)
+    {
+        // The node is freed when the item is consumed, so guard against a stale
+        // reference before touching it.
+        if (!IsInstanceValid(_localHandcuffs)) return;
+        if (enabled && !_localHandcuffs.Visible) return; // not granted yet
+        _localHandcuffs.SetInteractionEnabled(enabled);
     }
 
     // ── Music crossfade ───────────────────────────────────────────────────────

@@ -113,7 +113,7 @@ transform = Transform3D(0.26212183, -0.9650348, 0, 0.9650348, 0.26212183, 0, 0, 
 [node name="Interactable" type="Node3D" parent="." unique_id=276991405]
 script = ExtResource("4_interactable_script")
 PromptText = "Smoke Cigarette"
-TooltipText = "Smoke a cigarette to restore one lost life. Use it wisely."
+TooltipText = "Smoke a cigarette to restore last dice reroll, Ophanim will decide."
 UseLeftClick = true
 HighlightTargetMesh = NodePath("../ciggie_cunt")
 UseShellHighlight = true

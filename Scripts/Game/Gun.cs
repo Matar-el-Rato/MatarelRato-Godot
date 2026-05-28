@@ -55,6 +55,15 @@ public partial class Gun : Node3D
 	private bool   _hasBeenShot    = false;
 	private bool   _isReturning    = false;
 	private bool   _isTransitioning = false;
+	private bool   _isDisappearing  = false;
+
+	// Initial transform/parent captured at _Ready so a consumed makarov resets back to the
+	// hidden "fresh" pose PlayerItemSet expects for a future SpawnItem grant — even if
+	// it was never grabbed on this client (remote-attacker view).
+	private Node    _initialParent;
+	private Vector3 _initialLocalPos;
+	private Vector3 _initialLocalRot;
+	private Vector3 _initialLocalScale = Vector3.One;
 
 	// ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -88,6 +97,11 @@ public partial class Gun : Node3D
 			_clickPlayer.VolumeDb = MisfireVolumeDb;
 			AddChild(_clickPlayer);
 		}
+
+		_initialParent     = GetParent();
+		_initialLocalPos   = Position;
+		_initialLocalRot   = Rotation;
+		_initialLocalScale = Scale;
 	}
 
 	// ── Per-frame ─────────────────────────────────────────────────────────────
@@ -252,6 +266,52 @@ public partial class Gun : Node3D
 		{
 			_clickPlayer?.Play();
 		}
+	}
+
+	// ── Consume ───────────────────────────────────────────────────────────────
+
+	/// <summary>
+	/// Scales the makarov out and resets it to its hidden "fresh" state so a future
+	/// golden-square grant via PlayerItemSet.SpawnItem can re-spawn it. Crucially does NOT
+	/// QueueFree — PlayerItemSet looks the node up by name ("Gun") in SpawnItem, so freeing
+	/// it would make any subsequent grant fail with "not found in PlayerItemSet".
+	/// </summary>
+	public void BurnDisappear()
+	{
+		if (_isDisappearing) return;
+		_isDisappearing = true;
+		SetInteractionEnabled(false);
+		SetCollisionsEnabled(this, false);
+
+		var tween = CreateTween();
+		tween.TweenProperty(this, "scale", new Vector3(0.001f, 0.001f, 0.001f), 0.5f)
+		     .SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.In);
+		tween.Finished += ResetToFresh;
+	}
+
+	private void ResetToFresh()
+	{
+		if (!IsInsideTree()) return;
+
+		// If the gun was reparented to a hand during use, return it under the PlayerItemSet
+		// so SpawnItem's name lookup succeeds on the next grant.
+		if (_initialParent != null && IsInstanceValid(_initialParent) && GetParent() != _initialParent)
+			Reparent(_initialParent, true);
+
+		Position = _initialLocalPos;
+		Rotation = _initialLocalRot;
+		Scale    = _initialLocalScale;
+
+		Visible = false;
+		if (_interactable != null) _interactable.Enabled = false;
+
+		_isInHand          = false;
+		_hasBeenShot       = false;
+		_isReturning       = false;
+		_isTransitioning   = false;
+		_isDisappearing    = false;
+		_timeSinceLastShot = 0;
+		Interactor.IsLocked = false;
 	}
 
 	// ── Collision helper ──────────────────────────────────────────────────────

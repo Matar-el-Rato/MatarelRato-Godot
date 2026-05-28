@@ -30,6 +30,15 @@ public partial class FireAxe : Node3D
 	private bool _isInHand        = false;
 	private bool _isReturning     = false;
 	private bool _isTransitioning = false;
+	private bool _isDisappearing  = false;
+
+	// Initial transform/parent captured at _Ready so a consumed axe resets back to the
+	// hidden "fresh" pose PlayerItemSet expects for a future SpawnItem grant — even if
+	// it was never grabbed on this client (remote-attacker view).
+	private Node    _initialParent;
+	private Vector3 _initialLocalPos;
+	private Vector3 _initialLocalRot;
+	private Vector3 _initialLocalScale = Vector3.One;
 
 	// ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -38,6 +47,21 @@ public partial class FireAxe : Node3D
 		_interactable = GetNodeOrNull<Interactable>(InteractablePath);
 		if (_interactable != null)
 			_interactable.Interacted += OnInteracted;
+
+		_initialParent     = GetParent();
+		_initialLocalPos   = Position;
+		_initialLocalRot   = Rotation;
+		_initialLocalScale = Scale;
+	}
+
+	/// <summary>
+	/// Enable/disable interaction. TableManager gates this around the appropriate window
+	/// once the break-barrier logic is wired.
+	/// </summary>
+	public void SetInteractionEnabled(bool enabled)
+	{
+		if (_interactable != null)
+			_interactable.Enabled = enabled;
 	}
 
 	// ── Input ─────────────────────────────────────────────────────────────────
@@ -115,6 +139,50 @@ public partial class FireAxe : Node3D
 			SetCollisionsEnabled(this, true);
 			Interactor.IsLocked = false;
 		};
+	}
+
+	// ── Consume ───────────────────────────────────────────────────────────────
+
+	/// <summary>
+	/// Scales the axe out and resets it to its hidden "fresh" state so a future
+	/// golden-square grant via PlayerItemSet.SpawnItem can re-spawn it. Crucially does NOT
+	/// QueueFree — PlayerItemSet looks the node up by name ("FireAxe") in SpawnItem, so
+	/// freeing it would make any subsequent grant fail with "not found in PlayerItemSet".
+	/// </summary>
+	public void BurnDisappear()
+	{
+		if (_isDisappearing) return;
+		_isDisappearing = true;
+		SetInteractionEnabled(false);
+		SetCollisionsEnabled(this, false);
+
+		var tween = CreateTween();
+		tween.TweenProperty(this, "scale", new Vector3(0.001f, 0.001f, 0.001f), 0.5f)
+			 .SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.In);
+		tween.Finished += ResetToFresh;
+	}
+
+	private void ResetToFresh()
+	{
+		if (!IsInsideTree()) return;
+
+		// If the axe was reparented to a hand during use, return it under the PlayerItemSet
+		// so SpawnItem's name lookup succeeds on the next grant.
+		if (_initialParent != null && IsInstanceValid(_initialParent) && GetParent() != _initialParent)
+			Reparent(_initialParent, true);
+
+		Position = _initialLocalPos;
+		Rotation = _initialLocalRot;
+		Scale    = _initialLocalScale;
+
+		Visible = false;
+		if (_interactable != null) _interactable.Enabled = false;
+
+		_isInHand        = false;
+		_isReturning     = false;
+		_isTransitioning = false;
+		_isDisappearing  = false;
+		Interactor.IsLocked = false;
 	}
 
 	// ── Collision helper ──────────────────────────────────────────────────────

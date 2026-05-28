@@ -475,6 +475,47 @@ public partial class CubileteController : Node3D
 		tcs.SetResult(true);
 	}
 
+	/// <summary>
+	/// Called after the local player uses a cigarette (SmokingComplete fired).
+	/// Freeze the dice, arc them back into the cup, hide them, and leave the cup
+	/// in Stationary-with-interaction-disabled until TableManager re-enables it
+	/// on the next turn_start (after cigarette_result is processed).
+	/// </summary>
+	public async void ReturnDiceForReroll(Vector3 boardPos)
+	{
+		if (_currentState == State.Hidden) return;
+
+		// Immediately freeze any still-rolling dice.
+		foreach (var die in _dice) die.Freeze = true;
+
+		// Restore cup mesh from camera if it was grabbed.
+		RestoreMeshToParent();
+		SetCubileteVisible(true);
+		GlobalPosition = boardPos;
+		GlobalRotation = Vector3.Zero;
+
+		// Arc dice back to the cup position.
+		var tween = CreateTween().SetParallel(true);
+		for (int i = 0; i < _dice.Length; i++)
+		{
+			tween.TweenProperty(_dice[i], "global_position",
+				boardPos + new Vector3(0f, 0.02f + 0.02f * i, 0f), 0.45f)
+				.SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.InOut);
+		}
+		await ToSignal(tween, Tween.SignalName.Finished);
+		if (!IsInsideTree()) return;
+
+		// Dice are now inside the cup — hide them.
+		foreach (var die in _dice) die.Visible = false;
+
+		_currentState             = State.Stationary;
+		_interactable.ProcessMode = ProcessModeEnum.Inherit;
+		_interactable.PromptText  = "Grab Cubilete";
+		_interactable.Enabled     = false; // stays disabled; TableManager enables on next turn_start
+		_glowActive               = false;
+		Interactor.IsLocked       = false;
+	}
+
 	// ── Turn transitions ──────────────────────────────────────────────────────
 
 	/// <summary>
@@ -740,11 +781,28 @@ public partial class CubileteController : Node3D
 
 	// ── Audio ─────────────────────────────────────────────────────────────────
 
-	private void PlayClack(float pitch = 1.0f)
+	/// <summary>
+	/// Plays a short burst of random-pitch dice clacks, as if the dice were just thrown.
+	/// Used for results that land without a physical throw (e.g. a cigarette reroll).
+	/// </summary>
+	public async void PlayThrowClacks()
+	{
+		if (_currentState == State.Hidden) return;
+		// Loud, tightly-spaced clacks read as dice tumbling and settling in the cup.
+		int hits = GD.RandRange(6, 8);
+		for (int i = 0; i < hits; i++)
+		{
+			PlayClack((float)GD.RandRange(0.8, 1.3), 4f);
+			await ToSignal(GetTree().CreateTimer((float)GD.RandRange(0.04, 0.11)), SceneTreeTimer.SignalName.Timeout);
+			if (!IsInsideTree()) return;
+		}
+	}
+
+	private void PlayClack(float pitch = 1.0f, float volumeDb = -6f)
 	{
 		var clip = GD.Load<AudioStream>("res://Assets/Sound FX/clack.wav");
 		if (clip == null) return;
-		var sfx = new AudioStreamPlayer { Stream = clip, VolumeDb = -6f, PitchScale = pitch };
+		var sfx = new AudioStreamPlayer { Stream = clip, VolumeDb = volumeDb, PitchScale = pitch };
 		AddChild(sfx);
 		sfx.Play();
 		sfx.Finished += () => sfx.QueueFree();

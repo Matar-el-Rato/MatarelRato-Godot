@@ -22,13 +22,14 @@ CubileteMeshPath = NodePath("cubilete")
 DicePaths = [NodePath("Dice1"), NodePath("Dice2")]
 InteractablePath = NodePath("cubilete/Interactable")
 HoldOffset = Vector3(0, 0, 0)
-ViewOffset = Vector3(0, -0.16, -0.07)
+ViewOffset = Vector3(0, -0.19, -0.06)
 
 [node name="cubilete" parent="." unique_id=1098885438 instance=ExtResource("2_cubilete")]
 
 [node name="Interactable" type="Node3D" parent="cubilete" unique_id=1367486348]
 script = ExtResource("4_interactable")
 PromptText = "Grab Cubilete"
+TooltipText = "Use it, what are you waiting for?"
 UseLeftClick = true
 AutoGenerateCollision = false
 HighlightTargetMesh = NodePath("..")

@@ -1,20 +1,32 @@
-[gd_scene format=3 uid="uid://bq8m2kn4j9x01"]
+[gd_scene format=3 uid="uid://bq8m2kn4kax01"]
 
 [ext_resource type="Script" uid="uid://1fpiv7o6fjkv" path="res://Scripts/Game/Handcuffs.cs" id="1_script"]
 [ext_resource type="PackedScene" uid="uid://cw2b6orr08dac" path="res://Assets/PlayingSet/PerPlayer/Handcuffs.glb" id="2_model"]
 [ext_resource type="Script" uid="uid://bk7ngt4ktf6i6" path="res://Scripts/Interaction/Interactable.cs" id="3_interactable"]
 
-[node name="Handcuffs" type="Node3D"]
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_pickup"]
+radius = 0.11
+height = 0.22
+
+[node name="Handcuffs" type="Node3D" unique_id=1857721817]
 script = ExtResource("1_script")
 HandRotation = Vector3(0, 1.5708, 0)
 InteractablePath = NodePath("Interactable")
+HandcuffModelPath = NodePath("Handcuffs_model")
 
-[node name="Handcuffs_model" parent="." instance=ExtResource("2_model")]
+[node name="Handcuffs_model" parent="." unique_id=1999178861 instance=ExtResource("2_model")]
 
-[node name="Interactable" type="Node3D" parent="."]
+[node name="PickupBody" type="StaticBody3D" parent="." unique_id=892671201]
+
+[node name="PickupShape" type="CollisionShape3D" parent="PickupBody" unique_id=776299453]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 0)
+shape = SubResource("CapsuleShape3D_pickup")
+
+[node name="Interactable" type="Node3D" parent="." unique_id=1147578180]
 script = ExtResource("3_interactable")
 PromptText = "Use Handcuffs"
-TooltipText = "Restrain the next player, forcing them to skip their turn."
+TooltipText = "Restrain a selected player, forcing them to skip their turn."
 UseLeftClick = true
+AutoGenerateCollision = false
 HighlightTargetMesh = NodePath("../Handcuffs_model")
 UseShellHighlight = true

@@ -430,12 +430,16 @@ public partial class TableroController : Node3D
 		};
 
 		// Line: origin → every path square; return-leg squares are laterally offset.
+		// The very last vertex always uses the centered position so the line connects
+		// cleanly to the destination ring (which is also placed at the centered square).
 		{
 			var lineMesh = new ImmediateMesh();
 			lineMesh.SurfaceBegin(Mesh.PrimitiveType.LineStrip, lineMat);
 			lineMesh.SurfaceAddVertex(ToLocal(originPos));
-			for (int i = 0; i < path.Count; i++)
+			for (int i = 0; i < path.Count - 1; i++)
 				lineMesh.SurfaceAddVertex(ToLocal(SquarePos(path[i], i)));
+			// Last vertex: centered (no lateral offset), matching the destination ring.
+			lineMesh.SurfaceAddVertex(ToLocal(GetBoardWorldPosition(path[^1], color) + Vector3.Up * yOff));
 			lineMesh.SurfaceEnd();
 
 			var lineInst = new MeshInstance3D { Mesh = lineMesh, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };

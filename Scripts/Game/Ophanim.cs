@@ -111,6 +111,7 @@ public partial class Ophanim : Node3D
 	private Interactable        _interactable;
 	private Tween               _flickerTween;
 	private bool                _isDecoding;
+	private int                 _decodeSequenceId;
 	private bool                _inGreeting;
 	private bool                _garbledShouldLoop;
 
@@ -332,6 +333,15 @@ public partial class Ophanim : Node3D
 
 		await ToSignal(GetTree().CreateTimer(VibrateDuration), SceneTreeTimer.SignalName.Timeout);
 		_vibrateDuration = 0f;
+
+		var clingClip = GD.Load<AudioStream>("res://Assets/Sound FX/success_cling.wav");
+		if (clingClip != null)
+		{
+			var cling = new AudioStreamPlayer3D { Stream = clingClip, VolumeDb = -4f };
+			AddChild(cling);
+			cling.Play();
+			cling.Finished += () => cling.QueueFree();
+		}
 
 		if (vibrateAudio != null)
 		{
@@ -659,6 +669,13 @@ public partial class Ophanim : Node3D
 		_ = ShootItemRay(targetWorldPos, null, BrimstoneRayVolumeDb, new Color(0.85f, 0.08f, 0.08f));
 	}
 
+	/// <summary>Fires a small white/cream reroll ray from Ophanim toward the given world position (fire and forget).
+	/// Used by TableManager after the cigarette vibration sequence to signal the new dice result.</summary>
+	public void ShootRerollRay(Vector3 targetWorldPos)
+	{
+		_ = ShootItemRay(targetWorldPos, null, PieceRayVolumeDb, new Color(0.95f, 0.9f, 0.7f));
+	}
+
 	private async System.Threading.Tasks.Task ShootItemRay(Vector3 targetWorldPos, System.Action onSpawn, float volumeDb = float.NaN, Color? tintColor = null)
 	{
 		Vector3 from = GlobalPosition;
@@ -781,6 +798,7 @@ public partial class Ophanim : Node3D
 
 	private async Task RunDecodeSequenceAsync(string target, float holdDuration)
 	{
+		int myId = ++_decodeSequenceId;
 		_isDecoding = true;
 
 		int len      = target.Length;
@@ -880,8 +898,13 @@ public partial class Ophanim : Node3D
 		await ToSignal(GetTree().CreateTimer(holdDuration), SceneTreeTimer.SignalName.Timeout);
 		if (!IsInsideTree()) return;
 
-		_dialogBubble?.HideDialog();
-		_isDecoding = false;
+		// Only the most recently started decode may hide the bubble and clear the flag.
+		// A stale fire-and-forget (e.g. GreetingMsg3) must not overwrite a newer sequence.
+		if (_decodeSequenceId == myId)
+		{
+			_dialogBubble?.HideDialog();
+			_isDecoding = false;
+		}
 	}
 
 	public override void _ExitTree()
