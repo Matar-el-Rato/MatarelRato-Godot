@@ -1,22 +1,23 @@
-[gd_scene load_steps=7 format=3 uid="uid://knecfpt8ny2s"]
+[gd_scene format=3 uid="uid://knecfpt8ny2s"]
 
 [ext_resource type="Script" uid="uid://od1qyrmyk781" path="res://Scripts/Interaction/FocusInteractable.cs" id="1_focus"]
 [ext_resource type="Script" uid="uid://bk7ngt4ktf6i6" path="res://Scripts/Interaction/Interactable.cs" id="2_interactable"]
 [ext_resource type="Script" uid="uid://by5rrpux7eqv2" path="res://Scripts/Interaction/ClipboardUIInteraction.cs" id="3_ui_interaction"]
-[ext_resource type="PackedScene" path="res://Scenes/UI/MatchHistoryUI.tscn" id="4_ui_scene"]
-[ext_resource type="Script" path="res://Scripts/UI/MatchHistoryBoardGate.cs" id="5_gate"]
+[ext_resource type="FontFile" uid="uid://cw75wckal27hg" path="res://Assets/Fonts/Jersey10-Regular.ttf" id="4_g2gxu"]
+[ext_resource type="PackedScene" uid="uid://b1h2m3n4o5p6q" path="res://Scenes/UI/MatchHistoryUI.tscn" id="4_ui_scene"]
+[ext_resource type="Script" uid="uid://cyccmye5f67j8" path="res://Scripts/UI/MatchHistoryBoardGate.cs" id="5_gate"]
 
 [sub_resource type="QuadMesh" id="QuadMesh_board"]
 size = Vector2(0.8, 0.6)
 
-[sub_resource type="ViewportTexture" id="ViewportTexture_board"]
+[sub_resource type="ViewportTexture" id="ViewportTexture_p7ns6"]
 viewport_path = NodePath("SubViewport")
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_board"]
 resource_local_to_scene = true
 transparency = 1
 shading_mode = 0
-albedo_texture = SubResource("ViewportTexture_board")
+albedo_texture = SubResource("ViewportTexture_p7ns6")
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_board"]
 size = Vector3(0.8, 0.6, 0.02)
@@ -44,6 +45,9 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.7)
 script = ExtResource("2_interactable")
 PromptText = "Match History"
 UseLeftClick = true
+ShowExclamation = true
+ExclamationOffset = Vector3(0, 0.8, 0)
+CustomFont = ExtResource("4_g2gxu")
 UseShellHighlight = true
 
 [node name="Collision" type="StaticBody3D" parent="Interactable" unique_id=910100005]

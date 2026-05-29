@@ -381,6 +381,21 @@ public partial class DiceHUD : Control
 
     public static void HideRemote() => _pendingRemoteHide = true;
 
+    /// <summary>
+    /// Hard-dismiss everything (local + remote panels, reroll icon, no-moves icon).
+    /// Call on game over / elimination / reset, where the normal turn flow that would
+    /// otherwise clear the HUD never runs — otherwise a reroll icon keeps the local
+    /// panel pinned up indefinitely (HideHUD ignores a plain hide while it shows).
+    /// </summary>
+    public static void ForceHideAll()
+    {
+        _pendingShowRerollIcon  = false;
+        _pendingShowNoMovesIcon = false;
+        _pendingHideRerollIcon  = true;  // clears the local reroll icon, then hides the panel
+        _pendingHide            = true;
+        _pendingRemoteHide      = true;
+    }
+
     // ── Internal ──────────────────────────────────────────────────────────────
 
     /// <summary>

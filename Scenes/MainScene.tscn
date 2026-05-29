@@ -544,7 +544,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0021352768, 0.4310726, -3.0
 [node name="Room1" type="Node3D" parent="." unique_id=1422990858]
 
 [node name="AudioStreamPlayer3D" type="AudioStreamPlayer3D" parent="Room1" unique_id=975460020]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -17.753803, 1.0170901, -17.776184)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20.263268, 1.0170901, -4.774125)
 stream = ExtResource("4_hx8n4")
 volume_db = -5.0
 unit_size = 0.2
@@ -582,12 +582,14 @@ PromptText = "Open Door"
 InteractionAction = ""
 HighlightThickness = 7.0
 
-[node name="PiggaNPC" parent="Room1" unique_id=839475480 node_paths=PackedStringArray("Player", "RightApparel") instance=ExtResource("35_npc_scene")]
+[node name="PiggaNPC" parent="Room1" unique_id=839475480 node_paths=PackedStringArray("Player", "RightApparel", "LeftApparel", "LightingNode") instance=ExtResource("35_npc_scene")]
 transform = Transform3D(0.99975204, 0, 0.022268664, 0, 1, 0, -0.022268664, 0, 0.99975204, -19.503555, -0.028534383, -5.231407)
 script = ExtResource("39_room_npc_script")
 TalkAnimation = "Armature_002|mixamo_com|Layer0_001"
 Player = NodePath("../../Player")
 RightApparel = NodePath("../right_apparel")
+LeftApparel = NodePath("../left_apparel")
+LightingNode = NodePath("../Lighting")
 
 [node name="RoomJoin" type="Node3D" parent="Room1" unique_id=1122334455 node_paths=PackedStringArray("LightingNode", "RoomArea", "Player", "RoomNpc", "LeftApparel", "RightApparel", "PlayingSetup", "RoomJoinerUi")]
 script = ExtResource("40_room_join_script")
@@ -693,13 +695,6 @@ script = ExtResource("55_damocles_script")
 
 [node name="Room2" type="Node3D" parent="." unique_id=1167468490]
 
-[node name="AudioStreamPlayer3D2" type="AudioStreamPlayer3D" parent="Room2" unique_id=1161319522]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -17.753803, 1.0170901, 3.1471882)
-stream = ExtResource("4_hx8n4")
-volume_db = -5.0
-unit_size = 0.2
-autoplay = true
-
 [node name="left_door2" parent="Room2" unique_id=276129115 instance=ExtResource("10_4b75m")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.571119, 1.1142102, 16.247717)
 script = ExtResource("12_door_script")
@@ -726,14 +721,135 @@ PromptText = "Open Door"
 InteractionAction = ""
 HighlightThickness = 7.0
 
-[node name="Room3" type="Node3D" parent="." unique_id=1614680348]
-
-[node name="AudioStreamPlayer3D3" type="AudioStreamPlayer3D" parent="Room3" unique_id=1017838159]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -17.753803, 1.0170901, 25.989521)
+[node name="AudioStreamPlayer3D3" type="AudioStreamPlayer3D" parent="Room2" unique_id=1781119625]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20.263268, 1.0170901, 15.998026)
 stream = ExtResource("4_hx8n4")
 volume_db = -5.0
 unit_size = 0.2
 autoplay = true
+
+[node name="right_apparel2" parent="Room2" unique_id=1895400593 instance=ExtResource("37_rmfi2")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.326433, 0.6798404, 13.475934)
+
+[node name="left_apparel2" parent="Room2" unique_id=111273724 instance=ExtResource("38_sl126")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.682745, 0.68421197, 17.32839)
+
+[node name="PiggaNPC2" parent="Room2" unique_id=842688675 node_paths=PackedStringArray("Player", "RightApparel", "LeftApparel", "LightingNode") instance=ExtResource("35_npc_scene")]
+transform = Transform3D(0.99975204, 0, 0.022268664, 0, 1, 0, -0.022268664, 0, 0.99975204, -19.503555, -0.028534383, 15.540744)
+script = ExtResource("39_room_npc_script")
+TalkAnimation = "Armature_002|mixamo_com|Layer0_001"
+Player = NodePath("../../Player")
+RightApparel = NodePath("../right_apparel2")
+LeftApparel = NodePath("../left_apparel2")
+LightingNode = NodePath("../Lighting2")
+
+[node name="RoomJoin2" type="Node3D" parent="Room2" unique_id=1539345670 node_paths=PackedStringArray("LightingNode", "RoomArea", "Player", "RoomNpc", "LeftApparel", "RightApparel", "PlayingSetup", "RoomJoinerUi")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 20.772152)
+script = ExtResource("40_room_join_script")
+LeftDoorPath = NodePath("../left_door2")
+RightDoorPath = NodePath("../right_door2")
+LightingNode = NodePath("../Lighting2")
+RoomArea = NodePath("../RoomBounds2")
+Player = NodePath("../../Player")
+RoomNpc = NodePath("../PiggaNPC2")
+FlickerSound = ExtResource("23_oo3wg")
+LeftApparel = NodePath("../left_apparel2")
+RightApparel = NodePath("../right_apparel2")
+PlayingSetup = NodePath("../PlayingSetup2")
+RoomId = 2
+RoomJoinerUi = NodePath("../RoomJoiner2")
+NpcProximityDistance = 3.0
+
+[node name="RoomJoiner2" parent="Room2" unique_id=761234745 instance=ExtResource("41_75tun")]
+transform = Transform3D(-4.29222e-08, 0.189164, 0.9819455, 8.2686205e-09, 0.9819455, -0.189164, -1, 0, -4.371139e-08, -20.381191, 2.9480164, 15.448672)
+RoomId = 2
+
+[node name="Lighting2" type="Node3D" parent="Room2" unique_id=1579678521]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 20.772152)
+
+[node name="PizzeriaLight3" type="OmniLight3D" parent="Room2/Lighting2" unique_id=1560976608]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18.09094, 2.308368, -5.39094)
+light_color = Color(1, 1, 0.9254902, 1)
+light_energy = 1.5
+
+[node name="PizzeriaLight4" type="OmniLight3D" parent="Room2/Lighting2" unique_id=295873468]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13.127879, 2.308368, -5.39094)
+light_color = Color(1, 1, 0.9254902, 1)
+light_energy = 1.4
+
+[node name="PizzeriaLight5" type="OmniLight3D" parent="Room2/Lighting2" unique_id=1029140861]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -25.94965, 2.308368, -5.39094)
+light_color = Color(1, 1, 0.9254902, 1)
+light_energy = 2.778
+
+[node name="Lamp6" type="SpotLight3D" parent="Room2/Lighting2" unique_id=1406058605]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -14.82505, 3.4360473, -4.5708184)
+light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
+light_energy = 0.5
+spot_range = 51.321716
+spot_angle = 44.501743
+
+[node name="Lamp7" type="SpotLight3D" parent="Room2/Lighting2" unique_id=677818989]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -14.82505, 3.4360473, -6.393129)
+light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
+light_energy = 0.5
+spot_range = 51.321716
+spot_angle = 44.501743
+
+[node name="Lamp8" type="SpotLight3D" parent="Room2/Lighting2" unique_id=1259562146]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -18.84093, 3.4360473, -6.393129)
+light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
+light_energy = 1.667
+spot_range = 51.321716
+spot_angle = 44.501743
+
+[node name="Lamp9" type="SpotLight3D" parent="Room2/Lighting2" unique_id=1383004426]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -18.84093, 3.4360473, -4.571615)
+light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
+light_energy = 0.384
+spot_range = 51.321716
+spot_angle = 44.501743
+
+[node name="RoomBounds2" type="Area3D" parent="Room2" unique_id=1532707759]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13.980343, 0, 14.854821)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Room2/RoomBounds2" unique_id=276391980]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9.452879, 1.5272827, 0.31794596)
+shape = SubResource("BoxShape3D_ergw4")
+
+[node name="PlayingSetup2" type="Node3D" parent="Room2" unique_id=1834535488 node_paths=PackedStringArray("OphanimNode", "RoomMusicPlayer")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.1901207, 0, 20.67252)
+script = ExtResource("50_tablemgr")
+ChairScene = ExtResource("51_chair_scene")
+PlayerItemSetScene = ExtResource("52_pitemset")
+OphanimNode = NodePath("../Ophanim2")
+FisheyeMaterial = SubResource("ShaderMaterial_hkvke")
+RoomMusicPlayer = NodePath("../AudioStreamPlayer3D3")
+
+[node name="mesa_poker" parent="Room2/PlayingSetup2" unique_id=1289220138 instance=ExtResource("8_f140w")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.457277, 0.43543047, -5.255393)
+script = ExtResource("7_env_collision")
+
+[node name="tablero" parent="Room2/PlayingSetup2" unique_id=606758866 instance=ExtResource("9_0iob3")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.453938, 0.7376139, -5.248031)
+
+[node name="CubileteAndDice" parent="Room2/PlayingSetup2" unique_id=932204678 instance=ExtResource("17_mymud")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14.709938, 0.8132103, -5.257575)
+
+[node name="Ophanim2" parent="Room2" unique_id=1274311342 instance=ExtResource("47_uuu6x")]
+transform = Transform3D(-2.1855694e-08, 0, -0.5, 0, 0.5, 0, 0.5, 0, -2.1855694e-08, -15.350682, 1.6314306, 15.422035)
+RedactionRate = 0.03
+BubbleWorldScale = 2.6
+GreetingMsg3 = "THE MAKAROV WILL ROTATE. A CLICK PASSES. A SHOT DECIDES."
+InitiativeGunScene = ExtResource("43_jkhus")
+GunRestYAboveTable = 0.4
+BrimstoneRaySound = ExtResource("45_xot12")
+
+[node name="damocles2" parent="Room2" unique_id=1248801408 instance=ExtResource("28_8um71")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.262368, 0.69990087, 15.427664)
+script = ExtResource("55_damocles_script")
+
+[node name="Room3" type="Node3D" parent="." unique_id=1614680348]
 
 [node name="left_door3" parent="Room3" unique_id=1528410969 instance=ExtResource("10_4b75m")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.571119, 1.1142102, 39.036594)
@@ -760,6 +876,134 @@ script = ExtResource("13_interactable_script")
 PromptText = "Open Door"
 InteractionAction = ""
 HighlightThickness = 7.0
+
+[node name="AudioStreamPlayer3D5" type="AudioStreamPlayer3D" parent="Room3" unique_id=1322478737]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20.263268, 1.0170901, 38.80594)
+stream = ExtResource("4_hx8n4")
+volume_db = -5.0
+unit_size = 0.2
+autoplay = true
+
+[node name="right_apparel3" parent="Room3" unique_id=1800570929 instance=ExtResource("37_rmfi2")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.326433, 0.6798404, 36.283844)
+
+[node name="left_apparel3" parent="Room3" unique_id=1483694055 instance=ExtResource("38_sl126")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.682745, 0.68421197, 40.1363)
+
+[node name="PiggaNPC3" parent="Room3" unique_id=1268130912 node_paths=PackedStringArray("Player", "RightApparel", "LeftApparel", "LightingNode") instance=ExtResource("35_npc_scene")]
+transform = Transform3D(0.99975204, 0, 0.022268664, 0, 1, 0, -0.022268664, 0, 0.99975204, -19.503555, -0.028534383, 38.348656)
+script = ExtResource("39_room_npc_script")
+TalkAnimation = "Armature_002|mixamo_com|Layer0_001"
+Player = NodePath("../../Player")
+RightApparel = NodePath("../right_apparel3")
+LeftApparel = NodePath("../left_apparel3")
+LightingNode = NodePath("../Lighting3")
+
+[node name="RoomJoin3" type="Node3D" parent="Room3" unique_id=1003862766 node_paths=PackedStringArray("LightingNode", "RoomArea", "Player", "RoomNpc", "LeftApparel", "RightApparel", "PlayingSetup", "RoomJoinerUi")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 43.580063)
+script = ExtResource("40_room_join_script")
+LeftDoorPath = NodePath("../left_door3")
+RightDoorPath = NodePath("../right_door3")
+LightingNode = NodePath("../Lighting3")
+RoomArea = NodePath("../RoomBounds3")
+Player = NodePath("../../Player")
+RoomNpc = NodePath("../PiggaNPC3")
+FlickerSound = ExtResource("23_oo3wg")
+LeftApparel = NodePath("../left_apparel3")
+RightApparel = NodePath("../right_apparel3")
+PlayingSetup = NodePath("../PlayingSetup3")
+RoomId = 3
+RoomJoinerUi = NodePath("../RoomJoiner3")
+NpcProximityDistance = 3.0
+
+[node name="RoomJoiner3" parent="Room3" unique_id=645323998 instance=ExtResource("41_75tun")]
+transform = Transform3D(-4.29222e-08, 0.189164, 0.9819455, 8.2686205e-09, 0.9819455, -0.189164, -1, 0, -4.371139e-08, -20.381191, 2.9480164, 38.256584)
+RoomId = 3
+
+[node name="Lighting3" type="Node3D" parent="Room3" unique_id=1299622621]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 43.580063)
+
+[node name="PizzeriaLight3" type="OmniLight3D" parent="Room3/Lighting3" unique_id=1214624960]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18.09094, 2.308368, -5.39094)
+light_color = Color(1, 1, 0.9254902, 1)
+light_energy = 1.5
+
+[node name="PizzeriaLight4" type="OmniLight3D" parent="Room3/Lighting3" unique_id=640472718]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13.127879, 2.308368, -5.39094)
+light_color = Color(1, 1, 0.9254902, 1)
+light_energy = 1.4
+
+[node name="PizzeriaLight5" type="OmniLight3D" parent="Room3/Lighting3" unique_id=1843662290]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -25.94965, 2.308368, -5.39094)
+light_color = Color(1, 1, 0.9254902, 1)
+light_energy = 2.778
+
+[node name="Lamp6" type="SpotLight3D" parent="Room3/Lighting3" unique_id=585028887]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -14.82505, 3.4360473, -4.5708184)
+light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
+light_energy = 0.5
+spot_range = 51.321716
+spot_angle = 44.501743
+
+[node name="Lamp7" type="SpotLight3D" parent="Room3/Lighting3" unique_id=598686196]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -14.82505, 3.4360473, -6.393129)
+light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
+light_energy = 0.5
+spot_range = 51.321716
+spot_angle = 44.501743
+
+[node name="Lamp8" type="SpotLight3D" parent="Room3/Lighting3" unique_id=1390554609]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -18.84093, 3.4360473, -6.393129)
+light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
+light_energy = 1.667
+spot_range = 51.321716
+spot_angle = 44.501743
+
+[node name="Lamp9" type="SpotLight3D" parent="Room3/Lighting3" unique_id=1096734767]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -18.84093, 3.4360473, -4.571615)
+light_color = Color(0.9999998, 0.97370356, 0.96381634, 1)
+light_energy = 0.384
+spot_range = 51.321716
+spot_angle = 44.501743
+
+[node name="RoomBounds3" type="Area3D" parent="Room3" unique_id=1734526670]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13.980343, 0, 37.66273)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Room3/RoomBounds3" unique_id=2057904033]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9.452879, 1.5272827, 0.31794596)
+shape = SubResource("BoxShape3D_ergw4")
+
+[node name="PlayingSetup3" type="Node3D" parent="Room3" unique_id=786005805 node_paths=PackedStringArray("OphanimNode", "RoomMusicPlayer")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.1901207, 0, 43.48043)
+script = ExtResource("50_tablemgr")
+ChairScene = ExtResource("51_chair_scene")
+PlayerItemSetScene = ExtResource("52_pitemset")
+OphanimNode = NodePath("../Ophanim3")
+FisheyeMaterial = SubResource("ShaderMaterial_hkvke")
+RoomMusicPlayer = NodePath("../AudioStreamPlayer3D5")
+
+[node name="mesa_poker" parent="Room3/PlayingSetup3" unique_id=155557163 instance=ExtResource("8_f140w")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.457277, 0.43543047, -5.255393)
+script = ExtResource("7_env_collision")
+
+[node name="tablero" parent="Room3/PlayingSetup3" unique_id=153050852 instance=ExtResource("9_0iob3")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.453938, 0.7376139, -5.248031)
+
+[node name="CubileteAndDice" parent="Room3/PlayingSetup3" unique_id=369244242 instance=ExtResource("17_mymud")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14.709938, 0.8132103, -5.257575)
+
+[node name="Ophanim3" parent="Room3" unique_id=2031853865 instance=ExtResource("47_uuu6x")]
+transform = Transform3D(-2.1855694e-08, 0, -0.5, 0, 0.5, 0, 0.5, 0, -2.1855694e-08, -15.350682, 1.6314306, 38.229946)
+RedactionRate = 0.03
+BubbleWorldScale = 2.6
+GreetingMsg3 = "THE MAKAROV WILL ROTATE. A CLICK PASSES. A SHOT DECIDES."
+InitiativeGunScene = ExtResource("43_jkhus")
+GunRestYAboveTable = 0.4
+BrimstoneRaySound = ExtResource("45_xot12")
+
+[node name="damocles3" parent="Room3" unique_id=426914819 instance=ExtResource("28_8um71")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.262368, 0.69990087, 38.235573)
+script = ExtResource("55_damocles_script")
 
 [node name="Pizzeria" type="Node3D" parent="." unique_id=2058530922]
 

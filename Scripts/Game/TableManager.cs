@@ -147,6 +147,8 @@ public partial class TableManager : Node3D
     public void ResetGame()
     {
         _matchActive = false;
+        DiceHUD.ForceHideAll();
+        MoveCounterHUD.Hide();
         Chair.ResetLocalChoice();
         _localChosenColor = "";
         foreach (var child in GetChildren())
@@ -1083,6 +1085,14 @@ public partial class TableManager : Node3D
         string who = _usernameByUserId.TryGetValue(userId, out var n) ? n : $"#{userId}";
         GD.Print($"[TM] player_eliminated: {who}");
 
+        // If the local player is the one being eliminated, clear their dice HUD now
+        // (a lingering reroll icon would otherwise stay pinned through the death sequence).
+        if (userId == LiveConnectionManager.LocalUserId)
+        {
+            DiceHUD.ForceHideAll();
+            MoveCounterHUD.Hide();
+        }
+
         // Wait for any in-progress move animation before starting the sequence.
         await _lastMoveTask;
         if (!IsInsideTree()) return;
@@ -1246,6 +1256,11 @@ public partial class TableManager : Node3D
         string reason   = root.TryGetProperty("reason", out var r) ? r.GetString() : "race";
         string who      = _usernameByUserId.TryGetValue(winnerId, out var n) ? n : $"#{winnerId}";
         GD.Print($"[TM] game_over! Winner: {who} ({reason})");
+
+        // Clear any dice / reroll / no-moves HUD still on screen — the normal turn
+        // flow that would dismiss it never runs once the match is over.
+        DiceHUD.ForceHideAll();
+        MoveCounterHUD.Hide();
 
         string msg = $"[color=#ffd633]> {who.ToUpper()} WINS![/color]";
 
