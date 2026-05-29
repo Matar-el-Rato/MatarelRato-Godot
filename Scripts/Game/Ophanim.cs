@@ -673,6 +673,151 @@ public partial class Ophanim : Node3D
 		tween.Finished += () => _descendYOffset = RestingOffset;
 	}
 
+	/// <summary>
+	/// Fully hides Ophanim back to DescentHiddenOffset and resets activation state
+	/// so it can descend again for the next match. Call from ResetGame().
+	/// </summary>
+	public void FullReset()
+	{
+		if (_interactable != null) _interactable.Enabled = false;
+		StopGarbledAudio();
+		DismissBubble();
+		_vibrateDuration = 0f;
+		_hasActivated    = false;
+
+		var tween = CreateTween();
+		tween.TweenMethod(
+			Callable.From((float v) => _descendYOffset = v),
+			_descendYOffset, DescentHiddenOffset, DescentDuration)
+			.SetTrans(Tween.TransitionType.Cubic)
+			.SetEase(Tween.EaseType.In);
+		tween.Finished += () => _descendYOffset = DescentHiddenOffset;
+	}
+
+	/// <summary>
+	/// Win sequence: says the phrase then builds a blinding cream-white light.
+	/// Run this while flying the camera toward Ophanim and ramping the fisheye shader.
+	/// Returns when the light has reached peak intensity (caller fades to white next).
+	/// </summary>
+	public async System.Threading.Tasks.Task WinFlashAsync()
+	{
+		await SayAsync("Didn't think you'd make it this far", 2.0f);
+		if (!IsInsideTree()) return;
+
+		const float buildDuration = 3.0f;
+		var winLight = new OmniLight3D
+		{
+			LightColor  = new Color(1f, 0.97f, 0.88f), // warm cream-white
+			LightEnergy = 0f,
+			OmniRange   = 25f,
+		};
+		AddChild(winLight);
+		winLight.Position = Vector3.Zero;
+
+		winLight.CreateTween()
+			.TweenProperty(winLight, "light_energy", 20f, buildDuration)
+			.SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.In);
+
+		await ToSignal(GetTree().CreateTimer(buildDuration), SceneTreeTimer.SignalName.Timeout);
+		if (IsInstanceValid(winLight)) winLight.QueueFree();
+	}
+
+	// ── Devour sequence ──────────────────────────────────────────────────────
+
+	/// <summary>
+	/// Ophanim eats a list of Node3D targets (character model + pieces).
+	/// Starts vibrating with gear sounds, sucks all targets into itself while a
+	/// red light swells, then plays the cling, stops vibrating, and ascends.
+	/// </summary>
+	public async System.Threading.Tasks.Task DevourAsync(
+		System.Collections.Generic.List<Node3D> targets)
+	{
+		// ── Start indefinite vibration + gear audio ───────────────────────────
+		_vibrateStartTime = (float)(Time.GetTicksMsec() / 1000.0);
+		_vibrateDuration  = 9999f; // stopped manually below
+
+		AudioStreamPlayer3D gearAudio = null;
+		var gearClip = GD.Load<AudioStream>("res://Assets/Sound FX/gear_vibrating.wav");
+		if (gearClip != null)
+		{
+			gearAudio = new AudioStreamPlayer3D { Stream = gearClip, VolumeDb = -4f };
+			AddChild(gearAudio);
+			gearAudio.Play();
+		}
+
+		// ── Spawn a growing red light (parented so it follows Ophanim) ────────
+		var devourLight = new OmniLight3D
+		{
+			LightColor  = new Color(0.9f, 0.06f, 0.02f),
+			LightEnergy = 0f,
+			OmniRange   = 7f,
+		};
+		AddChild(devourLight);
+		devourLight.Position = Vector3.Zero;
+
+		// ── Tween all targets toward Ophanim's world centre ───────────────────
+		const float eatDuration = 1.8f;
+		var tinyScale = new Vector3(0.001f, 0.001f, 0.001f);
+		Vector3 eatTarget = GlobalPosition;
+
+		foreach (var node in targets)
+		{
+			if (!IsInstanceValid(node)) continue;
+			var tw = node.CreateTween().SetParallel(true);
+			tw.TweenProperty(node, "global_position", eatTarget, eatDuration)
+			  .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.In);
+			tw.TweenProperty(node, "scale", tinyScale, eatDuration * 0.85f)
+			  .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.In);
+		}
+
+		// Light builds alongside the eat
+		var lightGrow = devourLight.CreateTween();
+		lightGrow.TweenProperty(devourLight, "light_energy", 5f, eatDuration)
+				 .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.In);
+
+		await ToSignal(GetTree().CreateTimer(eatDuration), SceneTreeTimer.SignalName.Timeout);
+		if (!IsInsideTree()) return;
+
+		// ── Targets have arrived — hide them ─────────────────────────────────
+		foreach (var node in targets)
+			if (IsInstanceValid(node)) node.Visible = false;
+
+		// ── Stop vibration + cling ────────────────────────────────────────────
+		_vibrateDuration = 0f;
+
+		var clingClip = GD.Load<AudioStream>("res://Assets/Sound FX/success_cling.wav");
+		if (clingClip != null)
+		{
+			var cling = new AudioStreamPlayer3D { Stream = clingClip, VolumeDb = -2f };
+			AddChild(cling);
+			cling.Play();
+			cling.Finished += () => { if (IsInstanceValid(cling)) cling.QueueFree(); };
+		}
+
+		// Fade gear audio out
+		const float gearFade = 0.8f;
+		if (IsInstanceValid(gearAudio))
+		{
+			gearAudio.CreateTween().TweenProperty(gearAudio, "volume_db", -80f, gearFade);
+		}
+
+		// Shrink and free the light
+		if (IsInstanceValid(devourLight))
+		{
+			devourLight.CreateTween()
+					   .TweenProperty(devourLight, "light_energy", 0f, 0.7f);
+		}
+
+		await ToSignal(GetTree().CreateTimer(gearFade), SceneTreeTimer.SignalName.Timeout);
+		if (!IsInsideTree()) return;
+
+		if (IsInstanceValid(gearAudio))  { gearAudio.Stop();  gearAudio.QueueFree(); }
+		if (IsInstanceValid(devourLight)) devourLight.QueueFree();
+
+		// ── Return to normal ─────────────────────────────────────────────────
+		AscendAndHide();
+	}
+
 	// ── Gun decision prompt ───────────────────────────────────────────────────
 
 	/// <summary>Shows a bobbing "!" and routes Ophanim interactions to GunSkipRequested until hidden.</summary>

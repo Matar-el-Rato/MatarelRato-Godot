@@ -139,6 +139,7 @@ public partial class PlayerItemSet : Node3D
             Vector3 origScale = _originalScales.TryGetValue(casing.Name, out var s) ? s : casing.Scale;
             casing.Scale   = origScale * 0.001f;
             casing.Visible = true;
+            if (_isOwned) SetChildInteractions(casing, true);
             casing.CreateTween()
                 .TweenProperty(casing, "scale", origScale, 0.4f)
                 .SetTrans(Tween.TransitionType.Back)
@@ -167,6 +168,7 @@ public partial class PlayerItemSet : Node3D
 
     private void DropCasing(Node3D casing)
     {
+        SetChildInteractions(casing, false);
         var tween = casing.CreateTween();
         tween.SetParallel(true);
         tween.TweenProperty(casing, "rotation:z", Mathf.DegToRad(90f), 0.25f)

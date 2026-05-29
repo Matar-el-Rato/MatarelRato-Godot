@@ -22,12 +22,14 @@ public partial class SeatToken : Node3D
 	public Vector3 HeadWorldPosition =>
 		GlobalPosition + GlobalBasis * new Vector3(0f, _headLocalY, 0f);
 
-	private float          _headLocalY  = 1.8f;
+	private float          _headLocalY        = 1.8f;
 	private StaticBody3D   _targetBody;
-	private string         _username    = "";
+	private string         _username          = "";
 	private Label3D        _promptLabel;
 	private Tween          _promptTween;
+	private Node3D         _characterContainer;
 	private static readonly Color _promptColor = new Color(1f, 0.85f, 0.2f);
+	private static readonly Color _stoneColor  = new Color(0.52f, 0.50f, 0.47f);
 
 	public override void _Ready()
 	{
@@ -86,6 +88,76 @@ public partial class SeatToken : Node3D
 			 .SetTrans(Tween.TransitionType.Quad)
 			 .SetEase(Tween.EaseType.InOut);
 		tween.Finished += () => { if (IsInsideTree()) QueueFree(); };
+	}
+
+	/// <summary>
+	/// Turns the seated character into a stone statue: greys all meshes, freezes the
+	/// animation, plays petrify.wav, and leaves the token in the scene permanently.
+	/// </summary>
+	public void Petrify()
+	{
+		SetTargetable(false);
+		PlayPetrifySound();
+		FreezeAnimation();
+		if (_characterContainer != null && IsInstanceValid(_characterContainer))
+			ApplyStoneColor(_characterContainer);
+		if (_label != null)
+		{
+			_label.Modulate = new Color(0.6f, 0.6f, 0.6f, 1f);
+
+			var font = ResourceLoader.Load<Font>("res://Assets/Fonts/Jersey10-Regular.ttf");
+			var petrifiedLabel = new Label3D
+			{
+				Font            = font,
+				FontSize        = 44,
+				PixelSize       = 0.004f,
+				Billboard       = BaseMaterial3D.BillboardModeEnum.Enabled,
+				Modulate        = new Color(0.65f, 0.65f, 0.65f, 1f),
+				OutlineSize     = 8,
+				OutlineModulate = new Color(0f, 0f, 0f, 1f),
+				Text            = "(Petrified)",
+				Position        = _label.Position + new Vector3(0f, 0.22f, 0f),
+			};
+			AddChild(petrifiedLabel);
+		}
+	}
+
+	private void PlayPetrifySound()
+	{
+		var clip = GD.Load<AudioStream>("res://Assets/Sound FX/petrify.wav");
+		if (clip == null) return;
+		var sfx = new AudioStreamPlayer3D { Stream = clip, VolumeDb = 2f, MaxDistance = 20f };
+		AddChild(sfx);
+		sfx.Play();
+		sfx.Finished += () => { if (IsInstanceValid(sfx)) sfx.QueueFree(); };
+	}
+
+	private void FreezeAnimation()
+	{
+		if (_characterContainer == null) return;
+		var animPlayer = _characterContainer.FindChild("AnimationPlayer", true, false) as AnimationPlayer;
+		animPlayer?.Stop(false); // keep current pose, don't reset to bind
+	}
+
+	private static void ApplyStoneColor(Node node)
+	{
+		if (node is MeshInstance3D mesh)
+		{
+			int count = mesh.GetSurfaceOverrideMaterialCount();
+			for (int i = 0; i < count; i++)
+			{
+				var existing = (mesh.GetSurfaceOverrideMaterial(i)
+				             ?? mesh.Mesh?.SurfaceGetMaterial(i)) as StandardMaterial3D;
+				var mat = existing != null
+					? (StandardMaterial3D)existing.Duplicate()
+					: new StandardMaterial3D();
+				mat.AlbedoColor     = _stoneColor;
+				mat.EmissionEnabled = false;
+				mesh.SetSurfaceOverrideMaterial(i, mat);
+			}
+		}
+		foreach (Node child in node.GetChildren())
+			ApplyStoneColor(child);
 	}
 
 	/// <summary>
@@ -205,6 +277,7 @@ public partial class SeatToken : Node3D
 			container.Scale    = orientFix.Scale;
 		}
 		AddChild(container);
+		_characterContainer = container;
 
 		// Store approximate head height for targeting/handcuffs.
 		_headLocalY = container.Position.Y + 1.5f;

@@ -70,6 +70,8 @@ public partial class PlayerCameraController : CharacterBody3D
 
 	// Tension / heartbeat state (scales with lives remaining).
 	public static PlayerCameraController LocalInstance { get; private set; }
+	/// <summary>World position recorded at scene start — used to respawn the player after elimination.</summary>
+	public Vector3 InitialSpawnPosition { get; private set; }
 	private AudioStreamPlayer _heartbeatAudio;
 	private ColorRect         _hitVignette;
 	private float _heartBpm      = 50f;
@@ -94,7 +96,8 @@ public partial class PlayerCameraController : CharacterBody3D
 
 	public override void _Ready()
 	{
-		LocalInstance = this;
+		LocalInstance        = this;
+		InitialSpawnPosition = GlobalPosition;
 		EnsureInitialized();
 
 		FloorSnapLength    = 0.3f;
@@ -549,6 +552,22 @@ public void SwapCharacter(CharacterEntry entry, float duration = 0.8f)
 	}
 
 	/// <summary>
+	/// Instantly resets all sitting state without tweening. Use before teleporting so
+	/// no Unsit tween can override the destination position.
+	/// </summary>
+	public void ForceUnsit()
+	{
+		if (!_isSitting) return;
+		EnsureInitialized();
+		_isSitting       = false;
+		_isTransitioning = false;
+		_currentChair    = null;
+		_sittingYaw      = 0f;
+		if (_collisionShape != null)
+			_collisionShape.Disabled = false;
+	}
+
+	/// <summary>
 	/// Returns the player to the standing position they occupied before sitting.
 	/// Re-enables collision and restores the base FOV.
 	/// </summary>
@@ -652,6 +671,42 @@ public void SwapCharacter(CharacterEntry entry, float duration = 0.8f)
 		tween.TweenProperty(_hitVignette, "color:a", 0f, 0.9f)
 			 .SetTrans(Tween.TransitionType.Quad)
 			 .SetEase(Tween.EaseType.In);
+	}
+
+	/// <summary>
+	/// Mirrors the title-screen intro: tilts the camera to -35° then sweeps it level.
+	/// Call after teleporting the player to the respawn position while the screen is still black.
+	/// </summary>
+	public void PlayLookUpSequence(float duration = 2.5f)
+	{
+		EnsureInitialized();
+		MovementEnabled  = false;
+		MouseLookEnabled = false;
+		Velocity         = Vector3.Zero;
+
+		// Snap camera back to standing position (clears any sitting offset).
+		if (_camera != null)
+			_camera.Position = _baseCameraPos + (_activeEntry?.CameraOffset ?? Vector3.Zero);
+
+		_pitch = Mathf.DegToRad(-35f);
+		if (_camera != null)
+		{
+			_camera.Rotation = new Vector3(_pitch, 0f, 0f);
+			var tween = CreateTween();
+			tween.TweenProperty(_camera, "rotation", Vector3.Zero, duration)
+				 .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.InOut);
+			tween.Finished += () =>
+			{
+				_pitch           = 0f;
+				MovementEnabled  = true;
+				MouseLookEnabled = true;
+			};
+		}
+		else
+		{
+			MovementEnabled  = true;
+			MouseLookEnabled = true;
+		}
 	}
 
 	private void UpdateHeartbeat(float delta)

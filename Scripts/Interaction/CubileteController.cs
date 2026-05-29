@@ -678,6 +678,9 @@ public partial class CubileteController : Node3D
 		await ToSignal(tween, Tween.SignalName.Finished);
 		if (!IsInsideTree()) return;
 
+		// MoveToPlayer may have started while we were animating; let it own the transition.
+		if (_currentState == State.Moving) return;
+
 		_currentState             = State.Stationary;
 		_interactable.ProcessMode = ProcessModeEnum.Inherit;
 		_interactable.PromptText  = "Grab Cubilete";
@@ -739,6 +742,8 @@ public partial class CubileteController : Node3D
 		}
 		await ToSignal(arcTween, Tween.SignalName.Finished);
 		if (!IsInsideTree()) return;
+		_currentState             = State.Moving;   // re-assert: AppearAt may have stomped this
+		_interactable.ProcessMode = ProcessModeEnum.Disabled;
 
 		// Snap to exact target position + flatten rotation with a small bounce.
 		var settleTween = CreateTween().SetParallel()
@@ -748,6 +753,8 @@ public partial class CubileteController : Node3D
 		settleTween.TweenProperty(this, "global_rotation", Vector3.Zero, 0.3f);
 		await ToSignal(settleTween, Tween.SignalName.Finished);
 		if (!IsInsideTree()) return;
+		_currentState             = State.Moving;   // re-assert once more before final transition
+		_interactable.ProcessMode = ProcessModeEnum.Disabled;
 
 		// Park dice inside the cup at the new position.
 		for (int i = 0; i < _dice.Length; i++)

@@ -189,7 +189,9 @@ public partial class Interactor : Node3D
 				_currentInteractable?.OnBlur();
 				_currentInteractable = interactable;
 				_currentInteractable?.OnFocus();
-				UpdatePrompt(_currentInteractable != null);
+				bool hasPrompt = _currentInteractable != null
+					&& !(_currentInteractable is Interactable iSilent && string.IsNullOrEmpty(iSilent.PromptText));
+				UpdatePrompt(hasPrompt);
 				ResetTooltip();
 			}
 		}

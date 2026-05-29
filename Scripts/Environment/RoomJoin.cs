@@ -54,9 +54,11 @@ public partial class RoomJoin : Node3D
 	private float _leftApparelBaseZ;
 	private float _rightApparelBaseZ;
 	private float _playingSetupBaseY;
+	private Vector3 _preRoomPosition;
 	private const float PlayingSetupHideOffset = 1.2f;
 	private int      _transitionGrace     = 0;
 	private bool     _inRoomOfficially    = false;
+	private bool     _localGameActive     = false; // true while a match is running; gates EjectPlayer
 	private string[] _lastSeenPlayers     = null;
 	private int      _lastCountdownSecs   = -1;
 
@@ -146,6 +148,13 @@ public partial class RoomJoin : Node3D
 
 		if (_leftDoor  != null) _leftDoor.ExitRoomRequested  += OnExitRequested;
 		if (_rightDoor != null) _rightDoor.ExitRoomRequested += OnExitRequested;
+
+		TableManager.LocalPlayerEliminated += EjectPlayer;
+	}
+
+	public override void _ExitTree()
+	{
+		TableManager.LocalPlayerEliminated -= EjectPlayer;
 	}
 
 	// ── Per-frame checks ──────────────────────────────────────────────────────
@@ -238,6 +247,9 @@ public partial class RoomJoin : Node3D
 
 	private void StartFlickerOn()
 	{
+		// Record where the player was standing outside so EjectPlayer can return them there.
+		if (Player != null) _preRoomPosition = Player.GlobalPosition;
+
 		if (_lights.Count == 0) return;
 		_flickerAudio?.Play();
 		foreach (var (light, origEnergy) in _lights)
@@ -246,6 +258,7 @@ public partial class RoomJoin : Node3D
 
 	private void StartFlickerOff()
 	{
+		_localGameActive = false;
 		if (_inRoomOfficially)
 		{
 			_inRoomOfficially = false;
@@ -263,6 +276,32 @@ public partial class RoomJoin : Node3D
 		ResetApparel();
 		(PlayingSetup as TableManager)?.ResetGame();
 		RoomNpc?.ResetWelcome();
+	}
+
+	/// <summary>
+	/// Called after the local player's elimination animation finishes.
+	/// Resets their tension, teleports them to the original spawn position, and
+	/// plays the look-up camera sweep so they respawn just like the game's intro.
+	/// </summary>
+	public void EjectPlayer()
+	{
+		if (!_localGameActive) return;
+		_playerInside = false;
+
+		// Room-state reset: lights, doors, music, chairs, tablero.
+		// Player position/animation is handled by TableManager.OnPlayerEliminated directly.
+		StartFlickerOff();
+
+		// Show the winner message after the screen has faded back in (~1.5 s).
+		GetTree().CreateTimer(1.5f).Timeout += () =>
+		{
+			string msg = TableManager.PendingWinnerMessage;
+			if (!string.IsNullOrEmpty(msg))
+			{
+				TableManager.PendingWinnerMessage = "";
+				ChatManager.AddLog(msg);
+			}
+		};
 	}
 
 	// ── Room networking ───────────────────────────────────────────────────────
@@ -335,6 +374,7 @@ public partial class RoomJoin : Node3D
 
 	private void OnGameStart()
 	{
+		_localGameActive = true;
 		RoomJoinerUi?.SetStatus(RoomJoinerUI.RoomStatus.InGame);
 		RoomJoinerUi?.FadeOut();
 		ChatManager.AddLog("[color=#c04040]> Game started! Choose your chair.[/color]");

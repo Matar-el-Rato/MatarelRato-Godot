@@ -177,7 +177,7 @@ public partial class TableManager : Node3D
         _gunAwaitingGrab        = false;
         if (OphanimNode != null) OphanimNode.GunSkipRequested -= OnOphanimGunSkipRequested;
         OphanimNode?.HideGunDecisionPrompt();
-        OphanimNode?.DismissBubble();
+        OphanimNode?.FullReset(); // ascend back to hidden, reset activation for next match
         _gunSwordOrigHangDistance = 0f;
         _gunHoveringPiece?.SetHovering(false);
         _gunHoveringPiece = null;
@@ -246,6 +246,7 @@ public partial class TableManager : Node3D
                 case "fire_axe_used":        OnFireAxeUsed(root);         break;
                 case "cigarette_result":     OnCigaretteResult(root);     break;
                 case "life_lost":            OnLifeLost(root);            break;
+                case "player_eliminated":    OnPlayerEliminated(root);    break;
                 case "game_over":            OnGameOver(root);            break;
                 case "turn_timer_warning":   OnTimerWarning(root);        break;
                 case "turn_timer_expired":   OnTimerExpired(root);        break;
@@ -302,10 +303,24 @@ public partial class TableManager : Node3D
         string color  = root.GetProperty("color").GetString();
         int    userId = root.TryGetProperty("user_id", out var uvEl) ? uvEl.GetInt32() : -1;
 
-        if (_seatTokensByColor.TryGetValue(color, out var token) && IsInstanceValid(token)) {
-            token.Disappear();
+        if (_seatTokensByColor.TryGetValue(color, out var token) && IsInstanceValid(token))
+        {
+            token.Petrify(); // turn to stone; node stays in scene as a statue
             _seatTokensByColor.Remove(color);
         }
+
+        // Petrify all pieces belonging to this player — grey briefly, then fire-disappear.
+        var tablero = GetNodeOrNull<TableroController>("tablero");
+        if (tablero != null)
+        {
+            for (int p = 0; p < 4; p++)
+            {
+                var ficha = tablero.GetPiece(color.ToLower(), p);
+                if (ficha != null && IsInstanceValid(ficha))
+                    ficha.Petrify();
+            }
+        }
+
         if (_chairsByColor.TryGetValue(color, out var vacatedChair))
             vacatedChair.SetVacated();
         if (userId >= 0) {
@@ -451,12 +466,13 @@ public partial class TableManager : Node3D
         GD.Print($"[TM] turn_start user_id={userId} isMyTurn={_isMyTurn}");
 
         GetNodeOrNull<CubileteController>("CubileteAndDice")?.SetInteractionEnabled(_isMyTurn);
-        // Handcuffs + fire axe are available the whole turn; cigarette only opens after dice_result.
+        // Handcuffs + magnifying glass are available before rolling; cigarette only opens after dice_result.
+        // Fire axe is gated inside EnableFireAxe — only activates if barriers exist on the board.
         if (_isMyTurn)
         {
             EnableHandcuffs(true);
-            EnableFireAxe(true);
             EnableMagnifyingGlass(true);
+            EnableFireAxe(true);
         }
 
         if (_initiativeInProgress) return;
@@ -557,6 +573,9 @@ public partial class TableManager : Node3D
 
         // Enable the cigarette during this window (dice rolled, piece not yet moved).
         EnableCigarette(true);
+        // Magnifying glass stays enabled only on doubles (can still peek at the next roll).
+        if (!isDoubles)
+            EnableMagnifyingGlass(false);
 
         if (moveable.Count > 0)
             MoveCounterHUD.Show(die1 + die2);
@@ -720,6 +739,7 @@ public partial class TableManager : Node3D
         FocusController.IsBlocked = false; // safety: clear any stale block from this turn
         ClearSelectables();
         EnableCigarette(false);
+        EnableMagnifyingGlass(false);
         FocusController.FocusStateChanged -= OnFireAxeFocusChanged;
         // Cancel any in-progress handcuff/fire-axe targeting and disable until next turn.
         // (?. only guards null — the node may be freed after the item is consumed.)
@@ -825,9 +845,10 @@ public partial class TableManager : Node3D
                 itemSet.SpawnItem(finalItem);
                 if (userId == LiveConnectionManager.LocalUserId)
                 {
-                    if (finalItem == "handcuffs")      EnableHandcuffs(_isMyTurn); // usable the whole turn, if it's still ours
-                    else if (finalItem == "fire_axe")  EnableFireAxe(_isMyTurn);   // same gate as handcuffs
-                    else if (finalItem == "cigarette") EnableCigarette(false);     // only opens in the post-roll window
+                    if (finalItem == "handcuffs")           EnableHandcuffs(_isMyTurn);       // usable the whole turn, if it's still ours
+                    else if (finalItem == "magnifying_glass") EnableMagnifyingGlass(_isMyTurn); // usable pre-roll, or after doubles
+                    else if (finalItem == "fire_axe")         EnableFireAxe(_isMyTurn);         // enabled only if barriers exist (gated inside EnableFireAxe)
+                    else if (finalItem == "cigarette")        EnableCigarette(false);           // only opens in the post-roll window
                 }
             }
             : (System.Action)null;
@@ -1019,11 +1040,265 @@ public partial class TableManager : Node3D
         }
     }
 
-    private void OnGameOver(JsonElement root)
+    /// <summary>Fired after the local player's elimination animation finishes. RoomJoin subscribes to eject them.</summary>
+    public static event System.Action LocalPlayerEliminated;
+
+    /// <summary>Set by OnGameOver so RoomJoin can display it in chat after the respawn animation.</summary>
+    public static string PendingWinnerMessage = "";
+
+    private async void OnPlayerEliminated(JsonElement root)
     {
-        int winnerId = root.TryGetProperty("winner_user_id", out var w) ? w.GetInt32() : -1;
-        string who   = _usernameByUserId.TryGetValue(winnerId, out var n) ? n : $"#{winnerId}";
-        GD.Print($"[TM] game_over! Winner: {who}");
+        int userId = root.TryGetProperty("user_id", out var u) ? u.GetInt32() : -1;
+        if (userId < 0 || OphanimNode == null) return;
+
+        string who = _usernameByUserId.TryGetValue(userId, out var n) ? n : $"#{userId}";
+        GD.Print($"[TM] player_eliminated: {who}");
+
+        // Wait for any in-progress move animation before starting the sequence.
+        await _lastMoveTask;
+        if (!IsInsideTree()) return;
+
+        // Descend Ophanim close to the board (mirrors golden_square_event pattern).
+        float descentAmount   = OphanimNode.CurrentDescendOffset;
+        float descentDuration = OphanimNode.GoldenDescentDuration;
+        float origHang        = _sword?.HangDistance ?? 0f;
+
+        OphanimNode.ReDescend();
+
+        if (_sword != null && _sword.IsInsideTree() && descentAmount > 0f)
+        {
+            var ropeTween = _sword.CreateTween();
+            ropeTween.TweenMethod(
+                Callable.From((float v) => _sword.HangDistance = v),
+                origHang, origHang - descentAmount, descentDuration)
+                .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
+        }
+
+        await ToSignal(GetTree().CreateTimer(descentDuration), SceneTreeTimer.SignalName.Timeout);
+        if (!IsInsideTree()) return;
+
+        bool isLocal = userId == LiveConnectionManager.LocalUserId;
+
+        await OphanimNode.SayAsync("Hmm...", 1.8f);
+        if (!IsInsideTree()) return;
+
+        // Collect targets: seated character model + all board pieces.
+        var targets = new System.Collections.Generic.List<Node3D>();
+
+        if (_colorByUserId.TryGetValue(userId, out var color))
+        {
+            if (_seatTokensByColor.TryGetValue(color, out var token) && IsInstanceValid(token))
+                targets.Add(token);
+
+            var tablero = GetNodeOrNull<TableroController>("tablero");
+            if (tablero != null)
+                for (int p = 0; p < 4; p++)
+                {
+                    var ficha = tablero.GetPiece(color.ToLower(), p);
+                    if (ficha != null && IsInstanceValid(ficha) && ficha.Visible)
+                        targets.Add(ficha);
+                }
+        }
+
+        // Local player camera effect: fly toward Ophanim + fade to black, in
+        // parallel with DevourAsync so the player sees themselves being consumed.
+        CanvasLayer devourFade = null;
+        Tween flyTween = null;
+        if (isLocal)
+        {
+            devourFade = new CanvasLayer { Layer = 100 };
+            var rect = new ColorRect { Color = new Color(0f, 0f, 0f, 0f) };
+            rect.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+            devourFade.AddChild(rect);
+            GetTree().Root.AddChild(devourFade);
+
+            var pcc = PlayerCameraController.LocalInstance;
+            if (pcc != null)
+            {
+                flyTween = pcc.CreateTween().SetParallel(true);
+                flyTween.TweenProperty(pcc, "global_position", OphanimNode.GlobalPosition, 1.3f)
+                        .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.In);
+                flyTween.TweenProperty(rect, "color:a", 1.0f, 1.3f)
+                        .SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.In);
+            }
+            else
+            {
+                // No camera found — just fade directly.
+                rect.CreateTween().TweenProperty(rect, "color:a", 1.0f, 0.5f);
+            }
+        }
+
+        // Sound effects played at the start of the devour sequence.
+        foreach (var sfxPath in new[] { "res://Assets/Sound FX/cracking.wav", "res://Assets/Sound FX/burnfx.wav" })
+        {
+            var clip = GD.Load<AudioStream>(sfxPath);
+            if (clip != null)
+            {
+                var sfx = new AudioStreamPlayer { Stream = clip };
+                AddChild(sfx);
+                sfx.Play();
+                sfx.Finished += () => { if (IsInstanceValid(sfx)) sfx.QueueFree(); };
+            }
+        }
+
+        await OphanimNode.DevourAsync(targets);
+        if (!IsInsideTree()) return;
+
+        // Restore sword rope length after Ophanim ascends.
+        if (_sword != null && _sword.IsInsideTree() && origHang > 0f)
+        {
+            var restoreTween = _sword.CreateTween();
+            restoreTween.TweenMethod(
+                Callable.From((float v) => _sword.HangDistance = v),
+                _sword.HangDistance, origHang, descentDuration)
+                .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
+        }
+
+        if (!isLocal)
+        {
+            // Animation is done — now it's safe to show the game-over message in chat.
+            if (!string.IsNullOrEmpty(PendingWinnerMessage))
+            {
+                ChatManager.AddLog(PendingWinnerMessage);
+                PendingWinnerMessage = "";
+            }
+        }
+
+        if (isLocal)
+        {
+            flyTween?.Kill();
+
+            // Teleport and reset the local player while the screen is still black.
+            // We do this here in TableManager rather than relying on RoomJoin.EjectPlayer
+            // so it is guaranteed to run at exactly the right moment in the animation.
+            var pccLocal = PlayerCameraController.LocalInstance;
+            if (pccLocal != null)
+            {
+                pccLocal.ForceUnsit();
+                pccLocal.GlobalPosition = pccLocal.InitialSpawnPosition;
+                pccLocal.Velocity       = Vector3.Zero;
+                pccLocal.SetTension(3);
+                pccLocal.PlayLookUpSequence(2.5f);
+            }
+
+            // Trigger room-state reset (StartFlickerOff, doors, game reset, etc.)
+            LocalPlayerEliminated?.Invoke();
+
+            await ToSignal(GetTree().CreateTimer(0.3f), SceneTreeTimer.SignalName.Timeout);
+            if (!IsInsideTree()) return;
+
+            if (devourFade != null && IsInstanceValid(devourFade))
+            {
+                var rect = devourFade.GetChildOrNull<ColorRect>(0);
+                if (rect != null)
+                {
+                    var fadeOut = rect.CreateTween();
+                    fadeOut.TweenProperty(rect, "color:a", 0.0f, 0.9f)
+                           .SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.Out);
+                    fadeOut.Finished += () =>
+                    {
+                        if (IsInstanceValid(devourFade)) devourFade.QueueFree();
+                    };
+                }
+            }
+        }
+    }
+
+    private async void OnGameOver(JsonElement root)
+    {
+        int    winnerId = root.TryGetProperty("winner_user_id", out var w) ? w.GetInt32() : -1;
+        string reason   = root.TryGetProperty("reason", out var r) ? r.GetString() : "race";
+        string who      = _usernameByUserId.TryGetValue(winnerId, out var n) ? n : $"#{winnerId}";
+        GD.Print($"[TM] game_over! Winner: {who} ({reason})");
+
+        string msg = $"[color=#ffd633]> {who.ToUpper()} WINS![/color]";
+
+        if (reason == "elimination")
+            PendingWinnerMessage = msg; // shown by win sequence or EjectPlayer timer
+        else
+            ChatManager.AddLog(msg);   // race win: no animation pending
+
+        // ── Win sequence for the local winner ─────────────────────────────────
+        if (winnerId != LiveConnectionManager.LocalUserId || OphanimNode == null) return;
+
+        // For elimination: wait for the devour animation to finish (~4.4 s).
+        // For race: brief pause for the goal-piece animation to settle.
+        float waitBefore = reason == "elimination" ? 4.6f : 1.0f;
+        await ToSignal(GetTree().CreateTimer(waitBefore), SceneTreeTimer.SignalName.Timeout);
+        if (!IsInsideTree()) return;
+
+        // ── White overlay ─────────────────────────────────────────────────────
+        var winFade = new CanvasLayer { Layer = 100 };
+        var rect    = new ColorRect { Color = new Color(1f, 1f, 1f, 0f) };
+        rect.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+        winFade.AddChild(rect);
+        GetTree().Root.AddChild(winFade);
+
+        // ── Fly camera toward Ophanim ─────────────────────────────────────────
+        var pcc = PlayerCameraController.LocalInstance;
+        Tween flyTween = null;
+        if (pcc != null)
+        {
+            flyTween = pcc.CreateTween().SetParallel(true);
+            flyTween.TweenProperty(pcc, "global_position", OphanimNode.GlobalPosition, 1.5f)
+                    .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.In);
+        }
+
+        // ── Intensify fisheye shader to blinding levels ───────────────────────
+        if (FisheyeMaterial != null)
+        {
+            float fromK1   = FisheyeMaterial.GetShaderParameter("k1").As<float>();
+            float fromZoom = FisheyeMaterial.GetShaderParameter("zoom").As<float>();
+            var   st       = CreateTween().SetParallel(true);
+            st.TweenMethod(
+                Callable.From((float v) => FisheyeMaterial.SetShaderParameter("k1",   v)),
+                Variant.From(fromK1), Variant.From(2.2f), 4.5f);
+            st.TweenMethod(
+                Callable.From((float v) => FisheyeMaterial.SetShaderParameter("zoom", v)),
+                Variant.From(fromZoom), Variant.From(3.2f), 4.5f);
+        }
+
+        // ── Ophanim phrase + growing white light ──────────────────────────────
+        await OphanimNode.WinFlashAsync(); // ~2 s say + 3 s light
+        if (!IsInsideTree()) return;
+
+        // ── Fade to white ─────────────────────────────────────────────────────
+        rect.CreateTween()
+            .TweenProperty(rect, "color:a", 1.0f, 0.8f)
+            .SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.In);
+        await ToSignal(GetTree().CreateTimer(0.8f), SceneTreeTimer.SignalName.Timeout);
+        if (!IsInsideTree()) return;
+
+        flyTween?.Kill();
+
+        // ── Reset local player (same as death reset) ──────────────────────────
+        if (pcc != null)
+        {
+            pcc.ForceUnsit();
+            pcc.GlobalPosition = pcc.InitialSpawnPosition;
+            pcc.Velocity       = Vector3.Zero;
+            pcc.SetTension(3);
+            pcc.PlayLookUpSequence(2.5f);
+        }
+
+        // Room reset (StartFlickerOff → ResetGame → FullReset Ophanim etc.)
+        LocalPlayerEliminated?.Invoke();
+
+        // Show winner message now that we're back in the street
+        if (!string.IsNullOrEmpty(PendingWinnerMessage))
+        {
+            ChatManager.AddLog(PendingWinnerMessage);
+            PendingWinnerMessage = "";
+        }
+
+        // ── Fade back from white ──────────────────────────────────────────────
+        await ToSignal(GetTree().CreateTimer(0.3f), SceneTreeTimer.SignalName.Timeout);
+        if (!IsInsideTree()) return;
+
+        var fadeBack = rect.CreateTween();
+        fadeBack.TweenProperty(rect, "color:a", 0.0f, 0.9f)
+                .SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.Out);
+        fadeBack.Finished += () => { if (IsInstanceValid(winFade)) winFade.QueueFree(); };
     }
 
     private void OnTimerWarning(JsonElement root)
@@ -1606,11 +1881,31 @@ public partial class TableManager : Node3D
             var camera      = GetViewport().GetCamera3D();
             Vector3 diceCenter = cubilete.GlobalPosition + Vector3.Up * 0.15f;
             Vector3 glassTarget = camera != null
-                ? diceCenter.Lerp(camera.GlobalPosition, 0.38f)
+                ? diceCenter.Lerp(camera.GlobalPosition, 0.38f) - Vector3.Up * 0.065f
                 : diceCenter + Vector3.Up * 0.22f;
-            var glassTween = _localMagnifyingGlass.CreateTween();
+
+            var glassTween = _localMagnifyingGlass.CreateTween().SetParallel(true);
             glassTween.TweenProperty(_localMagnifyingGlass, "global_position", glassTarget, 0.4f)
                 .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.Out);
+
+            // Rotate lens toward camera. Model lens is along +X, so build a basis
+            // with +X facing the camera rather than using LookingAt (which aligns -Z).
+            if (camera != null)
+            {
+                var lookDir = (camera.GlobalPosition - glassTarget).Normalized();
+                if (lookDir.LengthSquared() > 0.001f)
+                {
+                    var xAxis = lookDir;
+                    var zAxis = lookDir.Cross(Vector3.Up);
+                    if (zAxis.LengthSquared() < 0.001f)
+                        zAxis = lookDir.Cross(Vector3.Right);
+                    zAxis = zAxis.Normalized();
+                    var yAxis = zAxis.Cross(xAxis).Normalized();
+                    var targetRotation = new Basis(xAxis, yAxis, zAxis).GetEuler();
+                    glassTween.TweenProperty(_localMagnifyingGlass, "global_rotation", targetRotation, 0.4f)
+                        .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.Out);
+                }
+            }
         }
 
         // Dice pop up showing the peeked values; HUD confirms them.
@@ -1702,6 +1997,9 @@ public partial class TableManager : Node3D
         // otherwise the hover tween and the move tween fight over global_position.
         await _lastMoveTask;
         if (!IsInsideTree()) return;
+
+        // Release any tablero focus so the player can aim at and interact with Ophanim.
+        FocusController.Instance?.ExitFocus();
 
         var tablero = GetNodeOrNull<TableroController>("tablero");
         _gunHoveringPiece = null;

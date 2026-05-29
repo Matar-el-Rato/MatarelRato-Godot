@@ -174,6 +174,112 @@ public partial class FichaNode : Node3D
 		}
 	}
 
+	// ── Petrification ─────────────────────────────────────────────────────────
+
+	private bool _petrified = false;
+
+	/// <summary>
+	/// Turns the piece grey then burns it away with fire VFX.
+	/// Called when the owning player leaves the game mid-match.
+	/// </summary>
+	public void Petrify()
+	{
+		if (_petrified) return;
+		_petrified = true;
+		_pulseTween?.Kill();
+		_hoverTween?.Kill();
+		ApplyStoneAppearance();
+		GetTree().CreateTimer(0.45f).Timeout += () =>
+		{
+			if (IsInsideTree()) BurnDisappear();
+		};
+	}
+
+	private static readonly Color _stoneColor = new Color(0.52f, 0.50f, 0.47f);
+
+	private void ApplyStoneAppearance()
+	{
+		foreach (var node in FindChildren("*", "MeshInstance3D", true, false))
+		{
+			if (node is not MeshInstance3D mesh) continue;
+			int count = mesh.GetSurfaceOverrideMaterialCount();
+			for (int i = 0; i < count; i++)
+			{
+				var existing = (mesh.GetSurfaceOverrideMaterial(i)
+				             ?? mesh.Mesh?.SurfaceGetMaterial(i)) as StandardMaterial3D;
+				var mat = existing != null
+					? (StandardMaterial3D)existing.Duplicate()
+					: new StandardMaterial3D();
+				mat.AlbedoColor     = _stoneColor;
+				mat.EmissionEnabled = false;
+				mesh.SetSurfaceOverrideMaterial(i, mat);
+			}
+		}
+	}
+
+	private void BurnDisappear()
+	{
+		AddBurnFlash(GlobalPosition);
+		AddEmbers(GlobalPosition);
+		var tween = CreateTween();
+		tween.TweenProperty(this, "scale", new Vector3(0.001f, 0.001f, 0.001f), 0.45f)
+		     .SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.In);
+		tween.Finished += () => { if (IsInsideTree()) Visible = false; };
+	}
+
+	private void AddBurnFlash(Vector3 worldPos)
+	{
+		var flash = new OmniLight3D
+		{
+			TopLevel    = true,
+			LightColor  = new Color(1.0f, 0.5f, 0.2f),
+			LightEnergy = 0.0f,
+			OmniRange   = 2.0f,
+		};
+		GetParent().AddChild(flash);
+		flash.GlobalPosition = worldPos + Vector3.Up * 0.05f;
+		var t = CreateTween();
+		t.TweenProperty(flash, "light_energy", 4.0f, 0.07f);
+		t.TweenProperty(flash, "light_energy", 0.0f, 0.38f);
+		t.Finished += () => flash.QueueFree();
+	}
+
+	private void AddEmbers(Vector3 worldPos)
+	{
+		var particles = new CpuParticles3D { TopLevel = true };
+		GetParent().AddChild(particles);
+		particles.GlobalPosition     = worldPos + Vector3.Up * 0.06f;
+		particles.Amount             = 40;
+		particles.Lifetime           = 0.6f;
+		particles.OneShot            = true;
+		particles.Explosiveness      = 0.85f;
+		particles.EmissionShape      = CpuParticles3D.EmissionShapeEnum.Box;
+		particles.EmissionBoxExtents = new Vector3(0.03f, 0.06f, 0.03f);
+		particles.Direction          = new Vector3(0, 1, 0);
+		particles.Spread             = 50.0f;
+		particles.Gravity            = new Vector3(0, 2.0f, 0);
+		particles.InitialVelocityMin = 0.4f;
+		particles.InitialVelocityMax = 1.2f;
+		particles.ScaleAmountMin     = 0.4f;
+		particles.ScaleAmountMax     = 0.9f;
+		var gradient = new Gradient();
+		gradient.SetColor(0, new Color(1, 1, 0.5f, 1));
+		gradient.AddPoint(0.3f, new Color(1, 0.5f, 0.1f, 0.9f));
+		gradient.SetColor(gradient.GetPointCount() - 1, new Color(0.8f, 0.1f, 0, 0));
+		particles.ColorRamp = gradient;
+		particles.Mesh = new QuadMesh { Size = new Vector2(0.01f, 0.01f) };
+		particles.MaterialOverride = new StandardMaterial3D
+		{
+			ShadingMode            = StandardMaterial3D.ShadingModeEnum.Unshaded,
+			VertexColorUseAsAlbedo = true,
+			BillboardMode          = StandardMaterial3D.BillboardModeEnum.Enabled,
+			Transparency           = StandardMaterial3D.TransparencyEnum.Alpha,
+		};
+		particles.Emitting = true;
+		GetTree().CreateTimer(particles.Lifetime + 0.5f).Timeout +=
+			() => { if (IsInstanceValid(particles)) particles.QueueFree(); };
+	}
+
 	// ── State helpers ─────────────────────────────────────────────────────────
 
 	public void SetBoardIndex(int index) => BoardIndex = index;

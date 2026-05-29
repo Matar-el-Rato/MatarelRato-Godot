@@ -2,6 +2,7 @@
 
 [ext_resource type="Texture2D" uid="uid://bdow7xpjm0o3" path="res://Assets/Textures/moon_sky.png" id="1_qxria"]
 [ext_resource type="AudioStream" uid="uid://d35ykscrkw14f" path="res://Assets/Music/Portal Radio Tune.mp3" id="4_hx8n4"]
+[ext_resource type="PackedScene" uid="uid://c3wltan7i5oke" path="res://Scenes/Fire/Fire_Scene.tscn" id="6_20cv7"]
 [ext_resource type="PackedScene" uid="uid://b8bnktsbevaar" path="res://Assets/Environment/MainScene/SceneTest.glb" id="6_scene_test"]
 [ext_resource type="PackedScene" uid="uid://bpd6m0lb3j2ls" path="res://Scenes/Player.tscn" id="6_y4jh7"]
 [ext_resource type="Script" uid="uid://ct45xk2s628kn" path="res://Scripts/Environment/EnvironmentCollision.cs" id="7_env_collision"]
@@ -45,11 +46,11 @@
 [ext_resource type="PackedScene" uid="uid://b0qrw5i73q7b3" path="res://Scenes/Ophanim.tscn" id="47_uuu6x"]
 [ext_resource type="Script" uid="uid://bk2cbuauhf6vh" path="res://Scripts/Game/TableManager.cs" id="50_tablemgr"]
 [ext_resource type="PackedScene" uid="uid://dch41rs3n3v01" path="res://Scenes/Game/Chair.tscn" id="51_chair_scene"]
-[ext_resource type="Script" uid="uid://d24gbbiq68qj6" path="res://Scripts/Game/DummyGameSetup.cs" id="51_ywy86"]
 [ext_resource type="PackedScene" uid="uid://dp1t3ms3t0v02" path="res://Scenes/Game/PlayerItemSet.tscn" id="52_pitemset"]
 [ext_resource type="Script" uid="uid://j8aoyub8x1u7" path="res://Scripts/Game/DamoclesSword.cs" id="55_damocles_script"]
 [ext_resource type="Script" uid="uid://dv8cr4xwhbspu" path="res://Scripts/UI/DiceHUD.cs" id="60_dicehud"]
 [ext_resource type="Script" uid="uid://dg0vb40isf867" path="res://Scripts/UI/MoveCounterHUD.cs" id="61_movecounter"]
+[ext_resource type="Script" uid="uid://bfn8rid3i0sc6" path="res://Scripts/Environment/Fires.cs" id="62_fires_script"]
 
 [sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_moon"]
 panorama = ExtResource("1_qxria")
@@ -69,11 +70,19 @@ glow_enabled = true
 glow_intensity = 0.4
 glow_strength = 0.8
 glow_bloom = 0.1
-fog_enabled = true
-fog_light_color = Color(0.05, 0.05, 0.07, 1)
-fog_density = 0.02
+fog_mode = 1
+fog_light_color = Color(0.03666994, 0.036669526, 0.053594783, 1)
+fog_light_energy = 0.0
+fog_density = 5.23
 fog_sky_affect = 0.0
-fog_depth_begin = 3.0
+fog_depth_begin = -12.5
+fog_depth_end = 118.4
+volumetric_fog_enabled = true
+volumetric_fog_density = 0.055
+volumetric_fog_albedo = Color(0.48178947, 0.48178947, 0.48178947, 1)
+volumetric_fog_emission_energy = 0.0
+volumetric_fog_length = 55.35
+volumetric_fog_sky_affect = 0.974
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_y4jh7"]
 size = Vector3(25.297192, 7.634369, 1)
@@ -503,6 +512,34 @@ MaxVolume = -15.0
 [node name="MusicZoneShape2" type="CollisionShape3D" parent="Environment/MusicZone" unique_id=998124612]
 shape = SubResource("BoxShape3D_hx8n4")
 
+[node name="Fires" type="Node3D" parent="Environment" unique_id=86714095 node_paths=PackedStringArray("PizzeriaDoor")]
+script = ExtResource("62_fires_script")
+PizzeriaDoor = NodePath("../../Pizzeria/left_door_pizzeria")
+
+[node name="Holder" parent="Environment/Fires" unique_id=1916003490 instance=ExtResource("6_20cv7")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 19.903595, 0.4310726, -5.2604623)
+
+[node name="Holder2" parent="Environment/Fires" unique_id=1890831058 instance=ExtResource("6_20cv7")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16.89814, 0.4310726, -5.2604623)
+
+[node name="Holder3" parent="Environment/Fires" unique_id=516636603 instance=ExtResource("6_20cv7")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13.808264, 0.4310726, -5.2604623)
+
+[node name="Holder4" parent="Environment/Fires" unique_id=1886567125 instance=ExtResource("6_20cv7")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.808264, 0.4310726, -5.2604623)
+
+[node name="Holder5" parent="Environment/Fires" unique_id=256020389 instance=ExtResource("6_20cv7")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.6170807, 0.4310726, -5.2604623)
+
+[node name="Holder6" parent="Environment/Fires" unique_id=693372597 instance=ExtResource("6_20cv7")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.121973, 0.4310726, -5.2604623)
+
+[node name="Holder7" parent="Environment/Fires" unique_id=1407096590 instance=ExtResource("6_20cv7")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.3866711, 0.4310726, -5.2604623)
+
+[node name="Holder8" parent="Environment/Fires" unique_id=1838562536 instance=ExtResource("6_20cv7")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0021352768, 0.4310726, -3.0823522)
+
 [node name="Room1" type="Node3D" parent="." unique_id=1422990858]
 
 [node name="AudioStreamPlayer3D" type="AudioStreamPlayer3D" parent="Room1" unique_id=975460020]
@@ -648,7 +685,6 @@ GreetingMsg3 = "THE MAKAROV WILL ROTATE. A CLICK PASSES. A SHOT DECIDES."
 InitiativeGunScene = ExtResource("43_jkhus")
 GunRestYAboveTable = 0.4
 BrimstoneRaySound = ExtResource("45_xot12")
-
 
 [node name="damocles" parent="Room1" unique_id=1517889442 instance=ExtResource("28_8um71")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.262368, 0.69990087, -5.344487)
@@ -856,18 +892,3 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-
-[node name="dummyset" type="Node3D" parent="." unique_id=1808206027]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.05903244, 0.6661848, -5.1799827)
-script = ExtResource("51_ywy86")
-TableroScene = ExtResource("9_0iob3")
-ItemSetScene = ExtResource("52_pitemset")
-CubileteScene = ExtResource("17_mymud")
-
-[node name="dummy_mesa" parent="." unique_id=1847385829 instance=ExtResource("8_f140w")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.05955839, 0.3337862, -5.1890163)
-
-[node name="dummy_light" type="OmniLight3D" parent="." unique_id=665700066]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.012196958, 1.7791717, -5.2062078)
-light_color = Color(1, 1, 0.58431375, 1)
-light_energy = 0.5
