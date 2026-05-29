@@ -24,6 +24,8 @@ public static class ServerProtocol
 	private const byte ReqRegister  = 1;
 	private const byte ReqLogin     = 2;
 	private const byte ReqChangeSkin = 3;
+	private const byte ReqGetHistory = 18;
+	private const byte ReqGetLeaderboard = 19;
 
 	/// <summary>Server response codes as defined in the MER protocol.</summary>
 	public enum ResponseCode : byte
@@ -122,7 +124,113 @@ public static class ServerProtocol
 		}
 	}
 
+	/// <summary>
+	/// Fetches the match history for <paramref name="username"/> from the server.
+	/// Stateless request: [type 1B][username 12B ASCII]; response:
+	/// [code 1B][json_len 4B big-endian][json bytes]. On success the JSON array
+	/// (see db_get_match_history_json on the server) is returned in
+	/// <see cref="ServerResult.Message"/>. Blocking — call from a background thread.
+	/// </summary>
+	public static ServerResult GetMatchHistory(string host, int port, string username)
+	{
+		try
+		{
+			using var client = new TcpClient();
+			client.ConnectAsync(host, port).Wait(5000);
+			if (!client.Connected)
+				return Fail(ResponseCode.Unknown, "Connection timed out.");
+
+			using var stream = client.GetStream();
+
+			var packet = new byte[1 + MaxUsername];
+			packet[0] = ReqGetHistory;
+			var userBytes = Encoding.ASCII.GetBytes(username ?? "");
+			Array.Copy(userBytes, 0, packet, 1, Math.Min(userBytes.Length, MaxUsername));
+			stream.Write(packet, 0, packet.Length);
+
+			return ReadJsonResponse(stream);
+		}
+		catch (Exception ex)
+		{
+			return Fail(ResponseCode.Unknown, "Network error: " + ex.Message);
+		}
+	}
+
+	/// <summary>
+	/// Fetches the global leaderboard (top players by points). Stateless request:
+	/// a single [type] byte; response uses the same [code][json_len 4B BE][json]
+	/// layout as history. JSON array of {username, points} in <see cref="ServerResult.Message"/>.
+	/// Blocking — call from a background thread.
+	/// </summary>
+	public static ServerResult GetLeaderboard(string host, int port)
+	{
+		try
+		{
+			using var client = new TcpClient();
+			client.ConnectAsync(host, port).Wait(5000);
+			if (!client.Connected)
+				return Fail(ResponseCode.Unknown, "Connection timed out.");
+
+			using var stream = client.GetStream();
+			stream.Write(new byte[] { ReqGetLeaderboard }, 0, 1);
+			return ReadJsonResponse(stream);
+		}
+		catch (Exception ex)
+		{
+			return Fail(ResponseCode.Unknown, "Network error: " + ex.Message);
+		}
+	}
+
 	// ── Internal helpers ──────────────────────────────────────────────────────
+
+	/// <summary>
+	/// Reads a length-prefixed JSON response: [code 1B][json_len 4B big-endian][json].
+	/// Returns the JSON (or "[]") in <see cref="ServerResult.Message"/>.
+	/// </summary>
+	private static ServerResult ReadJsonResponse(NetworkStream stream)
+	{
+		var header = new byte[5];
+		if (!ReadExact(stream, header, 5))
+			return Fail(ResponseCode.Unknown, "Invalid response from server.");
+
+		var code = (ResponseCode)header[0];
+		// length is big-endian (network byte order)
+		int jsonLen = (header[1] << 24) | (header[2] << 16) | (header[3] << 8) | header[4];
+		if (jsonLen < 0 || jsonLen > 1 << 20)
+			return Fail(ResponseCode.Unknown, "Payload too large.");
+
+		string json = "[]";
+		if (jsonLen > 0)
+		{
+			var jsonBuf = new byte[jsonLen];
+			if (!ReadExact(stream, jsonBuf, jsonLen))
+				return Fail(ResponseCode.Unknown, "Truncated response.");
+			json = Encoding.UTF8.GetString(jsonBuf);
+		}
+
+		return new ServerResult
+		{
+			IsSuccess = code == ResponseCode.Success,
+			Code      = code,
+			Message   = json
+		};
+	}
+
+	/// <summary>
+	/// Reads exactly <paramref name="count"/> bytes into <paramref name="buf"/>,
+	/// looping until all bytes arrive or the stream ends.
+	/// </summary>
+	private static bool ReadExact(NetworkStream stream, byte[] buf, int count)
+	{
+		int received = 0;
+		while (received < count)
+		{
+			int n = stream.Read(buf, received, count - received);
+			if (n <= 0) return false;
+			received += n;
+		}
+		return true;
+	}
 
 	/// <summary>
 	/// Opens a TCP connection, writes a credential packet, and reads the response.

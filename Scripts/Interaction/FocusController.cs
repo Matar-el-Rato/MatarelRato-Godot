@@ -89,20 +89,35 @@ public partial class FocusController : Node
 	/// </summary>
 	/// <param name="focalPoint">Node whose GlobalTransform becomes the camera's target.</param>
 	/// <param name="target">The logical focus target tracked by <see cref="IsFocusedOn"/>.</param>
-	public void FocusOn(Node3D focalPoint, Node3D target)
+	public void FocusOn(Node3D focalPoint, Node3D target, float targetFOV = 75.0f)
 	{
 		if (_playerCamera == null) SetupReferences();
 		if (_isFocused || focalPoint == null || _playerCamera == null || IsBlocked) return;
 
-		_isFocused              = true;
-		_currentFocusTarget     = target;
+		_isFocused               = true;
+		_currentFocusTarget      = target;
 		_originalCameraTransform = _playerCamera.GlobalTransform;
+		_originalFOV             = _playerCamera.Fov;
 
-		if (_playerBody != null) _playerBody.MovementEnabled = false;
-		Interactor.IsLocked      = true;
-		Input.MouseMode          = Input.MouseModeEnum.Visible;
+		if (_playerBody != null)
+		{
+			_playerBody.MovementEnabled = false;
+			_playerBody.Velocity        = Vector3.Zero;
+		}
 
-		TweenCamera(focalPoint.GlobalTransform, DefaultFOV);
+		// Decouple camera from the player body hierarchy so the parent transform
+		// doesn't fight the tween (same as FocusOnModular). Preserve world position.
+		Vector3 currentGlobalPos = _playerCamera.GlobalPosition;
+		_playerCamera.TopLevel = true;
+		_playerCamera.GlobalPosition = currentGlobalPos;
+
+		Interactor.IsLocked = true;
+		Input.MouseMode     = Input.MouseModeEnum.Visible;
+
+		// The focal point's full GlobalTransform becomes the camera transform, so a
+		// camera-anchor node placed in the editor gives deterministic framing
+		// (no orientation guessing — fixes upside-down / from-behind on flat screens).
+		TweenCamera(focalPoint.GlobalTransform, targetFOV);
 		FocusStateChanged?.Invoke(true);
 	}
 

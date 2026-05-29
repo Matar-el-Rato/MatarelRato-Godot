@@ -38,6 +38,9 @@ public static class AuthManager
 	/// <param name="errorMessage">Human-readable error from the server.</param>
 	public static event Action<bool, string> OnAuthFailed;
 
+	/// <summary>Fired after the session is cleared via <see cref="NotifyLogout"/>.</summary>
+	public static event Action OnLogout;
+
 	// ── State mutators ────────────────────────────────────────────────────────
 
 	/// <summary>
@@ -85,5 +88,7 @@ public static class AuthManager
 		// Notify the server of intentional logout, then close the connection.
 		LiveConnectionManager.SendLogout();
 		LiveConnectionManager.Disconnect();
+
+		OnLogout?.Invoke();
 	}
 }

@@ -16,6 +16,12 @@ public partial class FocusInteractable : Node
 {
 	/// <summary>The Node3D that the camera will focus on. Defaults to the parent node.</summary>
 	[Export] public Node3D       Target;
+	/// <summary>
+	/// Optional explicit camera anchor. When set, the camera tweens to this node's
+	/// GlobalTransform verbatim (deterministic framing for flat screens / monitors)
+	/// instead of the auto-computed modular placement.
+	/// </summary>
+	[Export] public Node3D       FocalPoint;
 	[Export] public Interactable InteractableNode;
 	/// <summary>Distance in metres between the camera and the target surface while focused.</summary>
 	[Export] public float        Distance        = 0.4f;
@@ -49,7 +55,13 @@ public partial class FocusInteractable : Node
 
 	private void OnInteracted()
 	{
-		if (FocusController.Instance != null && Target != null)
-			FocusController.Instance.FocusOnModular(Target, Distance, PositionOffset, RotationOffset, TargetFOV);
+		if (FocusController.Instance == null) return;
+		Node3D target = Target ?? GetParent() as Node3D;
+		if (target == null) return;
+
+		if (FocalPoint != null)
+			FocusController.Instance.FocusOn(FocalPoint, target, TargetFOV);
+		else
+			FocusController.Instance.FocusOnModular(target, Distance, PositionOffset, RotationOffset, TargetFOV);
 	}
 }

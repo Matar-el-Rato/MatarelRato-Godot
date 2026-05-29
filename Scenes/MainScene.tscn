@@ -51,6 +51,7 @@
 [ext_resource type="Script" uid="uid://dv8cr4xwhbspu" path="res://Scripts/UI/DiceHUD.cs" id="60_dicehud"]
 [ext_resource type="Script" uid="uid://dg0vb40isf867" path="res://Scripts/UI/MoveCounterHUD.cs" id="61_movecounter"]
 [ext_resource type="Script" uid="uid://bfn8rid3i0sc6" path="res://Scripts/Environment/Fires.cs" id="62_fires_script"]
+[ext_resource type="PackedScene" uid="uid://knecfpt8ny2s" path="res://Scenes/Pizzeria/MatchHistoryBoard.tscn" id="70_mhboard"]
 
 [sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_moon"]
 panorama = ExtResource("1_qxria")
@@ -842,6 +843,10 @@ transform = Transform3D(1, 0, -1.7484555e-07, 0, 1, 0, 1.7484555e-07, 0, 1, 36.6
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 31.765379, -0.09333238, -17.415981)
 PlayerPath = NodePath("../../Player")
 ProximityRadius = 7.0
+
+[node name="Match History Board" parent="Pizzeria" unique_id=910100000 instance=ExtResource("70_mhboard")]
+transform = Transform3D(0.19591773, 0.041545276, -0.38051313, 3.4025076e-09, 0.42745975, 0.04667101, 0.3827744, -0.02126437, 0.19476032, 37.181835, 1.1428527, -12.095044)
+script = null
 
 [node name="Player" parent="." unique_id=1339342590 instance=ExtResource("6_y4jh7")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.16528296, -0.22474906, -0.35706663)

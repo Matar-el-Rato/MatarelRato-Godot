@@ -121,6 +121,12 @@ public partial class TableManager : Node3D
     // Set by OnCigaretteResult; polled by the async OnSmokingComplete before showing HUD.
     private bool _cigaretteResultReady = false;
 
+    // True only for the room whose match is currently running. PendingGameActions is a
+    // single process-wide queue shared by all three rooms' TableManagers; without this
+    // gate every TableManager would race to drain it and process each other's actions.
+    // The local player is only ever in one match at a time, so exactly one is active.
+    private bool _matchActive = false;
+
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
     public override void _Ready()
@@ -131,11 +137,16 @@ public partial class TableManager : Node3D
     public void StartGame(int playerCount)
     {
         GD.Print($"[TM] StartGame playerCount={playerCount}");
+        // Drop any stale actions left in the shared queue from a previous or aborted
+        // match so this room starts clean. Our own match's actions arrive after this.
+        while (LiveConnectionManager.PendingGameActions.TryDequeue(out _)) { }
+        _matchActive = true;
         Setup(playerCount);
     }
 
     public void ResetGame()
     {
+        _matchActive = false;
         Chair.ResetLocalChoice();
         _localChosenColor = "";
         foreach (var child in GetChildren())
@@ -187,6 +198,9 @@ public partial class TableManager : Node3D
 
     public override void _Process(double delta)
     {
+        // Only the active room's TableManager consumes the shared action queue.
+        if (!_matchActive) return;
+
         while (LiveConnectionManager.PendingGameActions.TryDequeue(out var json))
             HandleGameAction(json);
 
@@ -246,7 +260,16 @@ public partial class TableManager : Node3D
                 case "fire_axe_used":        OnFireAxeUsed(root);         break;
                 case "cigarette_result":     OnCigaretteResult(root);     break;
                 case "life_lost":            OnLifeLost(root);            break;
-                case "player_eliminated":    OnPlayerEliminated(root);    break;
+                case "player_eliminated":
+                    // Create the TCS before the async animation starts so OnGameOver can await it.
+                    {
+                        int peUid = root.TryGetProperty("user_id", out var peu) ? peu.GetInt32() : -1;
+                        if (peUid >= 0 && peUid != LiveConnectionManager.LocalUserId)
+                            _remoteEliminationTcs = new System.Threading.Tasks.TaskCompletionSource<bool>(
+                                System.Threading.Tasks.TaskCreationOptions.RunContinuationsAsynchronously);
+                    }
+                    OnPlayerEliminated(root);
+                    break;
                 case "game_over":            OnGameOver(root);            break;
                 case "turn_timer_warning":   OnTimerWarning(root);        break;
                 case "turn_timer_expired":   OnTimerExpired(root);        break;
@@ -1046,6 +1069,12 @@ public partial class TableManager : Node3D
     /// <summary>Set by OnGameOver so RoomJoin can display it in chat after the respawn animation.</summary>
     public static string PendingWinnerMessage = "";
 
+    /// <summary>
+    /// Resolved when the remote-player elimination animation (DevourAsync) completes.
+    /// Created in HandleGameAction before OnPlayerEliminated starts so OnGameOver can await it.
+    /// </summary>
+    private static System.Threading.Tasks.TaskCompletionSource<bool> _remoteEliminationTcs;
+
     private async void OnPlayerEliminated(JsonElement root)
     {
         int userId = root.TryGetProperty("user_id", out var u) ? u.GetInt32() : -1;
@@ -1080,6 +1109,11 @@ public partial class TableManager : Node3D
         bool isLocal = userId == LiveConnectionManager.LocalUserId;
 
         await OphanimNode.SayAsync("Hmm...", 1.8f);
+        if (!IsInsideTree()) return;
+
+        // Let the speech bubble sit for 2 seconds so it's fully readable before
+        // the devour sequence begins pulling the player toward Ophanim.
+        await ToSignal(GetTree().CreateTimer(2.0f), SceneTreeTimer.SignalName.Timeout);
         if (!IsInsideTree()) return;
 
         // Collect targets: seated character model + all board pieces.
@@ -1156,12 +1190,14 @@ public partial class TableManager : Node3D
 
         if (!isLocal)
         {
-            // Animation is done — now it's safe to show the game-over message in chat.
+            // Animation is done — show game-over message and signal OnGameOver to proceed.
             if (!string.IsNullOrEmpty(PendingWinnerMessage))
             {
                 ChatManager.AddLog(PendingWinnerMessage);
                 PendingWinnerMessage = "";
             }
+            _remoteEliminationTcs?.TrySetResult(true);
+            _remoteEliminationTcs = null;
         }
 
         if (isLocal)
@@ -1221,10 +1257,46 @@ public partial class TableManager : Node3D
         // ── Win sequence for the local winner ─────────────────────────────────
         if (winnerId != LiveConnectionManager.LocalUserId || OphanimNode == null) return;
 
-        // For elimination: wait for the devour animation to finish (~4.4 s).
-        // For race: brief pause for the goal-piece animation to settle.
-        float waitBefore = reason == "elimination" ? 4.6f : 1.0f;
-        await ToSignal(GetTree().CreateTimer(waitBefore), SceneTreeTimer.SignalName.Timeout);
+        // For elimination: await the TCS that OnPlayerEliminated resolves when DevourAsync ends.
+        // For race: a brief pause lets the goal-piece animation settle.
+        if (reason == "elimination")
+        {
+            var tcs = _remoteEliminationTcs;
+            if (tcs != null)
+                await tcs.Task;           // precise: resumes the moment the animation ends
+            else
+                await ToSignal(GetTree().CreateTimer(6.5f), SceneTreeTimer.SignalName.Timeout);
+        }
+        else
+        {
+            await ToSignal(GetTree().CreateTimer(1.0f), SceneTreeTimer.SignalName.Timeout);
+        }
+        if (!IsInsideTree()) return;
+
+        // ── Fisheye starts now, as speech begins ──────────────────────────────
+        // EaseIn means slow build during the bubble, then aggressive as the pull starts.
+        // Duration covers speech (~3 s) + grace (2 s) + fly (1.5 s) ≈ 6.5 s total.
+        if (FisheyeMaterial != null)
+        {
+            float fromK1   = FisheyeMaterial.GetShaderParameter("k1").As<float>();
+            float fromZoom = FisheyeMaterial.GetShaderParameter("zoom").As<float>();
+            var   st       = CreateTween().SetParallel(true);
+            st.TweenMethod(
+                Callable.From((float v) => FisheyeMaterial.SetShaderParameter("k1",   v)),
+                Variant.From(fromK1), Variant.From(2.2f), 6.5f)
+                .SetTrans(Tween.TransitionType.Expo).SetEase(Tween.EaseType.In);
+            st.TweenMethod(
+                Callable.From((float v) => FisheyeMaterial.SetShaderParameter("zoom", v)),
+                Variant.From(fromZoom), Variant.From(3.2f), 6.5f)
+                .SetTrans(Tween.TransitionType.Expo).SetEase(Tween.EaseType.In);
+        }
+
+        // ── Ophanim speaks first — player reads, then gets pulled in ─────────────
+        await OphanimNode.SayAsync("Didn't think you'd make it this far", 2.0f);
+        if (!IsInsideTree()) return;
+
+        // Same 2-second grace period as the death sequence.
+        await ToSignal(GetTree().CreateTimer(2.0f), SceneTreeTimer.SignalName.Timeout);
         if (!IsInsideTree()) return;
 
         // ── White overlay ─────────────────────────────────────────────────────
@@ -1244,30 +1316,21 @@ public partial class TableManager : Node3D
                     .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.In);
         }
 
-        // ── Intensify fisheye shader to blinding levels ───────────────────────
-        if (FisheyeMaterial != null)
-        {
-            float fromK1   = FisheyeMaterial.GetShaderParameter("k1").As<float>();
-            float fromZoom = FisheyeMaterial.GetShaderParameter("zoom").As<float>();
-            var   st       = CreateTween().SetParallel(true);
-            st.TweenMethod(
-                Callable.From((float v) => FisheyeMaterial.SetShaderParameter("k1",   v)),
-                Variant.From(fromK1), Variant.From(2.2f), 4.5f);
-            st.TweenMethod(
-                Callable.From((float v) => FisheyeMaterial.SetShaderParameter("zoom", v)),
-                Variant.From(fromZoom), Variant.From(3.2f), 4.5f);
-        }
-
         // ── Ophanim phrase + growing white light ──────────────────────────────
-        await OphanimNode.WinFlashAsync(); // ~2 s say + 3 s light
+        // WinFlashAsync returns the light at peak WITHOUT freeing it so we can
+        // keep it blazing all the way through the white-screen fade below.
+        var winLight = await OphanimNode.WinFlashAsync(); // ~2 s say + 3.5 s light
         if (!IsInsideTree()) return;
 
-        // ── Fade to white ─────────────────────────────────────────────────────
+        // ── Fade to white while the light is still at full intensity ──────────
         rect.CreateTween()
             .TweenProperty(rect, "color:a", 1.0f, 0.8f)
             .SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.In);
         await ToSignal(GetTree().CreateTimer(0.8f), SceneTreeTimer.SignalName.Timeout);
         if (!IsInsideTree()) return;
+
+        // Screen is now fully white — safe to kill the light.
+        if (winLight != null && IsInstanceValid(winLight)) winLight.QueueFree();
 
         flyTween?.Kill();
 

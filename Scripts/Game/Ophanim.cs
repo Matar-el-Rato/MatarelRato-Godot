@@ -695,16 +695,15 @@ public partial class Ophanim : Node3D
 	}
 
 	/// <summary>
-	/// Win sequence: says the phrase then builds a blinding cream-white light.
-	/// Run this while flying the camera toward Ophanim and ramping the fisheye shader.
-	/// Returns when the light has reached peak intensity (caller fades to white next).
+	/// Win sequence: says the phrase then builds a blinding cream-white light to peak intensity.
+	/// Returns the OmniLight3D still alive at full energy — caller must free it after the
+	/// white-screen fade so the light stays blazing all the way through the transition.
 	/// </summary>
-	public async System.Threading.Tasks.Task WinFlashAsync()
+	public async System.Threading.Tasks.Task<OmniLight3D> WinFlashAsync()
 	{
-		await SayAsync("Didn't think you'd make it this far", 2.0f);
-		if (!IsInsideTree()) return;
-
-		const float buildDuration = 3.0f;
+		// Say is handled by the caller before this is invoked so the player has
+		// time to read the bubble before being pulled in — only the light is here.
+		const float buildDuration = 3.5f;
 		var winLight = new OmniLight3D
 		{
 			LightColor  = new Color(1f, 0.97f, 0.88f), // warm cream-white
@@ -719,7 +718,10 @@ public partial class Ophanim : Node3D
 			.SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.In);
 
 		await ToSignal(GetTree().CreateTimer(buildDuration), SceneTreeTimer.SignalName.Timeout);
-		if (IsInstanceValid(winLight)) winLight.QueueFree();
+
+		// Return light at peak WITHOUT freeing — caller keeps it alive through the white fade.
+		if (!IsInsideTree()) { if (IsInstanceValid(winLight)) winLight.QueueFree(); return null; }
+		return winLight;
 	}
 
 	// ── Devour sequence ──────────────────────────────────────────────────────

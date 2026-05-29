@@ -141,6 +141,13 @@ public partial class ClipboardUIInteraction : Node3D
 	/// </summary>
 	private Vector2 UndistortMousePos(Vector2 mousePos)
 	{
+		// If no material was wired in the editor, resolve the live ColorRect post-process
+		// material at runtime (the same node PlayerCameraController animates) so undistortion
+		// always matches the current k1/zoom — including while they tween. Cached once found.
+		if (FisheyeMaterial == null)
+			FisheyeMaterial = GetTree()?.Root.FindChild("ColorRect", true, false) is ColorRect cr
+				? cr.Material as ShaderMaterial
+				: null;
 		if (FisheyeMaterial == null) return mousePos;
 
 		var   vp     = GetViewport().GetVisibleRect().Size;
