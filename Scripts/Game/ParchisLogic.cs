@@ -114,10 +114,30 @@ public static class ParchisLogic
             else if (pos == entry) pos = corrBase;
             else                   pos = pos == 68 ? 1 : pos + 1;
 
-            foreach (var color in SlotColorNames)
+            // 1. Own barrier blocks passage.
+            if (IsBarrier(pos, moverColor, positions)) return false;
+
+            // 2. Safe square check: any 2+ pieces of any color block.
+            if (IsSafe(pos, moverColor))
             {
-                if (color == moverColor) continue;
-                if (IsBarrier(pos, color, positions)) return false;
+                int totalOcc = 0;
+                for (int s = 0; s < 4; s++)
+                {
+                    for (int p = 0; p < 4; p++)
+                    {
+                        if (positions[s][p] == pos) totalOcc++;
+                    }
+                }
+                if (totalOcc >= 2) return false;
+            }
+            else
+            {
+                // 3. Non-safe square: enemy barriers block.
+                foreach (var color in SlotColorNames)
+                {
+                    if (color == moverColor) continue;
+                    if (IsBarrier(pos, color, positions)) return false;
+                }
             }
         }
         return true;
@@ -162,11 +182,18 @@ public static class ParchisLogic
 
     private static bool CanLand(int sq, string moverColor, int[][] positions)
     {
-        foreach (var color in SlotColorNames) {
-            if (color == moverColor) continue;
-            if (IsBarrier(sq, color, positions)) return false;
+        if (sq <= 0) return false;
+        if (IsGoal(sq)) return true;
+
+        int totalOcc = 0;
+        for (int s = 0; s < 4; s++)
+        {
+            for (int p = 0; p < 4; p++)
+            {
+                if (positions[s][p] == sq) totalOcc++;
+            }
         }
-        return true;
+        return totalOcc < 2;
     }
 
     public static int ColorToSlot(string color) => color switch {

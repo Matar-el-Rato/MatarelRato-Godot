@@ -79,7 +79,7 @@ public partial class PlayerItemSet : Node3D
         // Only enable interaction on items that are already visible (spawned).
         foreach (Node child in GetChildren())
         {
-            if (child is Node3D { Visible: true })
+            if (child is Node3D { Visible: true } && child.Name != "Gun")
                 SetChildInteractions(child, owned);
         }
     }
@@ -123,7 +123,7 @@ public partial class PlayerItemSet : Node3D
              .SetEase(Tween.EaseType.Out);
         tween.TweenCallback(Callable.From(() => SetStaticBodiesEnabled(item, true)));
 
-        if (_isOwned)
+        if (_isOwned && itemName != "gun")
             SetChildInteractions(item, true);
 
         AddBurnFlash(item.GlobalPosition);

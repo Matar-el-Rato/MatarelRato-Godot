@@ -71,6 +71,15 @@ public partial class CubileteController : Node3D
 	private System.Threading.Tasks.Task _earlyReturnTask =
 		System.Threading.Tasks.Task.CompletedTask;
 
+	// True while a doubles dice-return is animating the cup back to the board.
+	// During this window the cup must NOT be grabbable (a mid-animation grab
+	// permanently locked the Interactor) and must NOT glow.
+	private bool _earlyReturnActive = false;
+	// Set when a turn_start/SetInteractionEnabled(true) arrives DURING the return
+	// (no-move doubles, or the player moved fast). ExecuteReturnDiceEarly reads it
+	// to decide whether to make the cup grabbable when the animation completes.
+	private bool _readyRequested    = false;
+
 	// Pre-determined values from a magnifying-glass peek; 0 = no lock.
 	private int _lockedDie1 = 0;
 	private int _lockedDie2 = 0;
@@ -201,6 +210,14 @@ public partial class CubileteController : Node3D
 	/// </summary>
 	public void SetInteractionEnabled(bool enabled)
 	{
+		// While a doubles dice-return is animating, don't toggle interaction or glow
+		// mid-flight. Record the "should be rollable" intent so the return can enable
+		// the cup at the right moment and position when it finishes.
+		if (_earlyReturnActive)
+		{
+			if (enabled) _readyRequested = true;
+			return;
+		}
 		_interactable.Enabled = enabled;
 		_glowActive           = enabled;
 	}
@@ -330,8 +347,21 @@ public partial class CubileteController : Node3D
 
 	private void OnInteracted()
 	{
+		// Never grab while the doubles return is animating — that race used to
+		// leave the cup parented to the camera while the return reset it to
+		// Stationary, locking the Interactor for the rest of the session.
+		if (_earlyReturnActive) return;
 		if (_currentState == State.Stationary)
 			Grab();
+	}
+
+	/// <summary>Makes the parked cup grabbable again and re-lights the glow.</summary>
+	private void EnableForRoll()
+	{
+		_interactable.ProcessMode = ProcessModeEnum.Inherit;
+		_interactable.Enabled     = true;
+		_interactable.PromptText  = "Grab Cubilete";
+		_glowActive               = true;
 	}
 
 	/// <summary>
@@ -581,6 +611,15 @@ public partial class CubileteController : Node3D
 	/// </summary>
 	public void ReturnDiceEarly(Vector3 boardPos)
 	{
+		// Lock the cup down for the whole return: not grabbable, not glowing,
+		// until the animation finishes (and, for a move-overdue doubles, until the
+		// player has actually moved and the server sends the extra turn_start).
+		_earlyReturnActive        = true;
+		_readyRequested           = false;
+		_interactable.Enabled     = false;
+		_interactable.ProcessMode = ProcessModeEnum.Disabled;
+		_glowActive               = false;
+
 		var tcs = new System.Threading.Tasks.TaskCompletionSource<bool>();
 		_earlyReturnTask = tcs.Task;
 		ExecuteReturnDiceEarly(boardPos, tcs);
@@ -605,10 +644,24 @@ public partial class CubileteController : Node3D
 		if (!IsInsideTree()) { tcs.TrySetResult(true); return; }
 
 		foreach (var die in _dice) { die.Freeze = true; die.Visible = false; }
-		_currentState             = State.Stationary;
-		_interactable.ProcessMode = ProcessModeEnum.Inherit;
-		_interactable.PromptText  = "Grab Cubilete";
-		_glowActive               = true;
+		_currentState      = State.Stationary;
+		_earlyReturnActive = false;
+
+		if (_readyRequested)
+		{
+			// Server already granted the re-roll (no-move doubles, or the player
+			// moved before the return finished) — make the cup grabbable now.
+			_readyRequested = false;
+			EnableForRoll();
+		}
+		else
+		{
+			// A piece move is still overdue: keep the cup parked, non-interactive
+			// and un-highlighted. The post-move turn_start → ReadyForRoll enables it.
+			_interactable.ProcessMode = ProcessModeEnum.Disabled;
+			_interactable.Enabled     = false;
+			_glowActive               = false;
+		}
 		tcs.SetResult(true);
 	}
 
@@ -663,6 +716,10 @@ public partial class CubileteController : Node3D
 	{
 		if (_currentState != State.Hidden && _currentState != State.Moving) return;
 
+		// Fresh match / first appearance — clear any leftover doubles-return state.
+		_earlyReturnActive        = false;
+		_readyRequested           = false;
+
 		SetCubileteVisible(false);
 		_interactable.ProcessMode = ProcessModeEnum.Disabled;
 
@@ -692,22 +749,32 @@ public partial class CubileteController : Node3D
 	/// </summary>
 	public void ReadyForRoll()
 	{
+		// If the doubles return is still animating the cup to the board, don't show
+		// or enable it here — it would flash at the thrown (in-air) position and be
+		// grabbable mid-animation. Defer: ExecuteReturnDiceEarly enables on finish.
+		if (_earlyReturnActive)
+		{
+			_readyRequested = true;
+			return;
+		}
+
 		foreach (var die in _dice) { die.Freeze = true; die.Visible = false; }
 		GlobalRotation = Vector3.Zero;
 		RestoreMeshToParent();
 		SetCubileteVisible(true);
-		_currentState             = State.Stationary;
-		_interactable.ProcessMode = ProcessModeEnum.Inherit;
-		_interactable.PromptText  = "Grab Cubilete";
-		_glowActive               = true;
+		_currentState = State.Stationary;
+		EnableForRoll();
 	}
 
 	/// <summary>
 	/// Arc the cup clockwise around <paramref name="boardCenter"/> to <paramref name="targetSurfacePos"/>,
 	/// then settle and enable interaction. Dice are hidden during transit and re-parked on arrival.
 	/// </summary>
-	public async void MoveToPlayer(Vector3 targetSurfacePos, Vector3 boardCenter)
+	public async System.Threading.Tasks.Task MoveToPlayer(Vector3 targetSurfacePos, Vector3 boardCenter)
 	{
+		// Turn has passed to another player; clear any stale doubles-return state.
+		_earlyReturnActive        = false;
+		_readyRequested           = false;
 		_currentState             = State.Moving;
 		_interactable.ProcessMode = ProcessModeEnum.Disabled;
 

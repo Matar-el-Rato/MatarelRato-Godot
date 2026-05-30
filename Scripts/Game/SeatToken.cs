@@ -45,8 +45,9 @@ public partial class SeatToken : Node3D
 	/// Sets username label and spawns the character model at the sitting position.
 	/// Call before Appear(). Token must already be positioned at chair.GlobalPosition
 	/// with chair.GlobalRotation — sitting offset is applied internally.
+	/// The username label is colored to match the player's assigned seat color.
 	/// </summary>
-	public void SetPlayerInfo(string username, string colorKey, int skinId, Chair chair)
+	public void SetPlayerInfo(string username, string colorKey, int skinId, Chair chair, Color seatColor)
 	{
 		_username = username;
 
@@ -57,7 +58,7 @@ public partial class SeatToken : Node3D
 			FontSize        = 72,
 			PixelSize       = 0.004f,
 			Billboard       = BaseMaterial3D.BillboardModeEnum.Enabled,
-			Modulate        = new Color(1, 1, 1, 1),
+			Modulate        = seatColor,
 			OutlineSize     = 12,
 			OutlineModulate = new Color(0, 0, 0, 1f),
 			Text            = username,

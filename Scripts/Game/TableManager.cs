@@ -41,7 +41,12 @@ public partial class TableManager : Node3D
     };
 
     private static readonly float[] ChairRotationsY  = { 0f, 180f, -90f, +90f };
-    private static readonly float[] ItemSetRotationsY = { 90f, -90f, 180f, 0f };
+    // Each set is placed at the board centre and rotated to face its own chair.
+    // Slot→seat: 0=blue(+Z) 1=green(-Z) 2=yellow(-X) 3=red(+X). Godot rotates the
+    // set's local +X by Y, so +X→(cosθ,0,-sinθ): blue=-90→+Z, green=90→-Z,
+    // yellow=180→-X, red=0→+X. Blue and green were previously swapped (90/-90),
+    // which put the green player's items across the table on the blue side.
+    private static readonly float[] ItemSetRotationsY = { -90f, 90f, 180f, 0f };
 
     private static readonly Color[] SlotColors = new[]
     {
@@ -49,6 +54,15 @@ public partial class TableManager : Node3D
         new Color(0.2f, 0.85f, 0.2f),
         new Color(1f,   0.85f, 0f),
         new Color(1f,   0.15f, 0.15f),
+    };
+
+/* Lighter, saturated versions of slot colors for player name labels. */
+    private static readonly Color[] SlotColorsLight = new[]
+    {
+        new Color(0.45f, 0.70f, 1.00f),    /* light blue - lowered red/green to reduce white */
+        new Color(0.45f, 0.92f, 0.45f),    /* light green - lowered red/blue to reduce white */
+        new Color(1.00f, 0.90f, 0.35f),    /* light yellow - lowered blue to reduce white */
+        new Color(1.00f, 0.45f, 0.45f),    /* light red - lowered green/blue to reduce white */
     };
 
     private static readonly string[] SlotColorNames = { "BLUE", "GREEN", "YELLOW", "RED" };
@@ -102,6 +116,9 @@ public partial class TableManager : Node3D
     private System.Threading.Tasks.Task _lastMoveTask =
         System.Threading.Tasks.Task.CompletedTask;
 
+    private System.Threading.Tasks.Task _lastEliminationTask =
+        System.Threading.Tasks.Task.CompletedTask;
+
     // Set on extra_turn/doubles so OnTurnStart skips the ReadyForRoll call (cup was already reset by ReturnDiceEarly).
     private bool _doublesAnimating     = false;
     // Updated from dice_result; passed to the reroll sound selector.
@@ -120,6 +137,7 @@ public partial class TableManager : Node3D
     private readonly Dictionary<int, Handcuffs> _activeHandcuffs = new();
     // Set by OnCigaretteResult; polled by the async OnSmokingComplete before showing HUD.
     private bool _cigaretteResultReady = false;
+    private bool _itemsAllowed = false;
 
     // True only for the room whose match is currently running. PendingGameActions is a
     // single process-wide queue shared by all three rooms' TableManagers; without this
@@ -180,6 +198,8 @@ public partial class TableManager : Node3D
         foreach (var row in _boardPositions)
             Array.Clear(row, 0, row.Length);
         ClearSelectables();
+        GetNodeOrNull<TableroController>("tablero")?.ResetBoard();
+        _goldenSquares = Array.Empty<int>();
         FocusController.FocusStateChanged -= OnFireAxeFocusChanged;
         _localHandcuffs       = null;
         _localCigarette       = null;
@@ -490,15 +510,16 @@ public partial class TableManager : Node3D
         _isMyTurn = (userId == LiveConnectionManager.LocalUserId);
         GD.Print($"[TM] turn_start user_id={userId} isMyTurn={_isMyTurn}");
 
+        // Immediately disallow item interactions until the cubilete settles
+        _itemsAllowed = false;
+        EnableHandcuffs(false);
+        EnableMagnifyingGlass(false);
+        EnableFireAxe(false);
+        EnableCigarette(false);
+        if (_localGun != null && IsInstanceValid(_localGun))
+            _localGun.SetInteractionEnabled(false);
+
         GetNodeOrNull<CubileteController>("CubileteAndDice")?.SetInteractionEnabled(_isMyTurn);
-        // Handcuffs + magnifying glass are available before rolling; cigarette only opens after dice_result.
-        // Fire axe is gated inside EnableFireAxe — only activates if barriers exist on the board.
-        if (_isMyTurn)
-        {
-            EnableHandcuffs(true);
-            EnableMagnifyingGlass(true);
-            EnableFireAxe(true);
-        }
 
         if (_initiativeInProgress) return;
 
@@ -517,7 +538,10 @@ public partial class TableManager : Node3D
             // finished the cup stayed hidden/ungrabbable, so the player timed out unable to
             // roll. ReadyForRoll is idempotent and re-shows the cup, so it's safe to always run.
             if (_isMyTurn)
+            {
                 GetNodeOrNull<CubileteController>("CubileteAndDice")?.ReadyForRoll();
+                _ = EnableItemsAfterDelay(0.5f);
+            }
             _doublesAnimating = false;
             return;
         }
@@ -526,10 +550,53 @@ public partial class TableManager : Node3D
         {
             var targetPos   = GetCubiletePositionForColor(color);
             var boardCenter = GetNodeOrNull<Node3D>("tablero")?.GlobalPosition ?? GlobalPosition;
-            GetNodeOrNull<CubileteController>("CubileteAndDice")?.MoveToPlayer(targetPos, boardCenter);
-            _cubileteAtUserId = userId;
+            var cubilete = GetNodeOrNull<CubileteController>("CubileteAndDice");
+            if (cubilete != null)
+            {
+                _cubileteAtUserId = userId;
+                if (_isMyTurn)
+                {
+                    _ = MoveCubileteAndEnableItems(cubilete, targetPos, boardCenter);
+                }
+                else
+                {
+                    cubilete.MoveToPlayer(targetPos, boardCenter);
+                }
+            }
         }
     }
+
+    private async System.Threading.Tasks.Task EnableItemsAfterDelay(float delay)
+    {
+        await ToSignal(GetTree().CreateTimer(delay), SceneTreeTimer.SignalName.Timeout);
+        if (!IsInsideTree()) return;
+
+        if (_isMyTurn)
+        {
+            _itemsAllowed = true;
+            EnableHandcuffs(true);
+            EnableMagnifyingGlass(true);
+            EnableFireAxe(true);
+        }
+    }
+
+    private async System.Threading.Tasks.Task MoveCubileteAndEnableItems(CubileteController cubilete, Vector3 targetPos, Vector3 boardCenter)
+    {
+        await cubilete.MoveToPlayer(targetPos, boardCenter);
+        if (!IsInsideTree()) return;
+
+        await ToSignal(GetTree().CreateTimer(0.5f), SceneTreeTimer.SignalName.Timeout);
+        if (!IsInsideTree()) return;
+
+        if (_isMyTurn)
+        {
+            _itemsAllowed = true;
+            EnableHandcuffs(true);
+            EnableMagnifyingGlass(true);
+            EnableFireAxe(true);
+        }
+    }
+
 
     private async void OnDiceResult(JsonElement root)
     {
@@ -541,10 +608,13 @@ public partial class TableManager : Node3D
         bool isDoubles= root.TryGetProperty("is_doubles",          out var idEl) && idEl.GetBoolean();
         int  consec   = root.TryGetProperty("consecutive_doubles", out var cdEl) ? cdEl.GetInt32() : 0;
 
-        var moveableFromServer = new HashSet<int>();
-        if (root.TryGetProperty("moveable_pieces", out var mpEl))
+        bool hasMoveableProperty = root.TryGetProperty("moveable_pieces", out var mpEl);
+        var moveableFromServer = new List<int>();
+        if (hasMoveableProperty)
+        {
             foreach (var el in mpEl.EnumerateArray())
                 moveableFromServer.Add(el.GetInt32());
+        }
         // root no longer accessed past this point.
 
         bool isMyRoll = userId == LiveConnectionManager.LocalUserId;
@@ -553,7 +623,7 @@ public partial class TableManager : Node3D
 
         if (!isMyRoll)
         {
-            bool hasMoves = moveableFromServer.Count > 0;
+            bool hasMoves = hasMoveableProperty ? moveableFromServer.Count > 0 : true;
             GetNodeOrNull<CubileteController>("CubileteAndDice")?.PlayRemoteThrow(1.5f, hasMoves);
             DiceHUD.ShowRemote(die1, die2);
             return;
@@ -567,9 +637,7 @@ public partial class TableManager : Node3D
         List<int> localMoveable = ourColor.Length > 0
             ? ParchisLogic.GetMoveablePieces(ourColor, die1, die2, _boardPositions)
             : new List<int>();
-        var moveable = moveableFromServer.Count > 0
-            ? new List<int>(moveableFromServer)
-            : localMoveable;
+        var moveable = hasMoveableProperty ? moveableFromServer : localMoveable;
 
         // die2 == 0 signals a second-move dice_result sent privately after a 5+X or 5+5 exit.
         // In that case, await the exit animation so the counter is already at the right value,
@@ -737,29 +805,36 @@ public partial class TableManager : Node3D
             return;
         }
 
-        if (isUs && pending > 0)
+        if (isUs)
         {
-            // Highlight immediately so the player sees selectable pieces.
-            _pendingBonusMoves = pending;
-            string ourColor = _colorByUserId.TryGetValue(userId, out var oc) ? oc.ToLower() : "";
-            if (ourColor.Length > 0)
+            if (pending > 0)
             {
-                int slot = ParchisLogic.ColorToSlot(ourColor);
-                var valid = new List<int>();
-                for (int p = 0; p < 4; p++)
-                    if (_boardPositions[slot][p] > 0 && !ParchisLogic.IsGoal(_boardPositions[slot][p]))
-                        valid.Add(p);
-                HighlightMoveablePieces(ourColor, valid);
+                // Highlight immediately so the player sees selectable pieces.
+                _pendingBonusMoves = pending;
+                string ourColor = _colorByUserId.TryGetValue(userId, out var oc) ? oc.ToLower() : "";
+                if (ourColor.Length > 0)
+                {
+                    var valid = ParchisLogic.GetMoveablePieces(ourColor, pending, 0, _boardPositions);
+                    HighlightMoveablePieces(ourColor, valid);
+                }
+                // Wait for the current animation so leftover Step() callbacks don't corrupt the new counter value.
+                await _lastMoveTask;
+                if (!IsInsideTree()) return;
+                MoveCounterHUD.Show(pending);
             }
-            // Wait for the current animation so leftover Step() callbacks don't corrupt the new counter value.
-            await _lastMoveTask;
-            if (!IsInsideTree()) return;
-            MoveCounterHUD.Show(pending);
+            else
+            {
+                ClearSelectables();
+                await _lastMoveTask;
+                if (!IsInsideTree()) return;
+                MoveCounterHUD.Hide();
+            }
         }
     }
 
     private async void OnTurnEnd(JsonElement root)
     {
+        _itemsAllowed = false;
         _sword?.Dismiss();
         FocusController.IsBlocked = false; // safety: clear any stale block from this turn
         ClearSelectables();
@@ -772,6 +847,11 @@ public partial class TableManager : Node3D
         if (IsInstanceValid(_localFireAxe))   _localFireAxe.CancelTargeting();
         EnableHandcuffs(false);
         EnableFireAxe(false);
+        if (_localGun != null && IsInstanceValid(_localGun))
+        {
+            _localGun.SetAvailable(false);
+            _localGun.SetInteractionEnabled(false);
+        }
         _pendingDie1       = 0;
         _pendingDie2       = 0;
         _pendingBonusMoves = 0;
@@ -874,6 +954,7 @@ public partial class TableManager : Node3D
                     else if (finalItem == "magnifying_glass") EnableMagnifyingGlass(_isMyTurn); // usable pre-roll, or after doubles
                     else if (finalItem == "fire_axe")         EnableFireAxe(_isMyTurn);         // enabled only if barriers exist (gated inside EnableFireAxe)
                     else if (finalItem == "cigarette")        EnableCigarette(false);           // only opens in the post-roll window
+                    else if (finalItem == "gun")              _localGun?.SetInteractionEnabled(false);
                 }
             }
             : (System.Action)null;
@@ -1082,6 +1163,12 @@ public partial class TableManager : Node3D
         int userId = root.TryGetProperty("user_id", out var u) ? u.GetInt32() : -1;
         if (userId < 0 || OphanimNode == null) return;
 
+        var myTcs = new System.Threading.Tasks.TaskCompletionSource<bool>();
+        var prevTask = _lastEliminationTask;
+        _lastEliminationTask = myTcs.Task;
+        await prevTask;
+        if (!IsInsideTree()) return;
+
         string who = _usernameByUserId.TryGetValue(userId, out var n) ? n : $"#{userId}";
         GD.Print($"[TM] player_eliminated: {who}");
 
@@ -1248,6 +1335,7 @@ public partial class TableManager : Node3D
                 }
             }
         }
+        myTcs.SetResult(true);
     }
 
     private async void OnGameOver(JsonElement root)
@@ -1740,7 +1828,12 @@ public partial class TableManager : Node3D
         token.GlobalPosition = chair.GlobalPosition;
         token.GlobalRotation = chair.GlobalRotation;
         token.SetUserId(userId);
-        token.SetPlayerInfo(username, color, skinId, chair);
+        
+        /* Map color to its corresponding light slot color for the username label. */
+        int colorSlot = ColorToSlot(color.ToLower());
+        Color labelColor = colorSlot >= 0 && colorSlot < SlotColorsLight.Length ? SlotColorsLight[colorSlot] : new Color(1, 1, 1, 1);
+        
+        token.SetPlayerInfo(username, color, skinId, chair, labelColor);
         token.Appear();
         _seatTokensByColor[color] = token;
     }
@@ -1939,14 +2032,14 @@ public partial class TableManager : Node3D
     {
         if (!IsInstanceValid(_localCigarette)) return;
         if (enabled && !_localCigarette.Visible) return;
-        _localCigarette.SetInteractionEnabled(enabled);
+        _localCigarette.SetInteractionEnabled(enabled && _itemsAllowed);
     }
 
     private void EnableMagnifyingGlass(bool enabled)
     {
         if (!IsInstanceValid(_localMagnifyingGlass)) return;
         if (enabled && !_localMagnifyingGlass.Visible) return;
-        _localMagnifyingGlass.SetInteractionEnabled(enabled);
+        _localMagnifyingGlass.SetInteractionEnabled(enabled && _itemsAllowed);
     }
 
     // ── Magnifying glass handlers ─────────────────────────────────────────────
@@ -2029,7 +2122,7 @@ public partial class TableManager : Node3D
         // reference before touching it.
         if (!IsInstanceValid(_localHandcuffs)) return;
         if (enabled && !_localHandcuffs.Visible) return; // not granted yet
-        _localHandcuffs.SetInteractionEnabled(enabled);
+        _localHandcuffs.SetInteractionEnabled(enabled && _itemsAllowed);
     }
 
     // ── Gun handlers ──────────────────────────────────────────────────────────
@@ -2296,7 +2389,7 @@ public partial class TableManager : Node3D
             var tablero = GetNodeOrNull<TableroController>("tablero");
             enabled = tablero != null && tablero.GetAxeableBarriers().Count > 0;
         }
-        _localFireAxe.SetInteractionEnabled(enabled);
+        _localFireAxe.SetInteractionEnabled(enabled && _itemsAllowed);
     }
 
     private void OnFireAxeGrabbed()
@@ -2421,6 +2514,24 @@ public partial class TableManager : Node3D
         if (!IsInsideTree()) return;
 
         await tablero.ApplyFireAxeSplit(fwdColor, fwdPiece, fwdTo, bwdColor, bwdPiece, bwdTo);
+
+        if (_isMyTurn)
+        {
+            string ourColor = _colorByUserId.TryGetValue(LiveConnectionManager.LocalUserId, out var oc) ? oc.ToLower() : "";
+            if (ourColor.Length > 0)
+            {
+                if (_pendingBonusMoves > 0)
+                {
+                    var valid = ParchisLogic.GetMoveablePieces(ourColor, _pendingBonusMoves, 0, _boardPositions);
+                    HighlightMoveablePieces(ourColor, valid);
+                }
+                else if (_pendingDie1 > 0 || _pendingDie2 > 0)
+                {
+                    var valid = ParchisLogic.GetMoveablePieces(ourColor, _pendingDie1, _pendingDie2, _boardPositions);
+                    HighlightMoveablePieces(ourColor, valid);
+                }
+            }
+        }
     }
 
     // ── Music crossfade ───────────────────────────────────────────────────────

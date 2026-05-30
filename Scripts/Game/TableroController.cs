@@ -93,6 +93,34 @@ public partial class TableroController : Node3D
 
 	// ── Public API ────────────────────────────────────────────────────────────
 
+	/// <summary>Resets the entire board state by destroying all spawned pieces and golden markers, clearing dictionaries and lists.</summary>
+	public void ResetBoard()
+	{
+		// QueueFree all spawned pieces
+		foreach (var ficha in _pieces.Values)
+		{
+			if (IsInstanceValid(ficha))
+				ficha.QueueFree();
+		}
+		_pieces.Clear();
+
+		// QueueFree all golden markers
+		foreach (var marker in _goldenMarkers)
+		{
+			if (IsInstanceValid(marker))
+				marker.QueueFree();
+		}
+		_goldenMarkers.Clear();
+
+		// QueueFree any path previews
+		HidePathPreview();
+
+		// Clear occupancies and other state
+		_occupancy.Clear();
+		_goalOccupancy.Clear();
+		_axeTargetedPieces.Clear();
+	}
+
 	/// <summary>Spawns four pieces for <paramref name="color"/> and places them in base, hidden until revealed.</summary>
 	public void SpawnPlayer(string color)
 	{
@@ -142,6 +170,17 @@ public partial class TableroController : Node3D
 		if (ficha == null) return;
 
 		RemoveFromOccupancy(ficha);
+
+		// Update the from square layout immediately after removing the piece.
+		if (from >= 1)
+		{
+			int count = OccupantCount(from);
+			if (count == 1)
+				CenterPieceAt(from);
+			else if (count >= 2)
+				ApplyBarrierPositions(from);
+		}
+
 		ficha.SetBoardIndex(to);
 
 		var path = BuildPath(color, from, to, steps);
@@ -174,6 +213,16 @@ public partial class TableroController : Node3D
 		}
 		else
 			await AnimatePath(ficha, path, color, notifyCounter);
+
+		// Now the piece has finished animating. Update the to square layout.
+		if (to >= 1)
+		{
+			int count = OccupantCount(to);
+			if (count == 1)
+				CenterPieceAt(to);
+			else if (count >= 2)
+				ApplyBarrierPositions(to);
+		}
 	}
 
 	/// <summary>Sends a piece back to its base slot (capture / triple-double).</summary>
@@ -181,7 +230,16 @@ public partial class TableroController : Node3D
 	{
 		var ficha = GetPiece(color, pieceIndex);
 		if (ficha == null) return;
+		int from = ficha.BoardIndex;
 		RemoveFromOccupancy(ficha);
+		if (from >= 1)
+		{
+			int count = OccupantCount(from);
+			if (count == 1)
+				CenterPieceAt(from);
+			else if (count >= 2)
+				ApplyBarrierPositions(from);
+		}
 		ficha.SetBoardIndex(-1);
 		var dest  = GetBasePosition(color, pieceIndex);
 		var tween = CreateTween();
@@ -239,7 +297,17 @@ public partial class TableroController : Node3D
 		var ficha = GetPiece(color, pieceIndex);
 		if (ficha == null) return;
 
+		int from = ficha.BoardIndex;
 		RemoveFromOccupancy(ficha);
+		if (from >= 1)
+		{
+			int count = OccupantCount(from);
+			if (count == 1)
+				CenterPieceAt(from);
+			else if (count >= 2)
+				ApplyBarrierPositions(from);
+		}
+
 		ficha.SetBoardIndex(toSq);
 		AddToOccupancy(ficha, toSq);
 
@@ -250,6 +318,15 @@ public partial class TableroController : Node3D
 		tween.TweenProperty(ficha, "global_position", mid,  0.14f);
 		tween.TweenProperty(ficha, "global_position", dest, 0.14f);
 		await ToSignal(tween, Tween.SignalName.Finished);
+
+		if (toSq >= 1)
+		{
+			int count = OccupantCount(toSq);
+			if (count == 1)
+				CenterPieceAt(toSq);
+			else if (count >= 2)
+				ApplyBarrierPositions(toSq);
+		}
 	}
 
 	// ── Fire axe: barrier discovery & visual highlights ───────────────────────
@@ -318,8 +395,28 @@ public partial class TableroController : Node3D
 		var fwdFicha = GetPiece(forwardPieceColor,  forwardPieceIndex);
 		var bwdFicha = GetPiece(backwardPieceColor, backwardPieceIndex);
 
+		int fwdFrom = fwdFicha != null ? fwdFicha.BoardIndex : -1;
+		int bwdFrom = bwdFicha != null ? bwdFicha.BoardIndex : -1;
+
 		if (fwdFicha != null) { RemoveFromOccupancy(fwdFicha); fwdFicha.SetBoardIndex(forwardTo); }
 		if (bwdFicha != null) { RemoveFromOccupancy(bwdFicha); bwdFicha.SetBoardIndex(backwardTo); }
+
+		if (fwdFrom >= 1)
+		{
+			int count = OccupantCount(fwdFrom);
+			if (count == 1)
+				CenterPieceAt(fwdFrom);
+			else if (count >= 2)
+				ApplyBarrierPositions(fwdFrom);
+		}
+		if (bwdFrom >= 1 && bwdFrom != fwdFrom)
+		{
+			int count = OccupantCount(bwdFrom);
+			if (count == 1)
+				CenterPieceAt(bwdFrom);
+			else if (count >= 2)
+				ApplyBarrierPositions(bwdFrom);
+		}
 
 		const float arcTime = 0.20f;
 		Tween last = null;
@@ -344,6 +441,23 @@ public partial class TableroController : Node3D
 
 		if (last != null)
 			await ToSignal(last, Tween.SignalName.Finished);
+
+		if (forwardTo >= 1)
+		{
+			int count = OccupantCount(forwardTo);
+			if (count == 1)
+				CenterPieceAt(forwardTo);
+			else if (count >= 2)
+				ApplyBarrierPositions(forwardTo);
+		}
+		if (backwardTo >= 1)
+		{
+			int count = OccupantCount(backwardTo);
+			if (count == 1)
+				CenterPieceAt(backwardTo);
+			else if (count >= 2)
+				ApplyBarrierPositions(backwardTo);
+		}
 	}
 
 	// ── Movement resolution ───────────────────────────────────────────────────
