@@ -13,6 +13,7 @@ public partial class WelcomeScreen : Control
 	private Button _playButton;
 	private Button _sourceCodeButton;
 	private Button _debugButton;
+	private Button _closeButton;
 
 	private Button _hoveredButton;
 	private Vector2 _hoveredOrigin;
@@ -43,10 +44,12 @@ public partial class WelcomeScreen : Control
 		_playButton       = GetNode<Button>("VBoxContainer/PlayButton");
 		_sourceCodeButton = GetNode<Button>("VBoxContainer/SourceCodeButton");
 		_debugButton      = GetNode<Button>("DebugButton");
+		_closeButton      = GetNode<Button>("CloseButton");
 
 		_playButton.Pressed       += OnPlayPressed;
 		_sourceCodeButton.Pressed += OnSourceCodePressed;
 		_debugButton.Pressed      += OnDebugPressed;
+		_closeButton.Pressed      += OnClosePressed;
 
 		_playButton.MouseEntered       += () => OnHoverStarted(_playButton);
 		_playButton.MouseExited        += () => OnHoverEnded(_playButton);
@@ -133,6 +136,8 @@ public partial class WelcomeScreen : Control
 	{
 		OS.ShellOpen("https://github.com/Matar-el-Rato/MatarelRato-Godot");
 	}
+
+	private void OnClosePressed() => GetTree().Quit();
 
 	// ── Transition ────────────────────────────────────────────────────────────
 
