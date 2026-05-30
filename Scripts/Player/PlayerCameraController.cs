@@ -195,13 +195,10 @@ public partial class PlayerCameraController : CharacterBody3D
 				: new Vector3(_pitch, 0, 0);
 		}
 
-		// Toggle mouse capture with Escape.
-		if (@event.IsActionPressed("ui_cancel"))
-		{
-			Input.MouseMode = Input.MouseMode == Input.MouseModeEnum.Captured
-				? Input.MouseModeEnum.Visible
-				: Input.MouseModeEnum.Captured;
-		}
+		// NOTE: Escape no longer toggles mouse capture. Releasing the cursor here
+		// silently broke mouse-look (the look code requires MouseMode == Captured),
+		// so ESC appeared to "freeze" the camera. Escape is reserved for in-game
+		// cancel actions (focus exit, item cancel) handled by their own scripts.
 	}
 
 	// ── Physics ───────────────────────────────────────────────────────────────

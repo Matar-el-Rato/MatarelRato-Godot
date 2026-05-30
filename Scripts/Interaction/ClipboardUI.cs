@@ -51,13 +51,17 @@ public partial class ClipboardUI : Control
 		if (SignButton != null)
 			SignButton.Pressed += () => _ = OnSignButtonPressed();
 
+		// Hard cap input at 12 chars — the server's username/password columns and
+		// validation only accept up to 12, so don't let the player type more.
 		if (UsernameInput != null)
 		{
+			UsernameInput.MaxLength = 12;
 			UsernameInput.TextChanged += _ => PlayScribble();
 			SetupHover(UsernameInput);
 		}
 		if (PasswordInput != null)
 		{
+			PasswordInput.MaxLength = 12;
 			PasswordInput.TextChanged += _ => PlayScribble();
 			SetupHover(PasswordInput);
 		}
@@ -197,7 +201,11 @@ public partial class ClipboardUI : Control
 	/// </summary>
 	private async Task OnSignButtonPressed()
 	{
-		string user = UsernameInput?.Text?.Trim() ?? "";
+		// Force usernames lowercase so casing never matters: the server's DB
+		// comparison is already case-insensitive, so "Anabelota" and "anabelota"
+		// are the same account — normalising here keeps the displayed name and
+		// the stored name consistent for both registration and login.
+		string user = (UsernameInput?.Text?.Trim() ?? "").ToLowerInvariant();
 		string pass = PasswordInput?.Text?.Trim() ?? "";
 
 		PlayScribble();
