@@ -76,7 +76,7 @@ public partial class MoveCounterHUD : Control
     public static void Step()           => _instance?.DoStep();
 
     /// <summary>Fades the counter out. Call only from OnTurnEnd.</summary>
-    public static void Hide()           => _instance?.DoHide();
+    public static new void Hide()           => _instance?.DoHide();
 
     /// <summary>Instantly drains counter to 0 and fades. Use for base exits where all dice are consumed at once.</summary>
     public static void DrainAll()       => _instance?.DoDrainAll();

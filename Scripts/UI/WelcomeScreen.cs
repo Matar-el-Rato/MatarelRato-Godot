@@ -36,6 +36,10 @@ public partial class WelcomeScreen : Control
 		GetWindow().ContentScaleMode = Window.ContentScaleModeEnum.Viewport;
 		Input.MouseMode = Input.MouseModeEnum.Visible;
 
+		// The pause menu / Tab hint is dormant on the title screen; it fades in once
+		// we hand off to gameplay (see ProceedToMainScene).
+		GetNodeOrNull<PauseMenu>("/root/PauseMenu")?.Deactivate();
+
 		_playButton       = GetNode<Button>("VBoxContainer/PlayButton");
 		_sourceCodeButton = GetNode<Button>("VBoxContainer/SourceCodeButton");
 		_debugButton      = GetNode<Button>("DebugButton");
@@ -145,28 +149,46 @@ public partial class WelcomeScreen : Control
 		var welcomeBg = GetNodeOrNull<Control>("WelcomeBackground");
 		var gameBg    = GetNodeOrNull<Control>("GameBackground");
 
-		const float FadeOut  = 1.0f;   // welcome → black
-		const float FadeIn   = 0.7f;   // black → blurry game world
+		const float MeshFadeDuration  = 1.8f;
+		const float HoldDuration      = 0.5f;
+		const float SwordFadeDuration = 0.8f;
+		const float FadeOut           = MeshFadeDuration + HoldDuration + SwordFadeDuration; // 3.1s total
+		const float FadeIn            = 0.7f;   // black → blurry game world
 
 		var mainTween = CreateTween().SetParallel(true);
 
-		// Phase 1: fade welcome scene + UI to black.
-		if (welcomeBg != null)
-		{
-			mainTween.TweenProperty(welcomeBg, "modulate:a", 0f, FadeOut)
-					 .SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.Out);
-			mainTween.TweenCallback(Callable.From(welcomeBg.QueueFree)).SetDelay(FadeOut);
-		}
+		// Phase 1: Fade out UI to black immediately (over 0.6s).
 		var uiContainer = GetNodeOrNull<Control>("MarginContainer");
 		if (uiContainer != null)
-			mainTween.TweenProperty(uiContainer, "modulate:a", 0f, FadeOut)
+			mainTween.TweenProperty(uiContainer, "modulate:a", 0f, 0.6f)
 					 .SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.Out);
 		var vbox = GetNodeOrNull<Control>("VBoxContainer");
 		if (vbox != null)
-			mainTween.TweenProperty(vbox, "modulate:a", 0f, FadeOut)
+			mainTween.TweenProperty(vbox, "modulate:a", 0f, 0.6f)
 					 .SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.Out);
-		mainTween.TweenProperty(_debugButton, "modulate:a", 0f, FadeOut)
+		mainTween.TweenProperty(_debugButton, "modulate:a", 0f, 0.6f)
 				 .SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.Out);
+
+		// Phase 1b: Fade out WelcomeScene meshes EXCEPT the sword to pure black (over 1.8s).
+		var sceneRender = GetNodeOrNull("WelcomeBackground/WelcomeViewport/SubViewport/WelcomeScene/scene_render");
+		if (sceneRender != null)
+		{
+			var swordNode = FindSwordNode(sceneRender);
+			if (swordNode != null)
+			{
+				GD.Print($"[WelcomeScreen] Found sword node for transition exemption: {swordNode.Name}");
+			}
+			FadeToBlackNodeRecursive(sceneRender, mainTween, MeshFadeDuration, swordNode);
+		}
+
+		// Phase 1c: Fade the remaining sword (by fading the whole WelcomeBackground container) after 2.3s (1.8s fade + 0.5s hold).
+		if (welcomeBg != null)
+		{
+			mainTween.TweenProperty(welcomeBg, "modulate:a", 0f, SwordFadeDuration)
+					 .SetDelay(MeshFadeDuration + HoldDuration)
+					 .SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.Out);
+			mainTween.TweenCallback(Callable.From(welcomeBg.QueueFree)).SetDelay(FadeOut);
+		}
 
 		// Phase 2: fade game world in (delayed so black frame is visible).
 		if (gameBg != null)
@@ -199,6 +221,101 @@ public partial class WelcomeScreen : Control
 		}
 	}
 
+	private Node3D FindSwordNode(Node node)
+	{
+		if (node == null) return null;
+		string name = node.Name.ToString().ToLower();
+		if (node is Node3D node3D && (name.Contains("sword") || name.Contains("damocles")))
+		{
+			return node3D;
+		}
+		foreach (Node child in node.GetChildren())
+		{
+			var found = FindSwordNode(child);
+			if (found != null) return found;
+		}
+		return null;
+	}
+
+	private bool IsAncestorOf(Node parent, Node child)
+	{
+		if (parent == null || child == null) return false;
+		var p = child.GetParent();
+		while (p != null)
+		{
+			if (p == parent) return true;
+			p = p.GetParent();
+		}
+		return false;
+	}
+
+	private void FadeToBlackNodeRecursive(Node node, Tween tween, float duration, Node exceptionNode)
+	{
+		if (node == null || node == exceptionNode) return;
+
+		if (IsAncestorOf(node, exceptionNode))
+		{
+			foreach (Node child in node.GetChildren())
+			{
+				FadeToBlackNodeRecursive(child, tween, duration, exceptionNode);
+			}
+			return;
+		}
+
+		if (node is Light3D light)
+		{
+			if (node.Name != "SpotLight3D")
+			{
+				tween.TweenProperty(light, "light_energy", 0.0f, duration)
+					 .SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.Out);
+			}
+		}
+		else if (node is GpuParticles3D gpuParticles)
+		{
+			gpuParticles.Emitting = false;
+		}
+		else if (node is CpuParticles3D cpuParticles)
+		{
+			cpuParticles.Emitting = false;
+		}
+		else if (node is MeshInstance3D meshInstance)
+		{
+			for (int i = 0; i < meshInstance.GetSurfaceOverrideMaterialCount(); i++)
+			{
+				var mat = meshInstance.GetSurfaceOverrideMaterial(i) as StandardMaterial3D;
+				if (mat == null)
+				{
+					var activeMat = meshInstance.GetActiveMaterial(i) as StandardMaterial3D;
+					if (activeMat != null)
+					{
+						mat = (StandardMaterial3D)activeMat.Duplicate();
+						meshInstance.SetSurfaceOverrideMaterial(i, mat);
+					}
+				}
+
+				if (mat != null)
+				{
+					tween.TweenProperty(mat, "albedo_color", new Color(0f, 0f, 0f, 1f), duration)
+						 .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.Out);
+					tween.TweenProperty(mat, "metallic", 0.0f, duration)
+						 .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.Out);
+					tween.TweenProperty(mat, "roughness", 1.0f, duration)
+						 .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.Out);
+					if (mat.EmissionEnabled)
+					{
+						tween.TweenProperty(mat, "emission", new Color(0f, 0f, 0f, 1f), duration)
+							 .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.Out);
+					}
+				}
+			}
+		}
+
+		foreach (Node child in node.GetChildren())
+		{
+			FadeToBlackNodeRecursive(child, tween, duration, exceptionNode);
+		}
+	}
+
 	// ── Hand off to gameplay ──────────────────────────────────────────────────
 
 	private void ProceedToMainScene()
@@ -224,6 +341,9 @@ public partial class WelcomeScreen : Control
 				Input.MouseMode        = Input.MouseModeEnum.Captured;
 			}
 		}
+
+		// Now that we're in the game world, reveal the Tab pause hint (fades in).
+		GetNodeOrNull<PauseMenu>("/root/PauseMenu")?.Activate();
 
 		// Zero out GameBackground before QueueFree: the SubViewport is now empty
 		// (MainScene was reparented) so it would flash black for one frame otherwise.

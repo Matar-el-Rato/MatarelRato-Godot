@@ -6,6 +6,7 @@
 [ext_resource type="PackedScene" uid="uid://b8bnktsbevaar" path="res://Assets/Environment/MainScene/SceneTest.glb" id="6_scene_test"]
 [ext_resource type="PackedScene" uid="uid://bpd6m0lb3j2ls" path="res://Scenes/Player.tscn" id="6_y4jh7"]
 [ext_resource type="Script" uid="uid://ct45xk2s628kn" path="res://Scripts/Environment/EnvironmentCollision.cs" id="7_env_collision"]
+[ext_resource type="PackedScene" uid="uid://d2ubu42s7bpxo" path="res://Assets/Pizzeria/getcloser.glb" id="8_eebff"]
 [ext_resource type="PackedScene" uid="uid://b7105h1f46xpg" path="res://Assets/PlayingSet/General/mesa_poker.glb" id="8_f140w"]
 [ext_resource type="PackedScene" uid="uid://ci62y8qvu2dj8" path="res://Scenes/Game/Tablero.tscn" id="9_0iob3"]
 [ext_resource type="FontFile" uid="uid://cw75wckal27hg" path="res://Assets/Fonts/Jersey10-Regular.ttf" id="9_xc4hf"]
@@ -47,6 +48,8 @@
 [ext_resource type="Script" uid="uid://bk2cbuauhf6vh" path="res://Scripts/Game/TableManager.cs" id="50_tablemgr"]
 [ext_resource type="PackedScene" uid="uid://dch41rs3n3v01" path="res://Scenes/Game/Chair.tscn" id="51_chair_scene"]
 [ext_resource type="PackedScene" uid="uid://dp1t3ms3t0v02" path="res://Scenes/Game/PlayerItemSet.tscn" id="52_pitemset"]
+[ext_resource type="PackedScene" uid="uid://cbbsw0bqpkft6" path="res://Assets/Characters/easteregg.glb" id="53_fqfjr"]
+[ext_resource type="PackedScene" uid="uid://cbt6nkarkyf4y" path="res://Assets/Characters/easteregg2.glb" id="54_oqotn"]
 [ext_resource type="Script" uid="uid://j8aoyub8x1u7" path="res://Scripts/Game/DamoclesSword.cs" id="55_damocles_script"]
 [ext_resource type="Script" uid="uid://dv8cr4xwhbspu" path="res://Scripts/UI/DiceHUD.cs" id="60_dicehud"]
 [ext_resource type="Script" uid="uid://dg0vb40isf867" path="res://Scripts/UI/MoveCounterHUD.cs" id="61_movecounter"]
@@ -541,6 +544,12 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.3866711, 0.4310726, -5.2604
 [node name="Holder8" parent="Environment/Fires" unique_id=1838562536 instance=ExtResource("6_20cv7")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0021352768, 0.4310726, -3.0823522)
 
+[node name="easteregg" parent="Environment" unique_id=817839520 instance=ExtResource("53_fqfjr")]
+transform = Transform3D(0.19870088, 0, -0.98006016, 0, 1, 0, 0.98006016, 0, 0.19870088, -2.6028013, -0.26837116, -60.090206)
+
+[node name="easteregg2" parent="Environment" unique_id=660683481 instance=ExtResource("54_oqotn")]
+transform = Transform3D(-0.9729132, 0, 0.2311707, 0, 1, 0, -0.2311707, 0, -0.9729132, 64.12361, -2.390236, 60.44978)
+
 [node name="Room1" type="Node3D" parent="." unique_id=1422990858]
 
 [node name="AudioStreamPlayer3D" type="AudioStreamPlayer3D" parent="Room1" unique_id=975460020]
@@ -582,13 +591,13 @@ PromptText = "Open Door"
 InteractionAction = ""
 HighlightThickness = 7.0
 
-[node name="PiggaNPC" parent="Room1" unique_id=839475480 node_paths=PackedStringArray("Player", "RightApparel", "LeftApparel", "LightingNode") instance=ExtResource("35_npc_scene")]
+[node name="PiggaNPC" parent="Room1" unique_id=839475480 node_paths=PackedStringArray("Player", "LeftApparel", "RightApparel", "LightingNode") instance=ExtResource("35_npc_scene")]
 transform = Transform3D(0.99975204, 0, 0.022268664, 0, 1, 0, -0.022268664, 0, 0.99975204, -19.503555, -0.028534383, -5.231407)
 script = ExtResource("39_room_npc_script")
 TalkAnimation = "Armature_002|mixamo_com|Layer0_001"
 Player = NodePath("../../Player")
-RightApparel = NodePath("../right_apparel")
 LeftApparel = NodePath("../left_apparel")
+RightApparel = NodePath("../right_apparel")
 LightingNode = NodePath("../Lighting")
 
 [node name="RoomJoin" type="Node3D" parent="Room1" unique_id=1122334455 node_paths=PackedStringArray("LightingNode", "RoomArea", "Player", "RoomNpc", "LeftApparel", "RightApparel", "PlayingSetup", "RoomJoinerUi")]
@@ -734,13 +743,13 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.326433, 0.6798404, 13.475
 [node name="left_apparel2" parent="Room2" unique_id=111273724 instance=ExtResource("38_sl126")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.682745, 0.68421197, 17.32839)
 
-[node name="PiggaNPC2" parent="Room2" unique_id=842688675 node_paths=PackedStringArray("Player", "RightApparel", "LeftApparel", "LightingNode") instance=ExtResource("35_npc_scene")]
+[node name="PiggaNPC2" parent="Room2" unique_id=842688675 node_paths=PackedStringArray("Player", "LeftApparel", "RightApparel", "LightingNode") instance=ExtResource("35_npc_scene")]
 transform = Transform3D(0.99975204, 0, 0.022268664, 0, 1, 0, -0.022268664, 0, 0.99975204, -19.503555, -0.028534383, 15.540744)
 script = ExtResource("39_room_npc_script")
 TalkAnimation = "Armature_002|mixamo_com|Layer0_001"
 Player = NodePath("../../Player")
-RightApparel = NodePath("../right_apparel2")
 LeftApparel = NodePath("../left_apparel2")
+RightApparel = NodePath("../right_apparel2")
 LightingNode = NodePath("../Lighting2")
 
 [node name="RoomJoin2" type="Node3D" parent="Room2" unique_id=1539345670 node_paths=PackedStringArray("LightingNode", "RoomArea", "Player", "RoomNpc", "LeftApparel", "RightApparel", "PlayingSetup", "RoomJoinerUi")]
@@ -890,13 +899,13 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.326433, 0.6798404, 36.283
 [node name="left_apparel3" parent="Room3" unique_id=1483694055 instance=ExtResource("38_sl126")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.682745, 0.68421197, 40.1363)
 
-[node name="PiggaNPC3" parent="Room3" unique_id=1268130912 node_paths=PackedStringArray("Player", "RightApparel", "LeftApparel", "LightingNode") instance=ExtResource("35_npc_scene")]
+[node name="PiggaNPC3" parent="Room3" unique_id=1268130912 node_paths=PackedStringArray("Player", "LeftApparel", "RightApparel", "LightingNode") instance=ExtResource("35_npc_scene")]
 transform = Transform3D(0.99975204, 0, 0.022268664, 0, 1, 0, -0.022268664, 0, 0.99975204, -19.503555, -0.028534383, 38.348656)
 script = ExtResource("39_room_npc_script")
 TalkAnimation = "Armature_002|mixamo_com|Layer0_001"
 Player = NodePath("../../Player")
-RightApparel = NodePath("../right_apparel3")
 LeftApparel = NodePath("../left_apparel3")
+RightApparel = NodePath("../right_apparel3")
 LightingNode = NodePath("../Lighting3")
 
 [node name="RoomJoin3" type="Node3D" parent="Room3" unique_id=1003862766 node_paths=PackedStringArray("LightingNode", "RoomArea", "Player", "RoomNpc", "LeftApparel", "RightApparel", "PlayingSetup", "RoomJoinerUi")]
@@ -1091,6 +1100,9 @@ ProximityRadius = 7.0
 [node name="Match History Board" parent="Pizzeria" unique_id=910100000 instance=ExtResource("70_mhboard")]
 transform = Transform3D(0.19591773, 0.041545276, -0.38051313, 3.4025076e-09, 0.42745975, 0.04667101, 0.3827744, -0.02126437, 0.19476032, 37.181835, 1.1428527, -12.095044)
 script = null
+
+[node name="getcloser" parent="Pizzeria" unique_id=520404911 instance=ExtResource("8_eebff")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 31.651487, 0.54589164, -17.656143)
 
 [node name="Player" parent="." unique_id=1339342590 instance=ExtResource("6_y4jh7")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.16528296, -0.22474906, -0.35706663)

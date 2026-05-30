@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://b30e1ugyavacm"
+path="res://.godot/imported/lightning.wav-a75d8acc80d885ffdd6536f136c3dbfa.sample"
+
+[deps]
+
+source_file="res://Assets/Sound FX/lightning.wav"
+dest_files=["res://.godot/imported/lightning.wav-a75d8acc80d885ffdd6536f136c3dbfa.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2

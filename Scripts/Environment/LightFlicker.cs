@@ -20,6 +20,10 @@ public partial class LightFlicker : Node3D
 	private float                  _activeMinInterval;
 	private float                  _activeMaxInterval;
 
+	private AudioStreamPlayer      _audioPlayer;
+	private AudioStream            _soundStream;
+	private double                 _lastSoundTime = 0.0;
+
 	public override void _Ready()
 	{
 		var list = new List<OmniLight3D>();
@@ -30,6 +34,20 @@ public partial class LightFlicker : Node3D
 		_lights = list.ToArray();
 		_timers = new float[_lights.Length];
 		SetIntenseMode(false);
+
+		string path = "res://Assets/Sound FX/lightning.wav";
+		if (ResourceLoader.Exists(path))
+		{
+			_soundStream = GD.Load<AudioStream>(path);
+			if (_soundStream != null)
+			{
+				_audioPlayer = new AudioStreamPlayer();
+				_audioPlayer.Stream = _soundStream;
+				_audioPlayer.MaxPolyphony = 16;
+				_audioPlayer.VolumeDb = -10f;
+				AddChild(_audioPlayer);
+			}
+		}
 	}
 
 	public void SetIntenseMode(bool intense)
@@ -47,9 +65,29 @@ public partial class LightFlicker : Node3D
 			_timers[i] -= (float)delta;
 			if (_timers[i] <= 0f)
 			{
-				_lights[i].LightEnergy = _rng.RandfRange(_activeMinEnergy, _activeMaxEnergy);
+				float energy = _rng.RandfRange(_activeMinEnergy, _activeMaxEnergy);
+				_lights[i].LightEnergy = energy;
 				_timers[i] = _rng.RandfRange(_activeMinInterval, _activeMaxInterval);
+
+				PlayFlickerSound(energy);
 			}
+		}
+	}
+
+	private void PlayFlickerSound(float energy)
+	{
+		if (_audioPlayer == null) return;
+
+		float t = Mathf.Clamp(energy / IntenseMaxEnergy, 0f, 1f);
+		float volDb = Mathf.Lerp(-45f, -25f, t);
+
+		_audioPlayer.VolumeDb = volDb;
+
+		double now = Time.GetTicksMsec() / 1000.0;
+		if (!_audioPlayer.Playing || (now - _lastSoundTime > 0.08))
+		{
+			_audioPlayer.Play();
+			_lastSoundTime = now;
 		}
 	}
 }

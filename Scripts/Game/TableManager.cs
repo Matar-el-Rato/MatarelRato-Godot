@@ -574,7 +574,7 @@ public partial class TableManager : Node3D
                 }
                 else
                 {
-                    cubilete.MoveToPlayer(targetPos, boardCenter);
+                    _ = cubilete.MoveToPlayer(targetPos, boardCenter);
                 }
             }
         }
@@ -1178,9 +1178,9 @@ public partial class TableManager : Node3D
         if (userId < 0 || OphanimNode == null) return;
 
         // Clean up eliminated player's floating items immediately
-        if (_colorByUserId.TryGetValue(userId, out var color))
+        if (_colorByUserId.TryGetValue(userId, out var elimColor))
         {
-            int slot = ColorToSlot(color.ToLower());
+            int slot = ColorToSlot(elimColor.ToLower());
             if (slot >= 0 && _itemSetsBySlot.TryGetValue(slot, out var itemSet))
             {
                 if (IsInstanceValid(itemSet))

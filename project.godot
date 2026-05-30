@@ -16,6 +16,11 @@ config/features=PackedStringArray("4.6", "C#", "Forward Plus")
 boot_splash/show_image=false
 config/icon="uid://ds2s3n7xy0hgj"
 
+[autoload]
+
+WindowModeManager="*res://Scripts/UI/WindowModeManager.cs"
+PauseMenu="*res://Scripts/UI/PauseMenu.cs"
+
 [display]
 
 window/size/viewport_width=1280
