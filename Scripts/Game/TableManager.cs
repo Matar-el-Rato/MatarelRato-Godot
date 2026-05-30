@@ -172,6 +172,19 @@ public partial class TableManager : Node3D
         foreach (var child in GetChildren())
             if (child is Chair || child is PlayerItemSet || child is SeatToken)
                 child.QueueFree();
+
+        // Clean up any items that were reparented to the camera
+        var camera = GetViewport()?.GetCamera3D();
+        if (camera != null && IsInstanceValid(camera))
+        {
+            foreach (var child in camera.GetChildren())
+            {
+                if (child is Gun || child is FireAxe)
+                {
+                    child.QueueFree();
+                }
+            }
+        }
         _chairsByColor.Clear();
         _seatTokensByColor.Clear();
         _colorByUserId.Clear();
@@ -279,6 +292,7 @@ public partial class TableManager : Node3D
                 case "gun_available":           OnGunAvailable(root);           break;
                 case "gun_result":              OnGunResult(root);              break;
                 case "magnifying_glass_result": OnMagnifyingGlassResult(root);  break;
+                case "magnifying_glass_used":   OnMagnifyingGlassUsedBroadcast(root); break;
                 case "fire_axe_used":        OnFireAxeUsed(root);         break;
                 case "cigarette_result":     OnCigaretteResult(root);     break;
                 case "life_lost":            OnLifeLost(root);            break;
@@ -1162,6 +1176,18 @@ public partial class TableManager : Node3D
     {
         int userId = root.TryGetProperty("user_id", out var u) ? u.GetInt32() : -1;
         if (userId < 0 || OphanimNode == null) return;
+
+        // Clean up eliminated player's floating items immediately
+        if (_colorByUserId.TryGetValue(userId, out var color))
+        {
+            int slot = ColorToSlot(color.ToLower());
+            if (slot >= 0 && _itemSetsBySlot.TryGetValue(slot, out var itemSet))
+            {
+                if (IsInstanceValid(itemSet))
+                    itemSet.QueueFree();
+                _itemSetsBySlot.Remove(slot);
+            }
+        }
 
         var myTcs = new System.Threading.Tasks.TaskCompletionSource<bool>();
         var prevTask = _lastEliminationTask;
@@ -2111,6 +2137,23 @@ public partial class TableManager : Node3D
 
         if (IsInstanceValid(_localMagnifyingGlass))
             _localMagnifyingGlass.BurnDisappear();
+    }
+
+    private void OnMagnifyingGlassUsedBroadcast(JsonElement root)
+    {
+        int userId = root.TryGetProperty("user_id", out var uEl) ? uEl.GetInt32() : -1;
+        if (userId < 0 || userId == LiveConnectionManager.LocalUserId) return;
+
+        if (_colorByUserId.TryGetValue(userId, out var color))
+        {
+            int slot = ColorToSlot(color.ToLower());
+            if (_itemSetsBySlot.TryGetValue(slot, out var itemSet))
+            {
+                var glass = itemSet.GetNodeOrNull<MagnifyingGlass>("MagnifyingGlass");
+                if (glass != null && IsInstanceValid(glass))
+                    glass.BurnDisappear();
+            }
+        }
     }
 
     /// <summary>
