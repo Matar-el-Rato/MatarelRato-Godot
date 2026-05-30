@@ -13,7 +13,7 @@ InteractablePath = NodePath("Interactable")
 [node name="Interactable" type="Node3D" parent="." unique_id=1579540753]
 script = ExtResource("3_interactable")
 PromptText = "Use Fire Axe"
-TooltipText = "Smash a barrier blocking your path on the board."
+TooltipText = "Smash an enemy barrier, knocking one piece forward and one back. The squares right before and after the barrier must be empty for it to land."
 UseLeftClick = true
 HighlightTargetMesh = NodePath("../axe_model")
 UseShellHighlight = true

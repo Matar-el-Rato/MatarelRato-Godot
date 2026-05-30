@@ -1693,11 +1693,34 @@ public partial class TableManager : Node3D
             _cubileteHeightOff = off.Y + cubilete.HiddenDepth;
         }
 
-        _sword = GetParent()?.GetNodeOrNull<DamoclesSword>("damocles");
+        // Find the room's DamoclesSword sibling BY TYPE, not by an exact name.
+        // When Room1 is duplicated to make Room2/Room3, Godot renames the copied
+        // sword node to keep sibling names unique (damocles → damocles2 / damocles3),
+        // so a hard-coded "damocles" lookup found nothing in the copied rooms and the
+        // sword silently never appeared. Scanning the parent's children by type makes
+        // every room behave identically regardless of the node's final name.
+        _sword = null;
+        var roomRoot = GetParent();
+        if (roomRoot != null)
+        {
+            foreach (var child in roomRoot.GetChildren())
+            {
+                if (child is DamoclesSword found)
+                {
+                    _sword = found;
+                    break;
+                }
+            }
+        }
+
         if (_sword != null)
         {
             _sword.Impaled -= OnSwordImpaled;
             _sword.Impaled += OnSwordImpaled;
+        }
+        else
+        {
+            GD.PrintErr("[TM] DamoclesSword not found as a sibling of TableManager.");
         }
 
         if (cubilete != null && !_rollConnected)
